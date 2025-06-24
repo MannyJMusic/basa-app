@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 export default function Footer() {
   return (
     <footer className="bg-gray-900 text-white">
@@ -15,13 +17,13 @@ export default function Footer() {
           <div>
             <h4 className="text-md font-semibold mb-4">Public</h4>
             <ul className="space-y-2">
-              <li><a href="/" className="text-gray-300 hover:text-white">Home</a></li>
-              <li><a href="/about" className="text-gray-300 hover:text-white">About</a></li>
-              <li><a href="/events" className="text-gray-300 hover:text-white">Events</a></li>
-              <li><a href="/membership" className="text-gray-300 hover:text-white">Membership</a></li>
-              <li><a href="/resources" className="text-gray-300 hover:text-white">Resources</a></li>
-              <li><a href="/blog" className="text-gray-300 hover:text-white">Blog/News</a></li>
-              <li><a href="/contact" className="text-gray-300 hover:text-white">Contact</a></li>
+              <li><Link href="/" className="text-gray-300 hover:text-white">Home</Link></li>
+              <li><Link href="/about" className="text-gray-300 hover:text-white">About</Link></li>
+              <li><Link href="/events" className="text-gray-300 hover:text-white">Events</Link></li>
+              <li><Link href="/membership" className="text-gray-300 hover:text-white">Membership</Link></li>
+              <li><Link href="/resources" className="text-gray-300 hover:text-white">Resources</Link></li>
+              <li><Link href="/blog" className="text-gray-300 hover:text-white">Blog/News</Link></li>
+              <li><Link href="/contact" className="text-gray-300 hover:text-white">Contact</Link></li>
             </ul>
           </div>
           
@@ -29,12 +31,12 @@ export default function Footer() {
           <div>
             <h4 className="text-md font-semibold mb-4">Member Portal</h4>
             <ul className="space-y-2">
-              <li><a href="/dashboard" className="text-gray-300 hover:text-white">Dashboard</a></li>
-              <li><a href="/dashboard/directory" className="text-gray-300 hover:text-white">Directory</a></li>
-              <li><a href="/dashboard/resources" className="text-gray-300 hover:text-white">Resources</a></li>
-              <li><a href="/dashboard/events" className="text-gray-300 hover:text-white">My Events</a></li>
-              <li><a href="/dashboard/profile" className="text-gray-300 hover:text-white">Profile</a></li>
-              <li><a href="/dashboard/account" className="text-gray-300 hover:text-white">Account</a></li>
+              <li><Link href="/dashboard" className="text-gray-300 hover:text-white">Dashboard</Link></li>
+              <li><Link href="/dashboard/directory" className="text-gray-300 hover:text-white">Directory</Link></li>
+              <li><Link href="/dashboard/resources" className="text-gray-300 hover:text-white">Resources</Link></li>
+              <li><Link href="/dashboard/events" className="text-gray-300 hover:text-white">My Events</Link></li>
+              <li><Link href="/dashboard/profile" className="text-gray-300 hover:text-white">Profile</Link></li>
+              <li><Link href="/dashboard/account" className="text-gray-300 hover:text-white">Account</Link></li>
             </ul>
           </div>
           
@@ -42,10 +44,10 @@ export default function Footer() {
           <div>
             <h4 className="text-md font-semibold mb-4">Account</h4>
             <ul className="space-y-2">
-              <li><a href="/auth/sign-in" className="text-gray-300 hover:text-white">Login</a></li>
-              <li><a href="/auth/sign-up" className="text-gray-300 hover:text-white">Register</a></li>
-              <li><a href="/auth/forgot-password" className="text-gray-300 hover:text-white">Forgot Password</a></li>
-              <li><a href="/auth/verify-email" className="text-gray-300 hover:text-white">Verify Email</a></li>
+              <li><Link href="/auth/sign-in" className="text-gray-300 hover:text-white">Login</Link></li>
+              <li><Link href="/auth/sign-up" className="text-gray-300 hover:text-white">Register</Link></li>
+              <li><Link href="/auth/forgot-password" className="text-gray-300 hover:text-white">Forgot Password</Link></li>
+              <li><Link href="/auth/verify-email" className="text-gray-300 hover:text-white">Verify Email</Link></li>
             </ul>
           </div>
         </div>

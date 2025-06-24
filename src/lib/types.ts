@@ -121,4 +121,101 @@ export function canAccess(userRole: UserRole, requiredRole: UserRole): boolean {
   }
   
   return roleHierarchy[userRole] >= roleHierarchy[requiredRole]
+}
+
+export interface Event {
+  id: string
+  title: string
+  slug: string
+  description: string
+  shortDescription?: string
+  startDate: Date
+  endDate: Date
+  location: string
+  address?: string
+  city?: string
+  state?: string
+  zipCode?: string
+  capacity?: number
+  price?: number
+  memberPrice?: number
+  category: string
+  type: 'NETWORKING' | 'SUMMIT' | 'RIBBON_CUTTING' | 'COMMUNITY'
+  status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
+  isFeatured: boolean
+  image?: string
+  organizerId: string
+  organizer: Member
+  registrations: EventRegistration[]
+  speakers: EventSpeaker[]
+  sponsors: EventSponsor[]
+  tags: string[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface EventRegistration {
+  id: string
+  eventId: string
+  event: Event
+  memberId?: string
+  member?: Member
+  name: string
+  email: string
+  company?: string
+  phone?: string
+  ticketCount: number
+  totalAmount: number
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'REFUNDED'
+  paymentIntentId?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface EventSpeaker {
+  id: string
+  eventId: string
+  event: Event
+  name: string
+  title?: string
+  company?: string
+  bio?: string
+  image?: string
+  topic?: string
+  order: number
+  createdAt: Date
+}
+
+export interface EventSponsor {
+  id: string
+  eventId: string
+  event: Event
+  memberId?: string
+  member?: Member
+  name: string
+  logo?: string
+  website?: string
+  tier: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM'
+  createdAt: Date
+}
+
+export interface EventFilters {
+  category?: string[]
+  dateRange?: { start: Date | null; end: Date | null }
+  location?: string[]
+  priceRange?: { min: number; max: number }
+  type?: string[]
+  search?: string
+}
+
+export interface EventPagination {
+  page: number
+  limit: number
+  total: number
+  pages: number
+}
+
+export interface EventsResponse {
+  events: Event[]
+  pagination: EventPagination
 } 
