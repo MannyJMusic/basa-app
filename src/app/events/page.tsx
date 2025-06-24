@@ -164,7 +164,14 @@ export default function EventsPage() {
                           {new Date(event.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                       </div>
-                      <CardTitle className="text-2xl">{event.title}</CardTitle>
+                      <CardTitle className="text-2xl">
+                        <Link 
+                          href={`/events/${event.slug}`}
+                          className="hover:text-blue-200 transition-colors duration-200"
+                        >
+                          {event.title}
+                        </Link>
+                      </CardTitle>
                       <CardDescription className="text-blue-100">
                         {event.shortDescription || event.description?.slice(0, 100) + '...'}
                       </CardDescription>
