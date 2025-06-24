@@ -3,8 +3,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { SessionProvider } from "@/components/providers/session-provider"
 import { auth } from "@/lib/auth"
-import Navigation from "@/components/layout/navigation"
-import Footer from "@/components/layout/footer"
+import PublicLayout from "@/components/layout/public-layout"
 import * as Sentry from '@sentry/nextjs';
 
 const inter = Inter({ subsets: ["latin"] })
@@ -30,13 +29,9 @@ export default async function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <SessionProvider session={session}>
-          <div className="flex flex-col min-h-screen">
-            <Navigation />
-            <main className="flex-1">
-              {children}
-            </main>
-            <Footer />
-          </div>
+          <PublicLayout>
+            {children}
+          </PublicLayout>
         </SessionProvider>
       </body>
     </html>
