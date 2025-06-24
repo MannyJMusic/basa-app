@@ -11,9 +11,10 @@ interface PublicLayoutProps {
 export default function PublicLayout({ children }: PublicLayoutProps) {
   const pathname = usePathname()
   const isDashboard = pathname?.startsWith('/dashboard')
+  const isAdmin = pathname?.startsWith('/admin')
 
-  // Don't render public navigation and footer for dashboard pages
-  if (isDashboard) {
+  // Don't render public navigation and footer for dashboard or admin pages
+  if (isDashboard || isAdmin) {
     return <>{children}</>
   }
 

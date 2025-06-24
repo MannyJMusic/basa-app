@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Alert } from "@/components/ui/alert"
+import { getRedirectUrl } from "@/lib/utils"
+import { UserRole } from "@/lib/types"
 
 export default function SignInForm() {
   const [email, setEmail] = useState("")
@@ -24,13 +26,16 @@ export default function SignInForm() {
         email,
         password,
         redirect: false,
-        callbackUrl: searchParams.get("callbackUrl") || "/dashboard"
       })
       
       if (res?.error) {
         setError(res.error)
       } else if (res?.ok) {
-        router.push(res.url || "/dashboard")
+        // Wait for session to update and get the user's role
+        const session = await getSession()
+        const role = (session?.user?.role as UserRole) || "GUEST"
+        const redirectUrl = getRedirectUrl(role)
+        router.push(redirectUrl)
       }
     })
   }
