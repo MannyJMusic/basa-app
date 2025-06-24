@@ -1,4 +1,7 @@
+'use client'
+
 import Link from "next/link"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -19,8 +22,35 @@ import {
   Filter,
   Search
 } from "lucide-react"
+import { useEvents } from "@/hooks/use-events"
 
 export default function EventsPage() {
+  const { events, loading, fetchEvents } = useEvents()
+
+  useEffect(() => {
+    console.log('EventsPage: useEffect triggered')
+    // Fetch only published and upcoming events
+    fetchEvents({ status: "PUBLISHED", sortBy: "startDate", sortOrder: "asc" })
+      .then(data => {
+        console.log('EventsPage: fetchEvents success', data)
+      })
+      .catch(error => {
+        console.error('EventsPage: fetchEvents error', error)
+      })
+  }, [fetchEvents])
+
+  console.log('EventsPage: render', { events, loading, eventsLength: events?.length })
+  
+  // Debug: Log each event
+  if (events && events.length > 0) {
+    console.log('EventsPage: Events received:')
+    events.forEach((event, index) => {
+      console.log(`  ${index + 1}. ${event.title} - ${event.endDate}`)
+    })
+  } else {
+    console.log('EventsPage: No events received')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header Section */}
@@ -75,9 +105,10 @@ export default function EventsPage() {
                 <input 
                   placeholder="Search events..." 
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  disabled
                 />
               </div>
-              <Button variant="outline" className="flex items-center">
+              <Button variant="outline" className="flex items-center" disabled>
                 <Filter className="w-4 h-4 mr-2" />
                 Filter Events
               </Button>
@@ -89,409 +120,95 @@ export default function EventsPage() {
         </div>
       </section>
 
-      {/* Featured Events */}
+      {/* Events List */}
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Upcoming Featured Events
+              Upcoming Events
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Don't miss these exclusive networking opportunities designed to accelerate your business success.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            {/* Event 1: Monthly Networking Mixer */}
-            <Card className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                    Featured Event
-                  </Badge>
-                  <div className="text-sm opacity-90">Next Week</div>
-                </div>
-                <CardTitle className="text-2xl">BASA Monthly Networking Mixer</CardTitle>
-                <CardDescription className="text-blue-100">
-                  The premier networking event for San Antonio's business community
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Value Proposition */}
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-blue-900 mb-2">🎯 Value Proposition</h4>
-                    <p className="text-blue-800 text-sm">
-                      Connect with 150+ business leaders, generate qualified leads, and discover 
-                      partnership opportunities that drive real revenue growth.
-                    </p>
-                  </div>
-
-                  {/* Event Details */}
-                  <div className="space-y-3">
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="w-4 h-4 mr-3 text-purple-600" />
-                      <span>Thursday, March 21, 2024 • 6:00 PM - 9:00 PM</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <MapPin className="w-4 h-4 mr-3 text-purple-600" />
-                      <span>San Antonio Marriott Rivercenter</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Users className="w-4 h-4 mr-3 text-purple-600" />
-                      <span>Networking Focus: All Industries Welcome</span>
-                    </div>
-                  </div>
-
-                  {/* Speaker */}
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-gray-900 mb-2">🎤 Featured Speaker</h4>
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                        <Star className="w-5 h-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Sarah Johnson, CEO</p>
-                        <p className="text-sm text-gray-600">Johnson Marketing Group • 15+ years in digital marketing</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Pricing */}
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-2">💰 Pricing Structure</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">BASA Members:</span>
-                        <span className="font-semibold text-green-700">$25 (Save 50%)</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Non-Members:</span>
-                        <span className="font-semibold">$50</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">First-Time Guests:</span>
-                        <span className="font-semibold text-green-700">$35</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expected Outcomes */}
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-purple-900 mb-2">🎯 Expected Outcomes</h4>
-                    <ul className="text-sm text-purple-800 space-y-1">
-                      <li>• Generate 5-10 qualified business leads</li>
-                      <li>• Connect with 3 potential referral partners</li>
-                      <li>• Learn 2-3 actionable business growth strategies</li>
-                      <li>• Discover new market opportunities</li>
-                    </ul>
-                  </div>
-
-                  <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
-                    <Link href="/events/registration">Register Now</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Event 2: Industry-Specific Summit */}
-            <Card className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-t-lg">
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                    Industry Summit
-                  </Badge>
-                  <div className="text-sm opacity-90">2 Weeks</div>
-                </div>
-                <CardTitle className="text-2xl">Tech & Innovation Summit</CardTitle>
-                <CardDescription className="text-green-100">
-                  Exclusive insights into San Antonio's growing tech ecosystem
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Value Proposition */}
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-2">🎯 Value Proposition</h4>
-                    <p className="text-green-800 text-sm">
-                      Gain exclusive access to San Antonio's tech ecosystem, connect with startup founders, 
-                      and discover investment opportunities in emerging technologies.
-                    </p>
-                  </div>
-
-                  {/* Event Details */}
-                  <div className="space-y-3">
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="w-4 h-4 mr-3 text-green-600" />
-                      <span>Friday, March 29, 2024 • 9:00 AM - 5:00 PM</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <MapPin className="w-4 h-4 mr-3 text-green-600" />
-                      <span>San Antonio Tech Hub</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Users className="w-4 h-4 mr-3 text-green-600" />
-                      <span>Networking Focus: Technology & Innovation</span>
-                    </div>
-                  </div>
-
-                  {/* Speaker */}
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-gray-900 mb-2">🎤 Featured Speakers</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-2">
-                          <Star className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">Jennifer Martinez, Founder</p>
-                          <p className="text-xs text-gray-600">TechFlow Solutions • Serial Entrepreneur</p>
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="mt-2 text-gray-600">Loading events...</p>
+            </div>
+          ) : !events || events.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No upcoming events found.</p>
+              <p className="text-sm mt-2">Debug info: events array length = {events?.length || 0}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {events
+                // Temporarily remove date filtering to debug
+                // .filter(event => {
+                //   const isFuture = new Date(event.endDate) >= new Date()
+                //   console.log(`Event ${event.title}: endDate=${event.endDate}, isFuture=${isFuture}`)
+                //   return isFuture
+                // })
+                .map(event => (
+                  <Card key={event.id} className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg">
+                    <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
+                      <div className="flex items-center justify-between">
+                        {event.isFeatured && (
+                          <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                            Featured Event
+                          </Badge>
+                        )}
+                        <div className="text-sm opacity-90">
+                          {new Date(event.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                       </div>
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-2">
-                          <Star className="w-4 h-4 text-green-600" />
+                      <CardTitle className="text-2xl">{event.title}</CardTitle>
+                      <CardDescription className="text-blue-100">
+                        {event.shortDescription || event.description?.slice(0, 100) + '...'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center text-gray-600">
+                            <Calendar className="w-4 h-4 mr-3 text-purple-600" />
+                            <span>{new Date(event.startDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })} - {new Date(event.endDate).toLocaleTimeString(undefined, { timeStyle: 'short' })}</span>
+                          </div>
+                          <div className="flex items-center text-gray-600">
+                            <MapPin className="w-4 h-4 mr-3 text-purple-600" />
+                            <span>{event.location}</span>
+                          </div>
+                          <div className="flex items-center text-gray-600">
+                            <Users className="w-4 h-4 mr-3 text-purple-600" />
+                            <span>Capacity: {event.capacity || 'N/A'}</span>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-sm">Dr. Robert Wilson, CTO</p>
-                          <p className="text-xs text-gray-600">Innovation Labs • Former Google Engineer</p>
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <h4 className="font-semibold text-green-900 mb-2">
+                            <DollarSign className="inline w-4 h-4 mr-1" /> Pricing
+                          </h4>
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm">Member Price:</span>
+                              <span className="font-semibold text-green-700">${(Number(event.memberPrice) || 0).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm">Non-Member Price:</span>
+                              <span className="font-semibold">${(Number(event.price) || 0).toFixed(2)}</span>
+                            </div>
+                          </div>
                         </div>
+                        <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
+                          <Link href={`/events/${event.slug}/register`}>Register Now</Link>
+                        </Button>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Pricing */}
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-2">💰 Pricing Structure</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">BASA Members:</span>
-                        <span className="font-semibold text-green-700">$75 (Save 50%)</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Non-Members:</span>
-                        <span className="font-semibold">$150</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Startup Founders:</span>
-                        <span className="font-semibold text-green-700">$50</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expected Outcomes */}
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-2">🎯 Expected Outcomes</h4>
-                    <ul className="text-sm text-green-800 space-y-1">
-                      <li>• Connect with 10+ tech industry leaders</li>
-                      <li>• Discover 3-5 investment opportunities</li>
-                      <li>• Learn emerging technology trends</li>
-                      <li>• Build partnerships with startups</li>
-                    </ul>
-                  </div>
-
-                  <Button asChild className="w-full bg-green-600 hover:bg-green-700">
-                    <Link href="/events/registration">Register Now</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Event 3: Ribbon Cutting Celebration */}
-            <Card className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-t-lg">
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                    Ribbon Cutting
-                  </Badge>
-                  <div className="text-sm opacity-90">This Friday</div>
-                </div>
-                <CardTitle className="text-2xl">Member Business Grand Opening</CardTitle>
-                <CardDescription className="text-orange-100">
-                  Celebrate new member businesses with ribbon cutting ceremonies
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Value Proposition */}
-                  <div className="bg-orange-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-orange-900 mb-2">🎯 Value Proposition</h4>
-                    <p className="text-orange-800 text-sm">
-                      Support fellow BASA members, build community relationships, and discover 
-                      new business opportunities while celebrating local business success.
-                    </p>
-                  </div>
-
-                  {/* Event Details */}
-                  <div className="space-y-3">
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="w-4 h-4 mr-3 text-orange-600" />
-                      <span>Friday, March 15, 2024 • 4:00 PM - 6:00 PM</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <MapPin className="w-4 h-4 mr-3 text-orange-600" />
-                      <span>Downtown San Antonio (Various Locations)</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Users className="w-4 h-4 mr-3 text-orange-600" />
-                      <span>Networking Focus: Local Business Community</span>
-                    </div>
-                  </div>
-
-                  {/* Featured Business */}
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-gray-900 mb-2">🏢 Featured Business</h4>
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-                        <Building2 className="w-5 h-5 text-orange-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Artisan Coffee Co.</p>
-                        <p className="text-sm text-gray-600">Premium coffee shop & community hub</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Pricing */}
-                  <div className="bg-orange-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-orange-900 mb-2">💰 Pricing Structure</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">BASA Members:</span>
-                        <span className="font-semibold text-orange-700">FREE</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Non-Members:</span>
-                        <span className="font-semibold">$15</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">First-Time Guests:</span>
-                        <span className="font-semibold text-orange-700">$10</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expected Outcomes */}
-                  <div className="bg-orange-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-orange-900 mb-2">🎯 Expected Outcomes</h4>
-                    <ul className="text-sm text-orange-800 space-y-1">
-                      <li>• Support local business growth</li>
-                      <li>• Build community relationships</li>
-                      <li>• Discover new business opportunities</li>
-                      <li>• Network in relaxed atmosphere</li>
-                    </ul>
-                  </div>
-
-                  <Button asChild className="w-full bg-orange-600 hover:bg-orange-700">
-                    <Link href="/events/registration">RSVP Now</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Event 4: Networking & Giving Initiative */}
-            <Card className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-lg">
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                    Community Impact
-                  </Badge>
-                  <div className="text-sm opacity-90">Next Month</div>
-                </div>
-                <CardTitle className="text-2xl">Networking & Giving Initiative</CardTitle>
-                <CardDescription className="text-red-100">
-                  Make a difference while you network with local nonprofits
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Value Proposition */}
-                  <div className="bg-red-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-red-900 mb-2">🎯 Value Proposition</h4>
-                    <p className="text-red-800 text-sm">
-                      Combine networking with community impact. Build meaningful relationships 
-                      while supporting local nonprofits and enhancing your business reputation.
-                    </p>
-                  </div>
-
-                  {/* Event Details */}
-                  <div className="space-y-3">
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="w-4 h-4 mr-3 text-red-600" />
-                      <span>Saturday, April 6, 2024 • 10:00 AM - 2:00 PM</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <MapPin className="w-4 h-4 mr-3 text-red-600" />
-                      <span>San Antonio Community Center</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Users className="w-4 h-4 mr-3 text-red-600" />
-                      <span>Networking Focus: Nonprofit & Business Partnerships</span>
-                    </div>
-                  </div>
-
-                  {/* Featured Nonprofit */}
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-gray-900 mb-2">❤️ Featured Nonprofit</h4>
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
-                        <Heart className="w-5 h-5 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">San Antonio Youth Foundation</p>
-                        <p className="text-sm text-gray-600">Empowering local youth through education</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Pricing */}
-                  <div className="bg-red-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-red-900 mb-2">💰 Pricing Structure</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">BASA Members:</span>
-                        <span className="font-semibold text-red-700">$30 (Save 40%)</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Non-Members:</span>
-                        <span className="font-semibold">$50</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Nonprofit Staff:</span>
-                        <span className="font-semibold text-red-700">$20</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expected Outcomes */}
-                  <div className="bg-red-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-red-900 mb-2">🎯 Expected Outcomes</h4>
-                    <ul className="text-sm text-red-800 space-y-1">
-                      <li>• Build nonprofit partnerships</li>
-                      <li>• Enhance community reputation</li>
-                      <li>• Network with purpose-driven leaders</li>
-                      <li>• Create meaningful social impact</li>
-                    </ul>
-                  </div>
-
-                  <Button asChild className="w-full bg-red-600 hover:bg-red-700">
-                    <Link href="/events/registration">Register Now</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* View All Events CTA */}
-          <div className="text-center mt-12">
-            <Button asChild variant="outline" size="lg" className="mr-4">
-              <Link href="/events/calendar">View Full Calendar</Link>
-            </Button>
-            <Button asChild size="lg" className="bg-purple-600 hover:bg-purple-700">
-              <Link href="/events/list">Browse All Events</Link>
-            </Button>
-          </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -513,12 +230,11 @@ export default function EventsPage() {
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Handshake className="w-8 h-8 text-blue-600" />
                 </div>
-                <CardTitle>Quality Networking</CardTitle>
+                <CardTitle className="text-xl">Networking Opportunities</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600">
-                  Connect with vetted business professionals who are serious about collaboration 
-                  and growth opportunities.
+                  Connect with industry leaders, potential clients, and business partners in a professional setting.
                 </p>
               </CardContent>
             </Card>
@@ -528,12 +244,11 @@ export default function EventsPage() {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <TrendingUp className="w-8 h-8 text-green-600" />
                 </div>
-                <CardTitle>Business Growth</CardTitle>
+                <CardTitle className="text-xl">Business Growth</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600">
-                  Access exclusive insights, strategies, and opportunities that directly impact 
-                  your bottom line.
+                  Learn from experts, discover new opportunities, and gain insights to accelerate your business success.
                 </p>
               </CardContent>
             </Card>
@@ -541,14 +256,13 @@ export default function EventsPage() {
             <Card className="text-center border-0 shadow-lg">
               <CardHeader>
                 <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Award className="w-8 h-8 text-purple-600" />
+                  <Building2 className="w-8 h-8 text-purple-600" />
                 </div>
-                <CardTitle>Member Benefits</CardTitle>
+                <CardTitle className="text-xl">Community Impact</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600">
-                  Enjoy 50% discounts on event registration and exclusive access to premium 
-                  networking opportunities.
+                  Be part of a thriving business community that supports local growth and economic development.
                 </p>
               </CardContent>
             </Card>

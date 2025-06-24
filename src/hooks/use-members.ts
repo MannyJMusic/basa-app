@@ -104,6 +104,8 @@ export interface BulkUploadResult {
 export function useMembers() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [members, setMembers] = useState<Member[]>([])
+  const [pagination, setPagination] = useState<MembersResponse['pagination'] | null>(null)
 
   const fetchMembers = useCallback(async (filters: MemberFilters = {}): Promise<MembersResponse | null> => {
     setIsLoading(true)
@@ -125,7 +127,10 @@ export function useMembers() {
         throw new Error(errorData.error || "Failed to fetch members")
       }
 
-      return await response.json()
+      const data = await response.json()
+      setMembers(data.members)
+      setPagination(data.pagination)
+      return data
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to fetch members"
       setError(errorMessage)
@@ -321,6 +326,8 @@ export function useMembers() {
   return {
     isLoading,
     error,
+    members,
+    pagination,
     fetchMembers,
     fetchMember,
     createMember,

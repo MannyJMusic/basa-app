@@ -4,6 +4,7 @@ import "./globals.css"
 import { SessionProvider } from "@/components/providers/session-provider"
 import { auth } from "@/lib/auth"
 import PublicLayout from "@/components/layout/public-layout"
+import { Toaster } from "@/components/ui/toaster"
 import * as Sentry from '@sentry/nextjs';
 
 const inter = Inter({ subsets: ["latin"] })
@@ -32,6 +33,7 @@ export default async function RootLayout({
           <PublicLayout>
             {children}
           </PublicLayout>
+          <Toaster />
         </SessionProvider>
       </body>
     </html>
