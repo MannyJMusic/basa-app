@@ -26,6 +26,7 @@ export default function SignInForm() {
         redirect: false,
         callbackUrl: searchParams.get("callbackUrl") || "/dashboard"
       })
+      
       if (res?.error) {
         setError(res.error)
       } else if (res?.ok) {

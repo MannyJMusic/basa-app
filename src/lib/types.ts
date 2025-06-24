@@ -1,46 +1,32 @@
 import { DefaultSession } from "next-auth"
-import { Role, Status, MembershipTier } from "@prisma/client"
+import { Status, MembershipTier } from "@prisma/client"
+
+// Define Role enum locally since it's not exported from Prisma
+export enum Role {
+  ADMIN = "ADMIN",
+  MODERATOR = "MODERATOR", 
+  MEMBER = "MEMBER",
+  GUEST = "GUEST"
+}
 
 // Extend the built-in session types
 declare module "next-auth" {
   interface Session {
     user: {
       id: string
-      role: Role
+      firstName: string
+      lastName: string
+      role: string
       isActive: boolean
-      member?: {
-        id: string
-        businessName: string
-        membershipTier: MembershipTier
-        membershipStatus: Status
-      } | null
     } & DefaultSession["user"]
   }
 
   interface User {
     id: string
-    role: Role
+    firstName: string
+    lastName: string
+    role: string
     isActive: boolean
-    member?: {
-      id: string
-      businessName: string
-      membershipTier: MembershipTier
-      membershipStatus: Status
-    } | null
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string
-    role: Role
-    isActive: boolean
-    member?: {
-      id: string
-      businessName: string
-      membershipTier: MembershipTier
-      membershipStatus: Status
-    } | null
   }
 }
 
@@ -123,4 +109,16 @@ export interface PasswordResetData {
 export interface PasswordChangeData {
   currentPassword: string
   newPassword: string
+}
+
+// Role access control function
+export function canAccess(userRole: UserRole, requiredRole: UserRole): boolean {
+  const roleHierarchy = {
+    [Role.ADMIN]: 4,
+    [Role.MODERATOR]: 3,
+    [Role.MEMBER]: 2,
+    [Role.GUEST]: 1,
+  }
+  
+  return roleHierarchy[userRole] >= roleHierarchy[requiredRole]
 } 

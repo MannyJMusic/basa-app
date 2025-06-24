@@ -1,545 +1,157 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Enums
-enum Role {
-  ADMIN
-  MODERATOR
-  MEMBER
-  GUEST
+generator client {
+  provider = "prisma-client-js"
 }
 
-enum Status {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-  PENDING
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
 }
 
-enum MembershipTier {
-  BASIC
-  PREMIUM
-  EXECUTIVE
-  FOUNDER
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-enum EventType {
-  NETWORKING
-  WORKSHOP
-  CONFERENCE
-  SEMINAR
-  WEBINAR
-  SOCIAL
-  TRAINING
-  MEETING
-}
-
-enum EventStatus {
-  DRAFT
-  PUBLISHED
-  CANCELLED
-  COMPLETED
-}
-
-enum TicketType {
-  MEMBER
-  GUEST
-  VIP
-  SPONSOR
-}
-
-enum RegistrationStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-  WAITLISTED
-  NO_SHOW
-}
-
-enum ResourceCategory {
-  BUSINESS
-  MARKETING
-  FINANCE
-  LEGAL
-  TECHNOLOGY
-  NETWORKING
-  EDUCATION
-  TOOLS
-}
-
-enum ResourceType {
-  DOCUMENT
-  VIDEO
-  AUDIO
-  LINK
-  TEMPLATE
-  GUIDE
-  CHECKLIST
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
-  CANCELLED
-}
-
-enum PaymentMethod {
-  CREDIT_CARD
-  DEBIT_CARD
-  BANK_TRANSFER
-  CHECK
-  CASH
-  STRIPE
-}
-
-enum LeadStatus {
-  NEW
-  CONTACTED
-  QUALIFIED
-  PROPOSAL
-  NEGOTIATION
-  CLOSED_WON
-  CLOSED_LOST
-}
-
-enum LeadSource {
-  WEBSITE
-  REFERRAL
-  SOCIAL_MEDIA
-  EMAIL
-  PHONE
-  EVENT
-  ADVERTISING
-  OTHER
-}
-
-// Core User Management
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  emailVerified   DateTime?
-  hashedPassword  String
-  firstName       String
-  lastName        String
-  phone           String?
-  role            Role      @default(MEMBER)
-  isActive        Boolean   @default(true)
-  lastLogin       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  member          Member?
-  registrations   EventRegistration[]
-  payments        Payment[]
-  auditLogs       AuditLog[]
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  firstName     String?
+  lastName      String?
+  hashedPassword String?
+  role          String    @default("MEMBER")
+  isActive      Boolean   @default(true)
+  lastLogin     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  member        Member?
+  auditLogs     AuditLog[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  oldValues  Json?
+  newValues  Json?
+  timestamp  DateTime @default(now())
+  ipAddress  String?
+  userAgent  String?
 }
 
 model Member {
   id                  String    @id @default(cuid())
   userId              String    @unique
   user                User      @relation(fields: [userId], references: [id])
-  
-  // Business Info
-  businessName        String
-  businessType        String
+
+  businessName        String?
+  businessType        String?
   industry            String[]
   ein                 String?   @unique
   yearEstablished     Int?
   numberOfEmployees   String?
   annualRevenue       String?
-  
-  // Contact
-  businessEmail       String
-  businessPhone       String
-  businessAddress     String
-  city                String
-  state               String
-  zipCode             String
+  businessEmail       String?
+  businessPhone       String?
+  businessAddress     String?
+  city                String?
+  state               String?
+  zipCode             String?
   website             String?
-  
-  // Membership
-  membershipTier      MembershipTier
+  membershipTier      MembershipTier?
   membershipStatus    Status    @default(ACTIVE)
   joinedAt            DateTime  @default(now())
-  renewalDate         DateTime
+  renewalDate         DateTime?
   stripeCustomerId    String?   @unique
   subscriptionId      String?   @unique
-  
-  // Profile
   logo                String?
   coverImage          String?
-  description         String   @db.Text
+  description         String?   @db.Text
   tagline             String?
   specialties         String[]
   certifications      String[]
-  
-  // Social
   linkedin            String?
   facebook            String?
   instagram           String?
   twitter             String?
   youtube             String?
-  
-  // Privacy
   showInDirectory     Boolean   @default(true)
   allowContact        Boolean   @default(true)
   showAddress         Boolean   @default(false)
-  
-  // Relations
   resources           Resource[]
   sponsorships        Sponsorship[]
   referralsGiven      Referral[] @relation("referrer")
   referralsReceived   Referral[] @relation("referred")
-  
   @@index([businessType, membershipStatus])
   @@index([industry])
 }
 
-model Event {
-  id                  String    @id @default(cuid())
-  title               String
-  slug                String    @unique
-  description         String    @db.Text
-  summary             String
-  
-  // Type & Category
-  type                EventType
-  category            String[]
-  tags                String[]
-  
-  // Schedule
-  startDate           DateTime
-  endDate             DateTime
-  timezone            String    @default("America/Chicago")
-  duration            Int       // minutes
-  
-  // Location
-  venue               String?
-  address             String?
-  city                String?
-  state               String?
-  zipCode             String?
-  isVirtual           Boolean   @default(false)
-  virtualUrl          String?
-  
-  // Capacity & Pricing
-  maxAttendees        Int?
-  memberPrice         Decimal   @db.Decimal(10, 2)
-  guestPrice          Decimal   @db.Decimal(10, 2)
-  earlyBirdDiscount   Int?      // percentage
-  earlyBirdDeadline   DateTime?
-  
-  // Content
-  featuredImage       String?
-  images              String[]
-  agenda              Json?
-  speakers            Json?
-  sponsors            Json?
-  materials           String[]
-  
-  // Settings
-  requiresApproval    Boolean   @default(false)
-  allowGuests         Boolean   @default(true)
-  maxGuestsPerMember  Int       @default(2)
-  sendReminders       Boolean   @default(true)
-  
-  // Status
-  status              EventStatus @default(DRAFT)
-  publishedAt         DateTime?
-  cancelledAt         DateTime?
-  cancellationReason  String?
-  
-  // Meta
-  createdBy           String
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  
-  // Relations
-  registrations       EventRegistration[]
-  sponsorships        Sponsorship[]
-  waitlist            Waitlist[]
-  
-  @@index([type, startDate])
-  @@index([status, startDate])
+enum MembershipTier {
+  BASIC
+  PREMIUM
+  VIP
 }
 
-model EventRegistration {
-  id                  String    @id @default(cuid())
-  eventId             String
-  event               Event     @relation(fields: [eventId], references: [id])
-  userId              String
-  user                User      @relation(fields: [userId], references: [id])
-  
-  // Registration Info
-  ticketType          TicketType
-  quantity            Int       @default(1)
-  guests              Json?     // [{name, email}]
-  dietaryRestrictions String?
-  specialNeeds        String?
-  
-  // Payment
-  totalAmount         Decimal   @db.Decimal(10, 2)
-  discountApplied     Decimal?  @db.Decimal(10, 2)
-  paymentId           String    @unique
-  payment             Payment   @relation(fields: [paymentId], references: [id])
-  
-  // Status
-  status              RegistrationStatus @default(CONFIRMED)
-  confirmationCode    String    @unique @default(cuid())
-  checkedIn           Boolean   @default(false)
-  checkedInAt         DateTime?
-  
-  // Meta
-  registeredAt        DateTime  @default(now())
-  cancelledAt         DateTime?
-  notes               String?
-  
-  @@unique([eventId, userId])
-  @@index([status, eventId])
+enum Status {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
 }
 
 model Resource {
-  id                  String    @id @default(cuid())
-  title               String
-  slug                String    @unique
-  description         String    @db.Text
-  excerpt             String
-  
-  // Categorization
-  category            ResourceCategory
-  subcategory         String?
-  tags                String[]
-  
-  // Content
-  type                ResourceType
-  content             String?   @db.Text
-  fileUrl             String?
-  fileSize            Int?
-  fileType            String?
-  thumbnail           String?
-  
-  // Access Control
-  isPublic            Boolean   @default(false)
-  requiresMembership  Boolean   @default(true)
-  allowedTiers        MembershipTier[]
-  
-  // Usage
-  downloadCount       Int       @default(0)
-  viewCount           Int       @default(0)
-  rating              Float?    @default(0)
-  reviewCount         Int       @default(0)
-  
-  // Meta
-  createdBy           String
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  publishedAt         DateTime?
-  
-  // Relations
-  member              Member?   @relation(fields: [createdBy], references: [id])
-  
-  @@index([category, isPublic])
-  @@index([requiresMembership, allowedTiers])
-}
-
-model Payment {
-  id                  String    @id @default(cuid())
-  userId              String
-  user                User      @relation(fields: [userId], references: [id])
-  
-  // Payment Details
-  amount              Decimal   @db.Decimal(10, 2)
-  currency            String    @default("USD")
-  status              PaymentStatus
-  method              PaymentMethod
-  
-  // Stripe Integration
-  stripePaymentId     String?   @unique
-  stripeChargeId      String?   @unique
-  stripeRefundId      String?
-  
-  // Description
-  description         String
-  metadata            Json?
-  
-  // Timestamps
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  processedAt         DateTime?
-  
-  // Relations
-  registration        EventRegistration?
-  
-  @@index([status, createdAt])
-  @@index([stripePaymentId])
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
 }
 
 model Sponsorship {
-  id                  String    @id @default(cuid())
-  eventId             String
-  event               Event     @relation(fields: [eventId], references: [id])
-  memberId            String
-  member              Member    @relation(fields: [memberId], references: [id])
-  
-  // Sponsorship Details
-  tier                String
-  amount              Decimal   @db.Decimal(10, 2)
-  benefits            String[]
-  logo                String?
-  description         String?
-  
-  // Status
-  status              Status    @default(PENDING)
-  approvedAt          DateTime?
-  declinedAt          DateTime?
-  
-  // Meta
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  
-  @@unique([eventId, memberId])
-}
-
-model Waitlist {
-  id                  String    @id @default(cuid())
-  eventId             String
-  event               Event     @relation(fields: [eventId], references: [id])
-  
-  // Waitlist Info
-  email               String
-  firstName           String
-  lastName            String
-  phone               String?
-  company             String?
-  position            String?
-  
-  // Status
-  status              Status    @default(PENDING)
-  notifiedAt          DateTime?
-  registeredAt        DateTime?
-  
-  // Meta
-  joinedAt            DateTime  @default(now())
-  notes               String?
-  
-  @@unique([eventId, email])
-  @@index([status, joinedAt])
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
 }
 
 model Referral {
-  id                  String    @id @default(cuid())
-  referrerId          String
-  referrer            Member    @relation("referrer", fields: [referrerId], references: [id])
-  referredId          String
-  referred            Member    @relation("referred", fields: [referredId], references: [id])
-  
-  // Referral Details
-  companyName         String
-  contactName         String
-  contactEmail        String
-  contactPhone        String?
-  description         String?
-  
-  // Status
-  status              LeadStatus
-  notes               String?
-  
-  // Meta
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  
-  @@unique([referrerId, referredId])
-  @@index([status, createdAt])
-}
-
-model Lead {
-  id                  String    @id @default(cuid())
-  
-  // Contact Info
-  firstName           String
-  lastName            String
-  email               String
-  phone               String?
-  company             String?
-  position            String?
-  
-  // Lead Details
-  source              LeadSource
-  status              LeadStatus @default(NEW)
-  value               Decimal?  @db.Decimal(10, 2)
-  description         String?
-  
-  // Follow-up
-  assignedTo          String?
-  nextFollowUp        DateTime?
-  lastContacted       DateTime?
-  
-  // Meta
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  convertedAt         DateTime?
-  
-  @@index([status, createdAt])
-  @@index([source, status])
-}
-
-model Newsletter {
-  id                  String    @id @default(cuid())
-  
-  // Newsletter Details
-  title               String
-  subject             String
-  content             String    @db.Text
-  htmlContent         String?   @db.Text
-  
-  // Settings
-  isDraft             Boolean   @default(true)
-  scheduledFor        DateTime?
-  sentAt              DateTime?
-  
-  // Recipients
-  recipientCount      Int       @default(0)
-  openedCount         Int       @default(0)
-  clickedCount        Int       @default(0)
-  
-  // Meta
-  createdBy           String
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  
-  @@index([isDraft, scheduledFor])
-}
-
-model AuditLog {
-  id                  String    @id @default(cuid())
-  userId              String
-  user                User      @relation(fields: [userId], references: [id])
-  
-  // Action Details
-  action              String
-  entityType          String
-  entityId            String?
-  oldValues           Json?
-  newValues           Json?
-  
-  // Context
-  ipAddress           String?
-  userAgent           String?
-  
-  // Meta
-  createdAt           DateTime  @default(now())
-  
-  @@index([userId, createdAt])
-  @@index([entityType, entityId])
+  id         String   @id @default(cuid())
+  referrerId String
+  referredId String
+  referrer   Member   @relation("referrer", fields: [referrerId], references: [id])
+  referred   Member   @relation("referred", fields: [referredId], references: [id])
 } 
