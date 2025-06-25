@@ -1,7 +1,7 @@
 'use client'
 
-import { motion, AnimatePresence, MotionProps } from 'framer-motion'
-import { ReactNode } from 'react'
+import { motion, AnimatePresence, useTransform, useScroll } from "framer-motion"
+import { ReactNode, useState, useEffect } from "react"
 
 // Common animation variants
 export const fadeIn = {
@@ -89,45 +89,132 @@ export const MotionFooter = ({ children, className, ...props }: MotionDivProps) 
   </motion.footer>
 )
 
-// Page transition wrapper
-interface PageTransitionProps {
+// Fade in animation
+export const FadeIn = ({ 
+  children, 
+  delay = 0, 
+  duration = 0.6,
+  className = "" 
+}: { 
   children: ReactNode
-  className?: string
-}
-
-export const PageTransition = ({ children, className }: PageTransitionProps) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    transition={{ duration: 0.3, ease: "easeInOut" }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-)
-
-// Card animation wrapper
-interface AnimatedCardProps {
-  children: ReactNode
-  className?: string
   delay?: number
-  index?: number
-}
-
-export const AnimatedCard = ({ children, className, delay = 0, index = 0 }: AnimatedCardProps) => (
+  duration?: number
+  className?: string
+}) => (
   <motion.div
-    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    transition={{ 
-      duration: 0.4, 
-      delay: delay + (index * 0.1),
-      ease: "easeOut"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration, delay }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+)
+
+// Slide up animation
+export const SlideUp = ({ 
+  children, 
+  delay = 0, 
+  duration = 0.6,
+  className = "" 
+}: { 
+  children: ReactNode
+  delay?: number
+  duration?: number
+  className?: string
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 30 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration, delay, ease: "easeOut" }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+)
+
+// Scale in animation
+export const ScaleIn = ({ 
+  children, 
+  delay = 0, 
+  duration = 0.6,
+  className = "" 
+}: { 
+  children: ReactNode
+  delay?: number
+  duration?: number
+  className?: string
+}) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.9 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ duration, delay, ease: "easeOut" }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+)
+
+// Stagger children animation
+export const StaggerContainer = ({ 
+  children, 
+  staggerDelay = 0.1,
+  className = "" 
+}: { 
+  children: ReactNode
+  staggerDelay?: number
+  className?: string
+}) => (
+  <motion.div
+    initial="hidden"
+    animate="visible"
+    variants={{
+      hidden: { opacity: 0 },
+      visible: {
+        opacity: 1,
+        transition: {
+          staggerChildren: staggerDelay
+        }
+      }
     }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+)
+
+// Stagger item animation
+export const StaggerItem = ({ 
+  children, 
+  className = "" 
+}: { 
+  children: ReactNode
+  className?: string
+}) => (
+  <motion.div
+    variants={{
+      hidden: { opacity: 0, y: 20 },
+      visible: { opacity: 1, y: 0 }
+    }}
+    transition={{ duration: 0.6, ease: "easeOut" }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+)
+
+// Hover animations
+export const HoverCard = ({ 
+  children, 
+  className = "" 
+}: { 
+  children: ReactNode
+  className?: string
+}) => (
+  <motion.div
     whileHover={{ 
-      y: -5, 
-      scale: 1.02,
-      transition: { duration: 0.2 }
+      y: -8,
+      transition: { duration: 0.3, ease: "easeOut" }
     }}
     className={className}
   >
@@ -135,115 +222,50 @@ export const AnimatedCard = ({ children, className, delay = 0, index = 0 }: Anim
   </motion.div>
 )
 
-// Button animation wrapper
-interface AnimatedButtonProps {
+// Floating animation
+export const Floating = ({ 
+  children, 
+  className = "" 
+}: { 
   children: ReactNode
   className?: string
-  onClick?: () => void
-  disabled?: boolean
-}
-
-export const AnimatedButton = ({ children, className, onClick, disabled }: AnimatedButtonProps) => (
-  <motion.button
-    whileHover={{ scale: disabled ? 1 : 1.05 }}
-    whileTap={{ scale: disabled ? 1 : 0.95 }}
-    transition={{ duration: 0.1 }}
-    onClick={onClick}
-    disabled={disabled}
-    className={className}
-  >
-    {children}
-  </motion.button>
-)
-
-// List animation wrapper
-interface AnimatedListProps {
-  children: ReactNode
-  className?: string
-}
-
-export const AnimatedList = ({ children, className }: AnimatedListProps) => (
+}) => (
   <motion.div
-    variants={staggerContainer}
-    initial="initial"
-    animate="animate"
+    animate={{ 
+      y: [0, -10, 0],
+      transition: { 
+        duration: 3, 
+        repeat: Infinity, 
+        ease: "easeInOut" 
+      }
+    }}
     className={className}
   >
     {children}
   </motion.div>
 )
 
-// List item animation wrapper
-interface AnimatedListItemProps {
+// Pulse animation
+export const Pulse = ({ 
+  children, 
+  className = "" 
+}: { 
   children: ReactNode
   className?: string
-}
-
-export const AnimatedListItem = ({ children, className }: AnimatedListItemProps) => (
+}) => (
   <motion.div
-    variants={staggerItem}
+    animate={{ 
+      scale: [1, 1.05, 1],
+      transition: { 
+        duration: 2, 
+        repeat: Infinity, 
+        ease: "easeInOut" 
+      }
+    }}
     className={className}
   >
     {children}
   </motion.div>
-)
-
-// Modal animation wrapper
-interface AnimatedModalProps {
-  children: ReactNode
-  isOpen: boolean
-  onClose: () => void
-  className?: string
-}
-
-export const AnimatedModal = ({ children, isOpen, onClose, className }: AnimatedModalProps) => (
-  <AnimatePresence>
-    {isOpen && (
-      <>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={onClose}
-        />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 ${className}`}
-        >
-          {children}
-        </motion.div>
-      </>
-    )}
-  </AnimatePresence>
-)
-
-// Notification animation wrapper
-interface AnimatedNotificationProps {
-  children: ReactNode
-  isVisible: boolean
-  onClose: () => void
-  className?: string
-}
-
-export const AnimatedNotification = ({ children, isVisible, onClose, className }: AnimatedNotificationProps) => (
-  <AnimatePresence>
-    {isVisible && (
-      <motion.div
-        initial={{ opacity: 0, x: 300 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 300 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className={className}
-      >
-        {children}
-      </motion.div>
-    )}
-  </AnimatePresence>
 )
 
 // Loading spinner animation
@@ -255,19 +277,87 @@ export const LoadingSpinner = ({ className = "" }: { className?: string }) => (
   />
 )
 
-// Progress bar animation
-interface AnimatedProgressBarProps {
-  progress: number
+// Scroll-triggered animations
+export const ScrollReveal = ({ 
+  children, 
+  threshold = 0.1,
+  className = "" 
+}: { 
+  children: ReactNode
+  threshold?: number
   className?: string
-}
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 50 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, threshold }}
+    transition={{ duration: 0.8, ease: "easeOut" }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+)
 
-export const AnimatedProgressBar = ({ progress, className }: AnimatedProgressBarProps) => (
-  <div className={`w-full bg-gray-200 rounded-full h-2 ${className}`}>
-    <motion.div
-      className="bg-blue-600 h-2 rounded-full"
-      initial={{ width: 0 }}
-      animate={{ width: `${progress}%` }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-    />
-  </div>
-) 
+// Page transition
+export const PageTransition = ({ 
+  children, 
+  className = "" 
+}: { 
+  children: ReactNode
+  className?: string
+}) => (
+  <motion.div
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: 20 }}
+    transition={{ duration: 0.3, ease: "easeInOut" }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+)
+
+// Button hover effect
+export const AnimatedButton = ({ 
+  children, 
+  className = "",
+  onClick
+}: { 
+  children: ReactNode
+  className?: string
+  onClick?: () => void
+}) => (
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    transition={{ duration: 0.2, ease: "easeOut" }}
+    className={className}
+    onClick={onClick}
+  >
+    {children}
+  </motion.button>
+)
+
+// Card hover effect with 3D tilt
+export const TiltCard = ({ 
+  children, 
+  className = "" 
+}: { 
+  children: ReactNode
+  className?: string
+}) => (
+  <motion.div
+    whileHover={{ 
+      rotateX: 5,
+      rotateY: 5,
+      scale: 1.02,
+      transition: { duration: 0.3, ease: "easeOut" }
+    }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+)
+
+// Export AnimatePresence for conditional animations
+export { AnimatePresence } 
