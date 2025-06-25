@@ -598,6 +598,118 @@ async function main() {
     }
   }
 
+  // --- Seed Blog Posts ---
+  const adminUser = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
+  if (adminUser) {
+    const sampleBlogPosts = [
+      {
+        title: 'Welcome to the BASA Blog',
+        slug: 'welcome-to-basa-blog',
+        excerpt: 'An introduction to the BASA blog and what you can expect.',
+        content: 'Welcome to the official BASA blog! Here you will find news, updates, and resources for our business community.',
+        featuredImage: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800',
+        status: 'PUBLISHED',
+        tags: ['welcome', 'basa', 'news'],
+        metaTitle: 'Welcome to BASA Blog',
+        metaDescription: 'Introduction to the BASA blog.',
+        isFeatured: true,
+      },
+      {
+        title: 'Networking Tips for Entrepreneurs',
+        slug: 'networking-tips-entrepreneurs',
+        excerpt: 'Top strategies for effective business networking.',
+        content: 'Networking is key to business growth. Here are our top tips for making meaningful connections.',
+        featuredImage: 'https://images.unsplash.com/photo-1515168833906-d2a3b82b3029?w=800',
+        status: 'PUBLISHED',
+        tags: ['networking', 'tips', 'entrepreneurs'],
+        metaTitle: 'Networking Tips',
+        metaDescription: 'Top networking strategies for entrepreneurs.',
+        isFeatured: false,
+      },
+    ]
+    for (const post of sampleBlogPosts) {
+      const exists = await prisma.blogPost.findUnique({ where: { slug: post.slug } })
+      if (!exists) {
+        await prisma.blogPost.create({
+          data: {
+            ...post,
+            authorId: adminUser.id,
+            publishedAt: new Date(),
+          },
+        })
+        console.log(`Created blog post: ${post.title}`)
+      }
+    }
+  }
+
+  // --- Seed Testimonials ---
+  if (createdMembers.length > 0) {
+    const sampleTestimonials = [
+      {
+        authorName: 'John Smith',
+        authorTitle: 'CEO',
+        authorCompany: 'TechCorp Solutions',
+        content: 'BASA has been instrumental in growing our business. The networking opportunities and resources have helped us connect with key clients and partners.',
+        rating: 5,
+        status: 'APPROVED',
+        isFeatured: true,
+        memberId: createdMembers[0].id,
+      },
+      {
+        authorName: 'Sarah Johnson',
+        authorTitle: 'Founder',
+        authorCompany: 'Innovate Business Solutions',
+        content: 'The mentorship program and business resources have been invaluable. I have learned so much from fellow entrepreneurs in the BASA community.',
+        rating: 5,
+        status: 'APPROVED',
+        isFeatured: false,
+        memberId: createdMembers[1].id,
+      },
+    ]
+    for (const testimonial of sampleTestimonials) {
+      const exists = await prisma.testimonial.findFirst({ where: { authorName: testimonial.authorName, memberId: testimonial.memberId } })
+      if (!exists) {
+        await prisma.testimonial.create({ data: testimonial })
+        console.log(`Created testimonial: ${testimonial.authorName}`)
+      }
+    }
+  }
+
+  // --- Seed Resources ---
+  if (createdMembers.length > 0) {
+    const sampleResources = [
+      {
+        title: 'Business Plan Template',
+        description: 'A comprehensive template for creating a professional business plan.',
+        fileUrl: 'https://example.com/business-plan-template.pdf',
+        fileType: 'PDF',
+        fileSize: 1024000,
+        isActive: true,
+        category: 'Templates',
+        tags: ['template', 'business', 'plan'],
+        memberId: createdMembers[0].id,
+      },
+      {
+        title: 'Networking Guide',
+        description: 'Tips and strategies for effective business networking.',
+        fileUrl: 'https://example.com/networking-guide.pdf',
+        fileType: 'PDF',
+        fileSize: 512000,
+        isActive: true,
+        category: 'Guides',
+        tags: ['networking', 'guide'],
+        memberId: createdMembers[1].id,
+      },
+    ]
+    for (const resource of sampleResources) {
+      const exists = await prisma.resource.findFirst({ where: { title: resource.title, memberId: resource.memberId } })
+      if (!exists) {
+        await prisma.resource.create({ data: resource })
+        console.log(`Created resource: ${resource.title}`)
+      }
+    }
+  }
+
   console.log('Seed data creation completed!')
 }
 

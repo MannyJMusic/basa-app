@@ -53,6 +53,7 @@ model User {
   sessions      Session[]
   member        Member?
   auditLogs     AuditLog[]
+  blogPosts     BlogPost[]
 }
 
 model VerificationToken {
@@ -123,6 +124,7 @@ model Member {
   events              Event[]
   eventRegistrations  EventRegistration[]
   eventSponsors       EventSponsor[]
+  testimonials         Testimonial[]
   @@index([businessType, membershipStatus])
   @@index([industry])
 }
@@ -140,9 +142,24 @@ enum Status {
 }
 
 model Resource {
-  id        String   @id @default(cuid())
-  memberId  String
-  member    Member   @relation(fields: [memberId], references: [id])
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  fileUrl     String?
+  fileType    String?
+  fileSize    Int?
+  downloadCount Int    @default(0)
+  isActive    Boolean  @default(true)
+  category    String?
+  tags        String[]
+  memberId    String?
+  member      Member?  @relation(fields: [memberId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([category])
+  @@index([memberId])
 }
 
 model Sponsorship {
@@ -324,4 +341,62 @@ model Settings {
   updatedAt             DateTime @updatedAt
   
   @@map("settings")
+}
+
+// Content Management Models
+model BlogPost {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  excerpt     String?     @db.Text
+  content     String      @db.Text
+  featuredImage String?
+  authorId    String
+  author      User        @relation(fields: [authorId], references: [id])
+  status      PostStatus  @default(DRAFT)
+  publishedAt DateTime?
+  tags        String[]
+  metaTitle   String?
+  metaDescription String?
+  viewCount   Int         @default(0)
+  isFeatured  Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([authorId])
+  @@index([tags])
+}
+
+model Testimonial {
+  id          String    @id @default(cuid())
+  authorName  String
+  authorTitle String?
+  authorCompany String?
+  authorImage String?
+  content     String    @db.Text
+  rating      Int       @default(5)
+  status      TestimonialStatus @default(PENDING)
+  isFeatured  Boolean   @default(false)
+  memberId    String?
+  member      Member?   @relation(fields: [memberId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+  @@index([isFeatured])
+  @@index([memberId])
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TestimonialStatus {
+  PENDING
+  APPROVED
+  REJECTED
 } 
