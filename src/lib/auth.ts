@@ -5,6 +5,7 @@ import LinkedInProvider from "next-auth/providers/linkedin"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
+import { getRedirectUrl } from "@/lib/utils"
 import type { NextAuthConfig } from "next-auth"
 import type { JWT } from "next-auth/jwt"
 import type { Session } from "next-auth"
@@ -69,6 +70,7 @@ export const authConfig: NextAuthConfig = {
           token.lastName = user.lastName
           token.role = user.role
           token.isActive = user.isActive
+          token.image = user.image
         }
         
         return token
@@ -82,14 +84,31 @@ export const authConfig: NextAuthConfig = {
             lastName: token.lastName as string,
             role: token.role as string,
             isActive: token.isActive as boolean,
+            image: token.image as string,
           }
         }
         
         return session
       },
+      async redirect({ url, baseUrl }) {
+        // If the url is relative, prefix it with the base url
+        if (url.startsWith("/")) return `${baseUrl}${url}`
+        // If the url is on the same origin, allow it
+        else if (new URL(url).origin === baseUrl) return url
+        // Otherwise, redirect to the dashboard
+        return `${baseUrl}/dashboard`
+      },
       async signIn({ user, account, profile }: { user: any; account?: any; profile?: any }) {
         if (user) {
           try {
+            console.log("SignIn callback - User data:", {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              image: user.image,
+              provider: account?.provider
+            });
+
             // Check if user exists by id
             let dbUser = await prisma.user.findUnique({ 
               where: { id: user.id },
@@ -97,6 +116,8 @@ export const authConfig: NextAuthConfig = {
             });
 
             if (dbUser) {
+              console.log("Existing user found:", dbUser.id);
+              
               // Check if this provider account already exists
               if (account?.provider && account?.providerAccountId) {
                 const existingAccount = await prisma.account.findUnique({
@@ -128,10 +149,16 @@ export const authConfig: NextAuthConfig = {
                 }
               }
 
-              // Update last login
+              // Update last login and image if provided
+              const updateData: any = { lastLogin: new Date() };
+              if (user.image) {
+                updateData.image = user.image;
+                console.log("Updating user image:", user.image);
+              }
+
               await prisma.user.update({
                 where: { id: dbUser.id },
-                data: { lastLogin: new Date() }
+                data: updateData
               });
 
               // Log sign in
@@ -143,10 +170,12 @@ export const authConfig: NextAuthConfig = {
                   entityId: dbUser.id,
                   newValues: {
                     timestamp: new Date().toISOString(),
-                    provider: account?.provider || 'credentials'
+                    provider: account?.provider || 'credentials',
+                    image: user.image || null
                   }
                 }
               });
+              
               return true;
             }
 
@@ -158,6 +187,8 @@ export const authConfig: NextAuthConfig = {
               });
 
               if (existingByEmail) {
+                console.log("Existing user found by email:", existingByEmail.id);
+                
                 // Check if this provider account already exists for this user
                 if (account?.providerAccountId) {
                   const existingAccount = await prisma.account.findUnique({
@@ -189,10 +220,16 @@ export const authConfig: NextAuthConfig = {
                   }
                 }
 
-                // Update last login
+                // Update last login and image if provided
+                const updateData: any = { lastLogin: new Date() };
+                if (user.image) {
+                  updateData.image = user.image;
+                  console.log("Updating existing user image:", user.image);
+                }
+
                 await prisma.user.update({
                   where: { id: existingByEmail.id },
-                  data: { lastLogin: new Date() }
+                  data: updateData
                 });
 
                 // Log sign in
@@ -204,19 +241,46 @@ export const authConfig: NextAuthConfig = {
                     entityId: existingByEmail.id,
                     newValues: {
                       timestamp: new Date().toISOString(),
-                      provider: account.provider
+                      provider: account.provider,
+                      image: user.image || null
                     }
                   }
                 });
+                
                 return true;
               }
             }
 
-            // For new social login users, redirect to sign-up page
-            if (account?.provider) {
-              // Store the social login data in the session for the sign-up page
-              return `/auth/sign-up?provider=${account.provider}&email=${encodeURIComponent(user.email || '')}&name=${encodeURIComponent(user.name || '')}`
+            // For new social login users, the PrismaAdapter will create the user
+            // We need to update the user with the image after creation
+            if (account?.provider && user.image) {
+              console.log("New social login user, updating with image:", user.image);
+              
+              // Wait a moment for the PrismaAdapter to create the user
+              setTimeout(async () => {
+                try {
+                  const newUser = await prisma.user.findUnique({
+                    where: { id: user.id }
+                  });
+                  
+                  if (newUser) {
+                    await prisma.user.update({
+                      where: { id: user.id },
+                      data: { 
+                        image: user.image,
+                        role: "MEMBER",
+                        isActive: true
+                      }
+                    });
+                    console.log("Successfully updated new user with image");
+                  }
+                } catch (error) {
+                  console.error("Error updating new user with image:", error);
+                }
+              }, 1000);
             }
+
+            return true;
           } catch (error) {
             console.error("SignIn error:", error);
             throw error;
@@ -224,7 +288,7 @@ export const authConfig: NextAuthConfig = {
         }
 
         return true;
-      }
+      },
     },
     pages: {
       signIn: '/auth/sign-in',
