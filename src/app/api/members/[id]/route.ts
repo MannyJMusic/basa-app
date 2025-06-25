@@ -29,7 +29,7 @@ export async function GET(
 ) {
   try {
     const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -62,10 +62,10 @@ export async function GET(
               },
             },
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: { id: "desc" },
           take: 10,
         },
-        sponsorships: {
+        eventSponsors: {
           include: {
             event: {
               select: {
@@ -75,7 +75,7 @@ export async function GET(
               },
             },
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: { id: "desc" },
           take: 10,
         },
       },
@@ -83,6 +83,11 @@ export async function GET(
 
     if (!member) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 })
+    }
+
+    // For non-admins, only allow viewing if showInDirectory is true
+    if (session.user.role !== "ADMIN" && !member.showInDirectory) {
+      return NextResponse.json({ error: "Not allowed" }, { status: 403 })
     }
 
     return NextResponse.json(member)

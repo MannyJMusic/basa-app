@@ -31,38 +31,10 @@ import {
   Star
 } from 'lucide-react'
 import Link from 'next/link'
+import { useEvents } from '@/hooks/use-events'
 
 // Load Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
-
-// Mock event data - in real app, this would come from API
-const EVENT_DATA = {
-  id: 'monthly-mixer-2024',
-  title: 'BASA Monthly Mixer',
-  description: 'Connect with fellow business owners in a relaxed, professional setting. Network, share ideas, and build meaningful relationships.',
-  date: '2024-02-15',
-  time: '18:00',
-  location: 'San Antonio Chamber of Commerce',
-  address: '602 E Commerce St, San Antonio, TX 78205',
-  price: {
-    member: 25,
-    nonMember: 50
-  },
-  capacity: 100,
-  registered: 67,
-  features: [
-    'Professional networking opportunities',
-    'Light refreshments included',
-    'Business card exchange',
-    'Guest speaker presentation',
-    'Door prizes and giveaways'
-  ],
-  speaker: {
-    name: 'Sarah Johnson',
-    title: 'CEO, Johnson Marketing Group',
-    topic: 'Building Authentic Business Relationships'
-  }
-}
 
 interface AttendeeInfo {
   name: string
@@ -76,6 +48,7 @@ export default function EventRegistrationPage() {
   const params = useParams()
   const eventSlug = params.slug as string
   
+  const [event, setEvent] = useState<any>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -85,12 +58,48 @@ export default function EventRegistrationPage() {
     { name: '', email: '', company: '', phone: '' }
   ])
 
-  const event = EVENT_DATA // In real app, fetch by slug
-  const availableSpots = event.capacity - event.registered
+  useEffect(() => {
+    async function loadEvent() {
+      setLoading(true)
+      setError(null)
+      try {
+        // Fetch event by slug from API
+        const res = await fetch(`/api/events?search=${eventSlug}`)
+        const data = await res.json()
+        // Find exact match by slug
+        const found = data.events?.find((e: any) => e.slug === eventSlug)
+        if (found) {
+          setEvent(found)
+        } else {
+          setError('Event not found')
+        }
+      } catch (err) {
+        setError('Failed to load event')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadEvent()
+  }, [eventSlug])
+
+  if (loading || !event) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Loading event...</h1>
+            {error && <p className="text-red-600">{error}</p>}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const availableSpots = event.capacity - (event.registrations?.length || 0)
 
   // Calculate pricing with group discounts
   const calculatePricing = () => {
-    const basePrice = isMember ? event.price.member : event.price.nonMember
+    const basePrice = isMember ? event.memberPrice : event.price
     let totalPrice = basePrice * ticketCount
     let discount = 0
     let discountPercentage = 0
@@ -271,7 +280,7 @@ export default function EventRegistrationPage() {
                       </Label>
                     </div>
                     <p className="text-sm text-gray-600">
-                      Members pay ${event.price.member} per ticket, non-members pay ${event.price.nonMember}
+                      Members pay ${event.memberPrice} per ticket, non-members pay ${event.price}
                     </p>
                   </div>
 
