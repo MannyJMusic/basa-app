@@ -408,6 +408,40 @@
     background-clip: text;
   }
   
+  /* Event Badge Styles */
+  .event-badge-networking {
+    background-color: #f0f4f8 !important;
+    color: #1B365D !important;
+    border-color: #bcccdc !important;
+  }
+  
+  .event-badge-ribbon-cutting {
+    background-color: #FFF9E3 !important;
+    color: #FFB300 !important;
+    border-color: #FFE066 !important;
+  }
+  
+  .event-badge-community {
+    background-color: #f0fdfa !important;
+    color: #0f7d8f !important;
+    border-color: #99f6e4 !important;
+  }
+  
+  .event-badge-summit {
+    background-color: #faf5ff !important;
+    color: #7c3aed !important;
+    border-color: #c4b5fd !important;
+  }
+  
+  .event-badge-networking:hover,
+  .event-badge-ribbon-cutting:hover,
+  .event-badge-community:hover,
+  .event-badge-summit:hover {
+    background-color: inherit !important;
+    color: inherit !important;
+    border-color: inherit !important;
+  }
+  
   /* Background Patterns */
   .bg-pattern-dots {
     background-image: radial-gradient(circle, rgba(255, 215, 0, 0.1) 1px, transparent 1px);

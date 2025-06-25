@@ -4,15 +4,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Testimonials } from "@/components/marketing/testimonials"
+import { FeaturedEvents } from "@/components/marketing/featured-events"
 import { 
   Users, 
   TrendingUp, 
   Heart, 
-  Calendar, 
   Award, 
   Handshake,
-  MapPin,
-  Clock,
   Star,
   Target,
   Building2,
@@ -252,129 +250,7 @@ export default function HomePage() {
       />
 
       {/* Featured Events Preview */}
-      <section className="basa-section relative bg-cover bg-center" style={{ backgroundImage: 'url(/images/backgrounds/calendar-bg.jpg)' }}>
-        <div className="absolute inset-0 bg-black/40"></div>
-        <div className="absolute inset-0 bg-pattern-dots opacity-5"></div>
-        <div className="relative basa-container">
-          <div className="text-center mb-20">
-            <Badge variant="secondary" className="mb-6 bg-teal-100 text-teal-800">
-              <Calendar className="w-4 h-4 mr-2" />
-              Upcoming Events
-            </Badge>
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-gradient-teal">
-              Don't Miss Our Next
-              <span className="block">Networking Opportunities</span>
-            </h2>
-            <p className="text-lg text-basa-charcoal max-w-3xl mx-auto leading-relaxed">
-              Join our curated events designed to accelerate your business growth and build meaningful connections.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Event Card 1 */}
-            <Card className="basa-card group hover:scale-105 transition-all duration-500">
-              <CardHeader>
-                <div className="flex items-center justify-between mb-4">
-                  <Badge variant="secondary" className="bg-navy-100 text-navy-800">
-                    Networking
-                  </Badge>
-                  <div className="text-sm text-gray-500 flex items-center">
-                    <Clock className="w-4 h-4 mr-1" />
-                    Monthly
-                  </div>
-                </div>
-                <CardTitle className="text-xl mb-2">BASA Monthly Mixer</CardTitle>
-                <CardDescription className="text-basa-charcoal">
-                  Connect with fellow business owners in a relaxed, professional setting with curated networking activities.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center text-sm text-basa-charcoal mb-6">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  San Antonio, TX
-                </div>
-                <Button asChild className="w-full basa-btn-primary text-white group">
-                  <Link href="/events">
-                    Learn More
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Event Card 2 */}
-            <Card className="basa-card group hover:scale-105 transition-all duration-500">
-              <CardHeader>
-                <div className="flex items-center justify-between mb-4">
-                  <Badge variant="secondary" className="bg-gold-100 text-gold-800">
-                    Ribbon Cutting
-                  </Badge>
-                  <div className="text-sm text-gray-500 flex items-center">
-                    <Clock className="w-4 h-4 mr-1" />
-                    Weekly
-                  </div>
-                </div>
-                <CardTitle className="text-xl mb-2">Member Business Celebrations</CardTitle>
-                <CardDescription className="text-basa-charcoal">
-                  Celebrate new member businesses with ribbon cutting ceremonies and community support.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center text-sm text-basa-charcoal mb-6">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Various Locations
-                </div>
-                <Button asChild className="w-full basa-btn-secondary group">
-                  <Link href="/events">
-                    Learn More
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Event Card 3 */}
-            <Card className="basa-card group hover:scale-105 transition-all duration-500">
-              <CardHeader>
-                <div className="flex items-center justify-between mb-4">
-                  <Badge variant="secondary" className="bg-teal-100 text-teal-800">
-                    Community
-                  </Badge>
-                  <div className="text-sm text-gray-500 flex items-center">
-                    <Clock className="w-4 h-4 mr-1" />
-                    Quarterly
-                  </div>
-                </div>
-                <CardTitle className="text-xl mb-2">Networking & Giving Initiative</CardTitle>
-                <CardDescription className="text-basa-charcoal">
-                  Partner with local nonprofits to make a positive community impact while networking.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center text-sm text-basa-charcoal mb-6">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  San Antonio Area
-                </div>
-                <Button asChild className="w-full basa-btn-accent text-white group">
-                  <Link href="/events">
-                    Learn More
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="text-center mt-16">
-            <Button asChild variant="outline" size="lg" className="basa-btn-primary text-lg px-8 py-4 group">
-              <Link href="/events">
-                View All Events
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      <FeaturedEvents />
     </div>
   )
 } 

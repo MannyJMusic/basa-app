@@ -59,7 +59,11 @@ export default function Navigation() {
                 alt="BASA Logo"
                 width={140}
                 height={50}
-                className="h-8 w-auto lg:h-10 transition-transform duration-300 group-hover:scale-105 filter brightness-110"
+                className={`h-8 w-auto lg:h-10 transition-all duration-300 group-hover:scale-105 ${
+                  isScrolled 
+                    ? 'filter brightness-0 contrast-200'
+                    : 'filter brightness-110'
+                }`}
                 priority
               />
             </Link>
