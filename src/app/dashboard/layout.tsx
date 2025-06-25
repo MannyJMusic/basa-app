@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import Image from "next/image"
 import DashboardNav from "@/components/dashboard/dashboard-nav"
 import DashboardHeader from "@/components/dashboard/dashboard-header"
 
@@ -19,9 +20,18 @@ export default async function DashboardLayout({
       {/* Sidebar */}
       <aside className="hidden w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 lg:block">
         <div className="p-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            BASA Dashboard
-          </h1>
+          <div className="flex items-center">
+            <Image
+              src="/images/BASA-LOGO.png"
+              alt="BASA Logo"
+              width={100}
+              height={35}
+              className="h-8 w-auto"
+            />
+            <span className="ml-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+              Dashboard
+            </span>
+          </div>
         </div>
         <DashboardNav />
       </aside>

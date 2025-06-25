@@ -376,7 +376,7 @@ export default function TestimonialsPage() {
             Connect, grow, and make an impact with 150+ business leaders.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="bg-white text-blue-900 hover:bg-blue-50">
+            <Button asChild size="lg" className="basa-btn-white basa-text-navy">
               <Link href="/membership/join">Join BASA Today</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10">

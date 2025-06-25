@@ -1,3 +1,469 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Enhanced BASA Brand Colors with CSS Custom Properties */
+    --basa-primary: 219 42% 23%;        /* #1B365D - Navy */
+    --basa-secondary: 48 100% 50%;      /* #FFD700 - Gold */
+    --basa-accent: 188 75% 40%;         /* #17A2B8 - Teal */
+    --basa-warm: 38 84% 84%;            /* Warm cream for backgrounds */
+    
+    /* Semantic Colors */
+    --basa-success: 160 84% 39%;        /* #14b8a6 - Success green */
+    --basa-warning: 38 92% 50%;         /* #f59538 - Warning orange */
+    --basa-error: 0 84% 60%;            /* #f87171 - Error red */
+    
+    /* Neutrals */
+    --basa-navy: 219 42% 23%;           /* #1B365D */
+    --basa-gold: 48 100% 50%;           /* #FFD700 */
+    --basa-white: 0 0% 100%;            /* #ffffff */
+    --basa-light-gray: 220 14% 96%;     /* #f1f5f9 */
+    --basa-charcoal: 215 28% 17%;       /* #1e293b */
+    --basa-teal: 188 75% 40%;           /* #17A2B8 */
+    
+    /* Legacy support - keeping existing variables but updating values */
+    --background: 0 0% 100%;
+    --foreground: 215 28% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+    --primary: 219 42% 23%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 215 28% 17%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 28% 45%;
+    --accent: 38 37% 67%;
+    --accent-foreground: 219 42% 23%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 219 42% 23%;
+    --radius: 0.75rem;
+    
+    /* Updated BASA Brand Colors */
+    --basa-primary: 219 42% 23%;      /* Navy Blue */
+    --basa-secondary: 48 100% 50%;     /* Warm Gold */
+    --basa-accent: 188 75% 40%;       /* Teal */
+    --basa-warm: 38 84% 84%;          /* Gold */
+    --basa-success: 160 84% 39%;      /* Success Green */
+    --basa-warning: 38 92% 50%;       /* Warning Yellow */
+    --basa-error: 0 84% 60%;          /* Error Red */
+    
+    /* Beautiful gradients using your palette */
+    --gradient-primary: linear-gradient(135deg, #1B365D 0%, #243b53 100%);
+    --gradient-secondary: linear-gradient(135deg, #FFD700 0%, #FFC300 100%);
+    --gradient-hero: linear-gradient(135deg, #1B365D 0%, #17A2B8 50%, #FFD700 100%);
+    --gradient-card: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    --gradient-accent: linear-gradient(135deg, #17A2B8 0%, #14b8a6 100%);
+  }
+
+  .dark {
+    --basa-primary: 219 42% 35%;        /* Lighter navy for dark mode */
+    --basa-secondary: 38 40% 75%;       /* Brighter gold for dark mode */
+    --basa-warm: 219 20% 15%;           /* Dark warm background */
+    --basa-light-gray: 215 28% 17%;     /* Dark gray */
+    --basa-charcoal: 220 14% 96%;       /* Light text in dark mode */
+    
+    --background: 215 28% 17%;
+    --foreground: 220 14% 96%;
+    --card: 215 28% 17%;
+    --card-foreground: 220 14% 96%;
+    --popover: 215 28% 17%;
+    --popover-foreground: 220 14% 96%;
+    --primary: 38 37% 67%;
+    --primary-foreground: 215 28% 17%;
+    --secondary: 215 28% 25%;
+    --secondary-foreground: 220 14% 96%;
+    --muted: 215 28% 25%;
+    --muted-foreground: 220 14% 65%;
+    --accent: 38 37% 67%;
+    --accent-foreground: 215 28% 17%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 220 14% 96%;
+    --border: 215 28% 25%;
+    --input: 215 28% 25%;
+    --ring: 38 37% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: hsl(var(--basa-charcoal));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Professional Typography System */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', 'Inter', sans-serif;
+    font-weight: 600;
+    color: hsl(var(--basa-navy));
+    @apply tracking-tight;
+  }
+  
+  h1 {
+    @apply text-3xl md:text-4xl lg:text-5xl;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+  
+  h2 {
+    @apply text-2xl md:text-3xl lg:text-4xl;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+  
+  h3 {
+    @apply text-xl md:text-2xl lg:text-3xl;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+  
+  h4 {
+    @apply text-lg md:text-xl lg:text-2xl;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+  
+  h5 {
+    @apply text-base md:text-lg lg:text-xl;
+    line-height: 1.5;
+    font-weight: 600;
+  }
+  
+  h6 {
+    @apply text-sm md:text-base lg:text-lg;
+    line-height: 1.5;
+    font-weight: 600;
+  }
+  
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+}
+
+@layer components {
+  /* BASA Professional Components */
+  .basa-gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .basa-gradient-secondary {
+    background: var(--gradient-secondary);
+  }
+  
+  .basa-gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .basa-gradient-card {
+    background: var(--gradient-card);
+  }
+  
+  .basa-gradient-accent {
+    background: var(--gradient-accent);
+  }
+  
+  .basa-text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .basa-text-gold {
+    color: hsl(var(--basa-gold));
+  }
+  
+  .basa-text-navy {
+    color: hsl(var(--basa-navy));
+  }
+  
+  /* Enhanced Professional Card Styles */
+  .basa-card {
+    @apply bg-white rounded-2xl shadow-lg border border-gray-100;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .basa-card:hover {
+    @apply shadow-xl;
+    transform: translateY(-5px);
+    border-color: hsl(var(--basa-gold));
+  }
+  
+  .basa-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+    transition: left 0.5s;
+  }
+  
+  .basa-card:hover::before {
+    left: 100%;
+  }
+  
+  /* Professional Button Styles - Fixed */
+  .basa-btn-primary {
+    background: linear-gradient(135deg, #1B365D 0%, #15294d 100%);
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 9999px;
+    transition: all 0.3s ease;
+    transform: scale(1);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .basa-btn-primary:hover {
+    background: linear-gradient(135deg, #15294d 0%, #0f1d3a 100%);
+    transform: scale(1.05);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  .basa-btn-secondary {
+    background: linear-gradient(135deg, #FFD700 0%, #FFC300 100%);
+    color: #1B365D;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 9999px;
+    transition: all 0.3s ease;
+    transform: scale(1);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .basa-btn-secondary:hover {
+    background: linear-gradient(135deg, #FFC300 0%, #FFD700 100%);
+    transform: scale(1.05);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  .basa-btn-accent {
+    background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%);
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 9999px;
+    transition: all 0.3s ease;
+    transform: scale(1);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .basa-btn-accent:hover {
+    background: linear-gradient(135deg, #1391a5 0%, #0f7d8f 100%);
+    transform: scale(1.05);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  /* Button shine effect */
+  .basa-btn-primary::before,
+  .basa-btn-secondary::before,
+  .basa-btn-accent::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+  }
+  
+  .basa-btn-primary:hover::before,
+  .basa-btn-secondary:hover::before,
+  .basa-btn-accent:hover::before {
+    left: 100%;
+  }
+  
+  /* Section Enhancements */
+  .basa-section {
+    @apply py-16 md:py-24;
+  }
+  
+  .basa-container {
+    @apply container mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Professional Header */
+  .basa-header {
+    background: linear-gradient(135deg, #1B365D 0%, #243b53 100%);
+    box-shadow: 0 2px 20px rgba(27, 54, 93, 0.15);
+    backdrop-filter: blur(10px);
+  }
+  
+  /* Animation Classes */
+  .fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+  
+  .slide-up {
+    animation: slideUp 0.6s ease-out;
+  }
+  
+  .scale-in {
+    animation: scaleIn 0.6s ease-out;
+  }
+  
+  .float {
+    animation: float 3s ease-in-out infinite;
+  }
+}
+
+@layer utilities {
+  /* Custom Animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  /* Text Gradients */
+  .text-gradient-navy {
+    background: linear-gradient(135deg, #1B365D 0%, #243b53 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #FFD700 0%, #FFC300 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .text-gradient-teal {
+    background: linear-gradient(135deg, #17A2B8 0%, #14b8a6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Event Badge Styles */
+  .event-badge-networking {
+    background-color: #f0f4f8 !important;
+    color: #1B365D !important;
+    border-color: #bcccdc !important;
+  }
+  
+  .event-badge-ribbon-cutting {
+    background-color: #FFF9E3 !important;
+    color: #FFB300 !important;
+    border-color: #FFE066 !important;
+  }
+  
+  .event-badge-community {
+    background-color: #f0fdfa !important;
+    color: #0f7d8f !important;
+    border-color: #99f6e4 !important;
+  }
+  
+  .event-badge-summit {
+    background-color: #faf5ff !important;
+    color: #7c3aed !important;
+    border-color: #c4b5fd !important;
+  }
+  
+  .event-badge-networking:hover,
+  .event-badge-ribbon-cutting:hover,
+  .event-badge-community:hover,
+  .event-badge-summit:hover {
+    background-color: inherit !important;
+    color: inherit !important;
+    border-color: inherit !important;
+  }
+  
+  /* Background Patterns */
+  .bg-pattern-dots {
+    background-image: radial-gradient(circle, rgba(255, 215, 0, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  .bg-pattern-grid {
+    background-image: linear-gradient(rgba(255, 215, 0, 0.1) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255, 215, 0, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  /* Responsive utilities */
+  .text-responsive {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+  }
+  
+  .heading-responsive {
+    font-size: clamp(2rem, 5vw, 3rem);
+  }
+}
+
+.text-primary-foreground {
+  color: hsl(var(--basa-navy));
+} 

@@ -21,7 +21,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
   return (
     <div className="flex flex-col min-h-screen">
       <Navigation />
-      <main className="flex-1">
+      <main className="flex-1 pt-16 lg:pt-20">
         {children}
       </main>
       <Footer />
