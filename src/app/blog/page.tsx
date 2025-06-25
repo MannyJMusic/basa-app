@@ -153,7 +153,7 @@ export default function BlogPage() {
           <p className="text-xl mb-8 text-blue-100 max-w-2xl mx-auto">
             BASA welcomes guest posts from members and San Antonio business leaders. Share your networking tips, success stories, or industry insights with our community.
           </p>
-          <Button asChild size="lg" className="bg-white text-blue-900 hover:bg-blue-50">
+          <Button asChild size="lg" className="basa-btn-white basa-text-navy">
             <Link href="/blog/write">Write for Us</Link>
           </Button>
         </div>
