@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/components/ui/use-toast"
 import { useProfile, UpdateProfileData } from "@/hooks/use-profile"
 import { 
@@ -240,22 +241,15 @@ export default function DashboardProfilePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
-                  {profile.image ? (
-                    <img 
-                      src={profile.image} 
-                      alt={`${profile.firstName || 'User'} ${profile.lastName || 'Profile'}`} 
-                      className="w-20 h-20 rounded-full object-cover"
-                      onError={(e) => {
-                        // Fallback to icon if image fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        target.nextElementSibling?.classList.remove('hidden');
-                      }}
-                    />
-                  ) : null}
-                  <User className={`w-10 h-10 text-blue-600 ${profile.image ? 'hidden' : ''}`} />
-                </div>
+                <Avatar className="w-20 h-20">
+                  <AvatarImage 
+                    src={profile.image} 
+                    alt={`${profile.firstName || 'User'} ${profile.lastName || 'Profile'}`}
+                  />
+                  <AvatarFallback className="bg-blue-100 text-blue-600 text-2xl font-semibold">
+                    {profile.firstName?.charAt(0) || 'U'}{profile.lastName?.charAt(0) || ''}
+                  </AvatarFallback>
+                </Avatar>
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold">
                     {isEditing ? (

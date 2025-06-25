@@ -43,7 +43,7 @@ export const authConfig: NextAuthConfig = {
 
           const isPasswordValid = await bcrypt.compare(
             credentials.password as string,
-            user.hashedPassword as string
+            user.hashedPassword
           )
 
           if (!isPasswordValid) {
@@ -52,9 +52,9 @@ export const authConfig: NextAuthConfig = {
 
           return {
             id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
+            email: user.email || '',
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
             role: user.role,
             isActive: user.isActive,
           }
@@ -109,6 +109,31 @@ export const authConfig: NextAuthConfig = {
               provider: account?.provider
             });
 
+            console.log("Profile data:", profile);
+            console.log("Account data:", account);
+
+            // Get name from OAuth provider's specific fields
+            let firstName = '';
+            let lastName = '';
+
+            if (account?.provider === 'google' && profile) {
+              // Google provides given_name and family_name
+              firstName = profile.given_name || '';
+              lastName = profile.family_name || '';
+              console.log("Google OAuth name data:", { given_name: profile.given_name, family_name: profile.family_name });
+            } else if (account?.provider === 'linkedin' && profile) {
+              // LinkedIn might have different field names
+              firstName = profile.localizedFirstName || profile.firstName || '';
+              lastName = profile.localizedLastName || profile.lastName || '';
+              console.log("LinkedIn OAuth name data:", { firstName, lastName });
+            } else {
+              // Fallback to splitting the full name
+              const splitResult = splitName(user.name);
+              firstName = splitResult.firstName;
+              lastName = splitResult.lastName;
+              console.log("Fallback name splitting:", { firstName, lastName });
+            }
+
             // Check if user exists by id
             let dbUser = await prisma.user.findUnique({ 
               where: { id: user.id },
@@ -149,11 +174,17 @@ export const authConfig: NextAuthConfig = {
                 }
               }
 
-              // Update last login and image if provided
+              // Update last login, image, and name if provided
               const updateData: any = { lastLogin: new Date() };
               if (user.image) {
                 updateData.image = user.image;
                 console.log("Updating user image:", user.image);
+              }
+              // Update name fields if they're empty and we have name data
+              if ((!dbUser.firstName || !dbUser.lastName) && (firstName || lastName)) {
+                if (firstName && !dbUser.firstName) updateData.firstName = firstName;
+                if (lastName && !dbUser.lastName) updateData.lastName = lastName;
+                console.log("Updating user name:", { firstName, lastName });
               }
 
               await prisma.user.update({
@@ -220,11 +251,17 @@ export const authConfig: NextAuthConfig = {
                   }
                 }
 
-                // Update last login and image if provided
+                // Update last login, image, and name if provided
                 const updateData: any = { lastLogin: new Date() };
                 if (user.image) {
                   updateData.image = user.image;
                   console.log("Updating existing user image:", user.image);
+                }
+                // Update name fields if they're empty and we have name data
+                if ((!existingByEmail.firstName || !existingByEmail.lastName) && (firstName || lastName)) {
+                  if (firstName && !existingByEmail.firstName) updateData.firstName = firstName;
+                  if (lastName && !existingByEmail.lastName) updateData.lastName = lastName;
+                  console.log("Updating existing user name:", { firstName, lastName });
                 }
 
                 await prisma.user.update({
@@ -252,9 +289,9 @@ export const authConfig: NextAuthConfig = {
             }
 
             // For new social login users, the PrismaAdapter will create the user
-            // We need to update the user with the image after creation
-            if (account?.provider && user.image) {
-              console.log("New social login user, updating with image:", user.image);
+            // We need to update the user with the image and name after creation
+            if (account?.provider) {
+              console.log("New social login user, will update with image and name");
               
               // Wait a moment for the PrismaAdapter to create the user
               setTimeout(async () => {
@@ -264,18 +301,27 @@ export const authConfig: NextAuthConfig = {
                   });
                   
                   if (newUser) {
+                    const updateData: any = { 
+                      role: "MEMBER",
+                      isActive: true
+                    };
+                    
+                    if (user.image) {
+                      updateData.image = user.image;
+                    }
+                    
+                    // Add name fields if we have them
+                    if (firstName) updateData.firstName = firstName;
+                    if (lastName) updateData.lastName = lastName;
+                    
                     await prisma.user.update({
                       where: { id: user.id },
-                      data: { 
-                        image: user.image,
-                        role: "MEMBER",
-                        isActive: true
-                      }
+                      data: updateData
                     });
-                    console.log("Successfully updated new user with image");
+                    console.log("Successfully updated new user with image and name:", { firstName, lastName });
                   }
                 } catch (error) {
-                  console.error("Error updating new user with image:", error);
+                  console.error("Error updating new user with image and name:", error);
                 }
               }, 1000);
             }
