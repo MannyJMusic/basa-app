@@ -54,7 +54,7 @@ export const authConfig: NextAuthConfig = {
           }
 
           const isPasswordValid = await bcrypt.compare(
-            credentials.password,
+            credentials.password as string,
             user.hashedPassword as string
           )
 

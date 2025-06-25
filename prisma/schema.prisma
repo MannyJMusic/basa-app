@@ -120,6 +120,9 @@ model Member {
   sponsorships        Sponsorship[]
   referralsGiven      Referral[] @relation("referrer")
   referralsReceived   Referral[] @relation("referred")
+  events              Event[]
+  eventRegistrations  EventRegistration[]
+  eventSponsors       EventSponsor[]
   @@index([businessType, membershipStatus])
   @@index([industry])
 }
@@ -154,4 +157,115 @@ model Referral {
   referredId String
   referrer   Member   @relation("referrer", fields: [referrerId], references: [id])
   referred   Member   @relation("referred", fields: [referredId], references: [id])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String   @db.Text
+  shortDescription String?
+  startDate   DateTime
+  endDate     DateTime
+  location    String
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  capacity    Int?
+  price       Decimal? @db.Decimal(10, 2)
+  memberPrice Decimal? @db.Decimal(10, 2)
+  category    String
+  type        String   @default("NETWORKING") // NETWORKING, SUMMIT, RIBBON_CUTTING, COMMUNITY
+  status      EventStatus @default(DRAFT)
+  isFeatured  Boolean  @default(false)
+  image       String?
+  organizerId String
+  organizer   Member   @relation(fields: [organizerId], references: [id])
+  registrations EventRegistration[]
+  speakers    EventSpeaker[]
+  sponsors    EventSponsor[]
+  tags        String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([startDate])
+  @@index([category])
+  @@index([status])
+  @@index([organizerId])
+}
+
+model EventRegistration {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  memberId  String?
+  member    Member?  @relation(fields: [memberId], references: [id])
+  name      String
+  email     String
+  company   String?
+  phone     String?
+  ticketCount Int    @default(1)
+  totalAmount Decimal @db.Decimal(10, 2)
+  status    RegistrationStatus @default(PENDING)
+  paymentIntentId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([memberId])
+  @@index([status])
+}
+
+model EventSpeaker {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name      String
+  title     String?
+  company   String?
+  bio       String?  @db.Text
+  image     String?
+  topic     String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+}
+
+model EventSponsor {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  memberId  String?
+  member    Member?  @relation(fields: [memberId], references: [id])
+  name      String
+  logo      String?
+  website   String?
+  tier      SponsorTier @default(BRONZE)
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@index([memberId])
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum SponsorTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
 } 

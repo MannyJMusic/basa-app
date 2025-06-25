@@ -1,18 +1,32 @@
 "use client"
 
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { FcGoogle } from "react-icons/fc"
 import { FaLinkedin } from "react-icons/fa"
+import { getRedirectUrl } from "@/lib/utils"
+import { UserRole } from "@/lib/types"
 
 export default function SocialAuth() {
   const [loading, setLoading] = useState<string | null>(null)
 
   async function handleSocialSignIn(provider: string) {
     setLoading(provider)
-    await signIn(provider, { callbackUrl: "/dashboard" })
-    setLoading(null)
+    try {
+      const result = await signIn(provider, { redirect: false })
+      if (result?.ok) {
+        // Wait for session to update and get the user's role
+        const session = await getSession()
+        const role = (session?.user?.role as UserRole) || "GUEST"
+        const redirectUrl = getRedirectUrl(role)
+        window.location.href = redirectUrl
+      }
+    } catch (error) {
+      console.error("Social login error:", error)
+    } finally {
+      setLoading(null)
+    }
   }
 
   return (

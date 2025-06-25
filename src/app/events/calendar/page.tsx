@@ -1,4 +1,7 @@
+'use client'
+
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -12,57 +15,116 @@ import {
   ChevronRight,
   ArrowLeft
 } from "lucide-react"
+import { useEvents } from "@/hooks/use-events"
 
 export default function CalendarPage() {
-  // Sample calendar data for March 2024
-  const calendarDays = [
-    // Week 1
-    { day: 1, events: [] },
-    { day: 2, events: [] },
-    { day: 3, events: [] },
-    { day: 4, events: [] },
-    { day: 5, events: [] },
-    { day: 6, events: [] },
-    { day: 7, events: [] },
-    // Week 2
-    { day: 8, events: [] },
-    { day: 9, events: [] },
-    { day: 10, events: [] },
-    { day: 11, events: [] },
-    { day: 12, events: [] },
-    { day: 13, events: [] },
-    { day: 14, events: [] },
-    // Week 3
-    { day: 15, events: [{ type: 'ribbon-cutting', title: 'Ribbon Cutting', time: '4:00 PM' }] },
-    { day: 16, events: [] },
-    { day: 17, events: [] },
-    { day: 18, events: [] },
-    { day: 19, events: [] },
-    { day: 20, events: [] },
-    { day: 21, events: [{ type: 'networking', title: 'Monthly Mixer', time: '6:00 PM' }] },
-    // Week 4
-    { day: 22, events: [] },
-    { day: 23, events: [] },
-    { day: 24, events: [] },
-    { day: 25, events: [] },
-    { day: 26, events: [] },
-    { day: 27, events: [] },
-    { day: 28, events: [] },
-    // Week 5
-    { day: 29, events: [{ type: 'summit', title: 'Tech Summit', time: '9:00 AM' }] },
-    { day: 30, events: [] },
-    { day: 31, events: [] },
-  ]
+  const { events, loading, fetchEvents } = useEvents()
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [calendarDays, setCalendarDays] = useState<any[]>([])
+
+  useEffect(() => {
+    // Fetch published events
+    fetchEvents({ status: "PUBLISHED" })
+      .catch(error => {
+        console.error('Error fetching events:', error)
+      })
+  }, [fetchEvents])
+
+  useEffect(() => {
+    // Generate calendar days for current month
+    generateCalendarDays()
+  }, [currentMonth, events])
+
+  const generateCalendarDays = () => {
+    const year = currentMonth.getFullYear()
+    const month = currentMonth.getMonth()
+    
+    // Get first day of month and number of days
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const daysInMonth = lastDay.getDate()
+    const startingDayOfWeek = firstDay.getDay()
+
+    const days = []
+    
+    // Add empty days for padding
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push({ day: null, events: [] })
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day)
+      const dayEvents = events.filter(event => {
+        const eventDate = new Date(event.startDate)
+        return eventDate.getDate() === day && 
+               eventDate.getMonth() === month && 
+               eventDate.getFullYear() === year
+      })
+      
+      days.push({
+        day,
+        events: dayEvents.map(event => ({
+          id: event.id,
+          title: event.title,
+          type: event.type.toLowerCase(),
+          time: new Date(event.startDate).toLocaleTimeString(undefined, { 
+            hour: 'numeric', 
+            minute: '2-digit' 
+          }),
+          slug: event.slug
+        }))
+      })
+    }
+    
+    setCalendarDays(days)
+  }
 
   const getEventColor = (type: string) => {
     switch (type) {
       case 'networking': return 'bg-blue-100 text-blue-800'
-      case 'ribbon-cutting': return 'bg-orange-100 text-orange-800'
+      case 'ribbon_cutting': return 'bg-orange-100 text-orange-800'
       case 'summit': return 'bg-green-100 text-green-800'
       case 'community': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
+
+  const getEventBadgeColor = (type: string) => {
+    switch (type) {
+      case 'NETWORKING': return 'bg-blue-100 text-blue-800'
+      case 'RIBBON_CUTTING': return 'bg-orange-100 text-orange-800'
+      case 'SUMMIT': return 'bg-green-100 text-green-800'
+      case 'COMMUNITY': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev)
+      if (direction === 'prev') {
+        newMonth.setMonth(prev.getMonth() - 1)
+      } else {
+        newMonth.setMonth(prev.getMonth() + 1)
+      }
+      return newMonth
+    })
+  }
+
+  const formatMonthYear = (date: Date) => {
+    return date.toLocaleDateString(undefined, { 
+      month: 'long', 
+      year: 'numeric' 
+    })
+  }
+
+  // Get events for the current month
+  const currentMonthEvents = events.filter(event => {
+    const eventDate = new Date(event.startDate)
+    return eventDate.getMonth() === currentMonth.getMonth() && 
+           eventDate.getFullYear() === currentMonth.getFullYear()
+  })
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -82,7 +144,7 @@ export default function CalendarPage() {
               Event Calendar
             </Badge>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              March 2024 Event Calendar
+              {formatMonthYear(currentMonth)} Event Calendar
             </h1>
             <p className="text-xl text-purple-100 leading-relaxed">
               Plan your networking schedule with our comprehensive event calendar. 
@@ -96,13 +158,21 @@ export default function CalendarPage() {
       <section className="py-6 bg-white border-b">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between max-w-4xl mx-auto">
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigateMonth('prev')}
+            >
               <ChevronLeft className="w-4 h-4 mr-2" />
-              February
+              {formatMonthYear(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
             </Button>
-            <h2 className="text-2xl font-bold text-gray-900">March 2024</h2>
-            <Button variant="outline" size="sm">
-              April
+            <h2 className="text-2xl font-bold text-gray-900">{formatMonthYear(currentMonth)}</h2>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigateMonth('next')}
+            >
+              {formatMonthYear(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
               <ChevronRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
@@ -127,19 +197,24 @@ export default function CalendarPage() {
               {calendarDays.map((dayData, index) => (
                 <div 
                   key={index} 
-                  className="min-h-[120px] p-2 border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+                  className={`min-h-[120px] p-2 border border-gray-200 ${
+                    dayData.day === null ? 'bg-gray-50' : 'bg-white hover:bg-gray-50'
+                  } transition-colors`}
                 >
-                  <div className="text-sm font-medium text-gray-900 mb-2">
-                    {dayData.day}
-                  </div>
-                  {dayData.events.map((event, eventIndex) => (
-                    <div 
-                      key={eventIndex}
-                      className={`text-xs p-1 rounded mb-1 cursor-pointer hover:opacity-80 ${getEventColor(event.type)}`}
-                    >
-                      <div className="font-medium">{event.title}</div>
-                      <div className="text-xs opacity-75">{event.time}</div>
+                  {dayData.day && (
+                    <div className="text-sm font-medium text-gray-900 mb-2">
+                      {dayData.day}
                     </div>
+                  )}
+                  {dayData.events.map((event: any, eventIndex: number) => (
+                    <Link 
+                      key={eventIndex}
+                      href={`/events/${event.slug}`}
+                      className={`block text-xs p-1 rounded mb-1 cursor-pointer hover:opacity-80 ${getEventColor(event.type)}`}
+                    >
+                      <div className="font-medium truncate">{event.title}</div>
+                      <div className="text-xs opacity-75">{event.time}</div>
+                    </Link>
                   ))}
                 </div>
               ))}
@@ -183,121 +258,80 @@ export default function CalendarPage() {
               Upcoming Events This Month
             </h2>
 
-            <div className="space-y-6">
-              {/* Event 1 */}
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Badge className="bg-orange-100 text-orange-800">Ribbon Cutting</Badge>
-                      <span className="text-sm text-gray-500">March 15, 2024</span>
-                    </div>
-                    <div className="text-sm text-gray-500">4:00 PM - 6:00 PM</div>
-                  </div>
-                  <CardTitle className="text-xl">Member Business Grand Opening</CardTitle>
-                  <CardDescription>
-                    Celebrate new member businesses with ribbon cutting ceremonies
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPin className="w-4 h-4 mr-2" />
-                      Downtown San Antonio
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Users className="w-4 h-4 mr-2" />
-                      All Industries Welcome
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Star className="w-4 h-4 mr-2" />
-                      Members: FREE
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Button asChild size="sm">
-                      <Link href="/events/registration">RSVP Now</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Event 2 */}
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Badge className="bg-blue-100 text-blue-800">Networking</Badge>
-                      <span className="text-sm text-gray-500">March 21, 2024</span>
-                    </div>
-                    <div className="text-sm text-gray-500">6:00 PM - 9:00 PM</div>
-                  </div>
-                  <CardTitle className="text-xl">BASA Monthly Networking Mixer</CardTitle>
-                  <CardDescription>
-                    The premier networking event for San Antonio's business community
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPin className="w-4 h-4 mr-2" />
-                      San Antonio Marriott Rivercenter
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Users className="w-4 h-4 mr-2" />
-                      All Industries Welcome
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Star className="w-4 h-4 mr-2" />
-                      Members: $25
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Button asChild size="sm">
-                      <Link href="/events/registration">Register Now</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Event 3 */}
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Badge className="bg-green-100 text-green-800">Summit</Badge>
-                      <span className="text-sm text-gray-500">March 29, 2024</span>
-                    </div>
-                    <div className="text-sm text-gray-500">9:00 AM - 5:00 PM</div>
-                  </div>
-                  <CardTitle className="text-xl">Tech & Innovation Summit</CardTitle>
-                  <CardDescription>
-                    Exclusive insights into San Antonio's growing tech ecosystem
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPin className="w-4 h-4 mr-2" />
-                      San Antonio Tech Hub
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Users className="w-4 h-4 mr-2" />
-                      Technology & Innovation
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Star className="w-4 h-4 mr-2" />
-                      Members: $75
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Button asChild size="sm">
-                      <Link href="/events/registration">Register Now</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Loading events...</p>
+              </div>
+            ) : currentMonthEvents.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No events scheduled for {formatMonthYear(currentMonth)}.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {currentMonthEvents.map((event) => (
+                  <Card key={event.id} className="hover:shadow-lg transition-shadow duration-300">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Badge className={getEventBadgeColor(event.type)}>
+                            {event.type.replace('_', ' ')}
+                          </Badge>
+                          <span className="text-sm text-gray-500">
+                            {new Date(event.startDate).toLocaleDateString(undefined, { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            })}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {new Date(event.startDate).toLocaleTimeString(undefined, { 
+                            hour: 'numeric', 
+                            minute: '2-digit' 
+                          })} - {new Date(event.endDate).toLocaleTimeString(undefined, { 
+                            hour: 'numeric', 
+                            minute: '2-digit' 
+                          })}
+                        </div>
+                      </div>
+                      <CardTitle className="text-xl">
+                        <Link 
+                          href={`/events/${event.slug}`}
+                          className="hover:text-purple-600 transition-colors duration-200"
+                        >
+                          {event.title}
+                        </Link>
+                      </CardTitle>
+                      <CardDescription>
+                        {event.shortDescription || event.description?.slice(0, 150) + '...'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          {event.location}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Users className="w-4 h-4 mr-2" />
+                          Capacity: {event.capacity || 'N/A'}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Star className="w-4 h-4 mr-2" />
+                          Members: ${(Number(event.memberPrice) || 0).toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <Button asChild size="sm">
+                          <Link href={`/events/${event.slug}/register`}>Register Now</Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
             {/* View All Events CTA */}
             <div className="text-center mt-12">

@@ -2,8 +2,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import Navigation from "@/components/layout/navigation"
-import Footer from "@/components/layout/footer"
 import { Testimonials } from "@/components/marketing/testimonials"
 import { 
   Users, 
@@ -22,8 +20,6 @@ import {
 export default function HomePage() {
   return (
     <div className="min-h-screen">
-      <Navigation />
-      
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-white">
         <div className="absolute inset-0 bg-black/20"></div>
@@ -309,8 +305,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   )
 } 
