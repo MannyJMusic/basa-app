@@ -141,7 +141,7 @@ async function main() {
       specialties: ['Business Advocacy', 'Economic Development', 'Community Events'],
       certifications: ['Chamber Management Professional'],
       showInDirectory: true,
-      allowContact: true,
+      allowContact: false, // Chamber might not want direct contact
       showAddress: true,
     },
     {
@@ -260,7 +260,7 @@ async function main() {
       tagline: 'Design that speaks volumes',
       specialties: ['Graphic Design', 'Brand Identity', 'Web Design'],
       certifications: ['Adobe Certified Expert', 'Design Thinking Practitioner'],
-      showInDirectory: true,
+      showInDirectory: false, // Designer might want privacy
       allowContact: true,
       showAddress: false,
     },
@@ -347,6 +347,7 @@ async function main() {
           membershipTier: memberData.membershipTier,
           membershipStatus: 'ACTIVE',
           joinedAt: new Date(),
+          renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
           description: memberData.description,
           tagline: memberData.tagline,
           specialties: memberData.specialties,
