@@ -53,6 +53,7 @@ model User {
   sessions      Session[]
   member        Member?
   auditLogs     AuditLog[]
+  blogPosts     BlogPost[]
 }
 
 model VerificationToken {
@@ -123,6 +124,7 @@ model Member {
   events              Event[]
   eventRegistrations  EventRegistration[]
   eventSponsors       EventSponsor[]
+  testimonials         Testimonial[]
   @@index([businessType, membershipStatus])
   @@index([industry])
 }
@@ -140,9 +142,24 @@ enum Status {
 }
 
 model Resource {
-  id        String   @id @default(cuid())
-  memberId  String
-  member    Member   @relation(fields: [memberId], references: [id])
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  fileUrl     String?
+  fileType    String?
+  fileSize    Int?
+  downloadCount Int    @default(0)
+  isActive    Boolean  @default(true)
+  category    String?
+  tags        String[]
+  memberId    String?
+  member      Member?  @relation(fields: [memberId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([category])
+  @@index([memberId])
 }
 
 model Sponsorship {
@@ -268,4 +285,118 @@ enum SponsorTier {
   SILVER
   GOLD
   PLATINUM
+}
+
+model Settings {
+  id                    String   @id @default(cuid())
+  
+  // Organization Information
+  organizationName      String   @default("BASA - Business Association of San Antonio")
+  contactEmail          String   @default("admin@basa.org")
+  phoneNumber           String?
+  website               String   @default("https://basa.org")
+  address               String?
+  description           String?  @db.Text
+  
+  // System Settings
+  maintenanceMode       Boolean  @default(false)
+  autoApproveMembers    Boolean  @default(false)
+  emailNotifications    Boolean  @default(true)
+  
+  // Security Settings
+  requireTwoFactor      Boolean  @default(true)
+  sessionTimeout        Int      @default(30) // minutes
+  enforcePasswordPolicy Boolean  @default(true)
+  allowedIpAddresses    String?
+  apiRateLimit          Int      @default(100)
+  
+  // Notification Settings
+  notifyNewMembers      Boolean  @default(true)
+  notifyPayments        Boolean  @default(true)
+  notifyEventRegistrations Boolean @default(true)
+  notifySystemAlerts    Boolean  @default(true)
+  adminEmails           String?  @db.Text // JSON array of email addresses
+  
+  // Integration Settings
+  stripePublicKey       String?
+  stripeSecretKey       String?
+  stripeTestMode        Boolean  @default(true)
+  smtpHost              String?
+  smtpPort              Int?
+  smtpUsername          String?
+  smtpPassword          String?
+  googleAnalyticsId     String?
+  googleTagManagerId    String?
+  
+  // Appearance Settings
+  logoUrl               String?
+  faviconUrl            String?
+  primaryColor          String   @default("#1e40af")
+  secondaryColor        String   @default("#059669")
+  showMemberCount       Boolean  @default(true)
+  showEventCalendar     Boolean  @default(true)
+  showTestimonials      Boolean  @default(true)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@map("settings")
+}
+
+// Content Management Models
+model BlogPost {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  excerpt     String?     @db.Text
+  content     String      @db.Text
+  featuredImage String?
+  authorId    String
+  author      User        @relation(fields: [authorId], references: [id])
+  status      PostStatus  @default(DRAFT)
+  publishedAt DateTime?
+  tags        String[]
+  metaTitle   String?
+  metaDescription String?
+  viewCount   Int         @default(0)
+  isFeatured  Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([authorId])
+  @@index([tags])
+}
+
+model Testimonial {
+  id          String    @id @default(cuid())
+  authorName  String
+  authorTitle String?
+  authorCompany String?
+  authorImage String?
+  content     String    @db.Text
+  rating      Int       @default(5)
+  status      TestimonialStatus @default(PENDING)
+  isFeatured  Boolean   @default(false)
+  memberId    String?
+  member      Member?   @relation(fields: [memberId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+  @@index([isFeatured])
+  @@index([memberId])
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TestimonialStatus {
+  PENDING
+  APPROVED
+  REJECTED
 } 
