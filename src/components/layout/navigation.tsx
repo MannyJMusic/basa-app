@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useSession, signOut } from "next-auth/react"
 import { useState } from "react"
 
@@ -14,8 +15,15 @@ export default function Navigation() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <Link href="/" className="text-xl font-bold text-gray-800">
-              BASA
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/images/BASA-LOGO.png"
+                alt="BASA Logo"
+                width={120}
+                height={40}
+                className="h-8 w-auto md:h-10"
+                priority
+              />
             </Link>
           </div>
           
