@@ -268,4 +268,60 @@ enum SponsorTier {
   SILVER
   GOLD
   PLATINUM
+}
+
+model Settings {
+  id                    String   @id @default(cuid())
+  
+  // Organization Information
+  organizationName      String   @default("BASA - Business Association of San Antonio")
+  contactEmail          String   @default("admin@basa.org")
+  phoneNumber           String?
+  website               String   @default("https://basa.org")
+  address               String?
+  description           String?  @db.Text
+  
+  // System Settings
+  maintenanceMode       Boolean  @default(false)
+  autoApproveMembers    Boolean  @default(false)
+  emailNotifications    Boolean  @default(true)
+  
+  // Security Settings
+  requireTwoFactor      Boolean  @default(true)
+  sessionTimeout        Int      @default(30) // minutes
+  enforcePasswordPolicy Boolean  @default(true)
+  allowedIpAddresses    String?
+  apiRateLimit          Int      @default(100)
+  
+  // Notification Settings
+  notifyNewMembers      Boolean  @default(true)
+  notifyPayments        Boolean  @default(true)
+  notifyEventRegistrations Boolean @default(true)
+  notifySystemAlerts    Boolean  @default(true)
+  adminEmails           String?  @db.Text // JSON array of email addresses
+  
+  // Integration Settings
+  stripePublicKey       String?
+  stripeSecretKey       String?
+  stripeTestMode        Boolean  @default(true)
+  smtpHost              String?
+  smtpPort              Int?
+  smtpUsername          String?
+  smtpPassword          String?
+  googleAnalyticsId     String?
+  googleTagManagerId    String?
+  
+  // Appearance Settings
+  logoUrl               String?
+  faviconUrl            String?
+  primaryColor          String   @default("#1e40af")
+  secondaryColor        String   @default("#059669")
+  showMemberCount       Boolean  @default(true)
+  showEventCalendar     Boolean  @default(true)
+  showTestimonials      Boolean  @default(true)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@map("settings")
 } 

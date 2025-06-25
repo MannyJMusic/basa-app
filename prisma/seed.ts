@@ -34,6 +34,42 @@ async function main() {
   await createAdmin('ADMIN1')
   await createAdmin('ADMIN2')
 
+  // Initialize default settings if none exist
+  const existingSettings = await prisma.settings.findFirst()
+  if (!existingSettings) {
+    await prisma.settings.create({
+      data: {
+        organizationName: 'BASA - Business Association of San Antonio',
+        contactEmail: 'admin@basa.org',
+        phoneNumber: '(210) 555-0123',
+        website: 'https://basa.org',
+        address: '123 Business District, San Antonio, TX 78205',
+        description: 'BASA is the premier business association in San Antonio, connecting entrepreneurs and business leaders for growth and success.',
+        maintenanceMode: false,
+        autoApproveMembers: false,
+        emailNotifications: true,
+        requireTwoFactor: true,
+        sessionTimeout: 30,
+        enforcePasswordPolicy: true,
+        apiRateLimit: 100,
+        notifyNewMembers: true,
+        notifyPayments: true,
+        notifyEventRegistrations: true,
+        notifySystemAlerts: true,
+        adminEmails: 'admin@basa.org\nmanager@basa.org',
+        stripeTestMode: true,
+        primaryColor: '#1e40af',
+        secondaryColor: '#059669',
+        showMemberCount: true,
+        showEventCalendar: true,
+        showTestimonials: true,
+      }
+    })
+    console.log('Created default settings')
+  } else {
+    console.log('Settings already exist')
+  }
+
   // Create sample members for events
   const sampleMembers = [
     {
