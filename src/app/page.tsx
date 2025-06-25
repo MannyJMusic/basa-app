@@ -26,63 +26,66 @@ import {
 export default function HomePage() {
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
+      {/* Hero Section - San Antonio Focused */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background with gradient and pattern */}
-        <div className="absolute inset-0 basa-gradient-primary"></div>
-        <div className="absolute inset-0 bg-pattern-dots opacity-10"></div>
+        {/* Hero Background Image */}
+        <Image 
+          src="/images/hero/basa-hero-networking.jpg"
+          alt="BASA Networking Event"
+          fill
+          priority
+          className="object-cover object-center z-0"
+        />
+        {/* Background with gradient and San Antonio imagery */}
+        <div className="absolute inset-0 basa-gradient-hero z-10" style={{ opacity: 0.7 }}></div>
+        <div className="absolute inset-0 bg-pattern-dots opacity-10 z-20"></div>
         
         {/* Floating elements */}
-        <div className="absolute top-20 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl animate-float"></div>
-        <div className="absolute top-40 right-20 w-32 h-32 bg-white/5 rounded-full blur-2xl animate-float" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute bottom-20 left-1/4 w-16 h-16 bg-white/10 rounded-full blur-xl animate-float" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-20 left-10 w-20 h-20 bg-gold-300/20 rounded-full blur-xl animate-float z-30"></div>
+        <div className="absolute top-40 right-20 w-32 h-32 bg-gold-200/10 rounded-full blur-2xl animate-float z-30" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute bottom-20 left-1/4 w-16 h-16 bg-gold-300/20 rounded-full blur-xl animate-float z-30" style={{ animationDelay: '2s' }}></div>
         
-        <div className="relative basa-container text-center text-white z-10">
+        <div className="relative basa-container text-center text-white z-40">
           <div className="max-w-5xl mx-auto">
-            <Badge variant="secondary" className="mb-8 bg-white/20 text-white border-white/30 backdrop-blur-sm animate-fade-in">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Since April 2020
-            </Badge>
-            
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-8 leading-tight animate-slide-up">
+            <h1 className="heading-responsive font-bold mb-8 leading-tight animate-slide-up" >
               Where San Antonio's
-              <span className="block text-gradient-blue bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+              <span className="block text-gradient-gold" >
                 Business Leaders
               </span>
               Connect & Grow
             </h1>
             
-            <p className="text-xl md:text-2xl mb-12 text-blue-100 leading-relaxed max-w-4xl mx-auto animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <p className="text-responsive mb-12 text-gold-100 leading-relaxed max-w-4xl mx-auto animate-slide-up" style={{ animationDelay: '0.2s', textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>
               Join 150+ thriving businesses building meaningful relationships since 2020. 
               From strategic networking events to community partnerships, BASA is your gateway to 
               business success in the Alamo City.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-slide-up" style={{ animationDelay: '0.4s' }}>
-              <Button asChild size="lg" className="basa-btn-primary text-lg px-8 py-4 group">
+              <Button asChild size="lg" className="basa-btn-secondary text-lg px-8 py-4 group" style={{ boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
                 <Link href="/membership/join">
                   Join BASA Today
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10 text-lg px-8 py-4 backdrop-blur-sm">
+              <Button asChild variant="outline" size="lg" className="border-gold-300/30 basa-text-navy hover:bg-gold-500/10 text-lg px-8 py-4 backdrop-blur-sm" style={{ boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
                 <Link href="/events">View Upcoming Events</Link>
               </Button>
             </div>
             
             {/* Trust indicators */}
             <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-center animate-fade-in" style={{ animationDelay: '0.6s' }}>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                <div className="text-3xl font-bold mb-2">150+</div>
-                <div className="text-blue-100">Active Members</div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20" style={{ boxShadow: '0 6px 12px rgba(0,0,0,0.3)' }}>
+                <div className="text-3xl font-bold mb-2 text-gold-300" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>150+</div>
+                <div className="text-gold-100" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>Active Members</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                <div className="text-3xl font-bold mb-2">4+</div>
-                <div className="text-blue-100">Years of Excellence</div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20" style={{ boxShadow: '0 6px 12px rgba(0,0,0,0.3)' }}>
+                <div className="text-3xl font-bold mb-2 text-gold-300" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>4+</div>
+                <div className="text-gold-100" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>Years of Excellence</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                <div className="text-3xl font-bold mb-2">Monthly</div>
-                <div className="text-blue-100">Networking Events</div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20" style={{ boxShadow: '0 6px 12px rgba(0,0,0,0.3)' }}>
+                <div className="text-3xl font-bold mb-2 text-gold-300" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>Monthly</div>
+                <div className="text-gold-100" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>Networking Events</div>
               </div>
             </div>
           </div>
@@ -90,17 +93,17 @@ export default function HomePage() {
       </section>
 
       {/* Value Propositions */}
-      <section className="basa-section bg-white relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-50 to-white"></div>
+      <section className="basa-section bg-basa-light-gray relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-white to-basa-light-gray"></div>
         <div className="relative basa-container">
           <div className="text-center mb-20">
-            <Badge variant="secondary" className="mb-6 bg-blue-100 text-blue-800">
+            <Badge variant="secondary" className="mb-6 bg-navy-100 text-navy-800">
               Why Choose BASA?
             </Badge>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-gradient-blue">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-gradient-navy">
               Three Pillars of Success
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg text-basa-charcoal max-w-3xl mx-auto leading-relaxed">
               We provide comprehensive networking solutions designed to help your business thrive in San Antonio's dynamic market.
             </p>
           </div>
@@ -109,26 +112,26 @@ export default function HomePage() {
             {/* Strategic Networking */}
             <Card className="basa-card group hover:scale-105 transition-all duration-500">
               <CardHeader className="text-center pb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <Handshake className="w-10 h-10 text-white" />
+                <div className="w-20 h-20 bg-gradient-to-br from-navy-500 to-navy-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <Handshake className="w-10 h-10 text-basa-navy-900" />
                 </div>
-                <CardTitle className="text-2xl text-gradient-blue">Strategic Networking</CardTitle>
+                <CardTitle className="text-2xl text-gradient-navy">Strategic Networking</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <CardDescription className="text-lg mb-8 text-gray-600 leading-relaxed">
+                <CardDescription className="text-lg mb-8 text-basa-charcoal leading-relaxed">
                   Quality connections over quantity. Our curated events bring together serious business professionals ready to collaborate, refer, and grow together.
                 </CardDescription>
-                <ul className="text-left space-y-4 text-gray-600">
+                <ul className="text-left space-y-4 text-basa-charcoal">
                   <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-navy-600 mr-3 mt-0.5 flex-shrink-0" />
                     <span>Curated professional events</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-navy-600 mr-3 mt-0.5 flex-shrink-0" />
                     <span>Quality over quantity approach</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-navy-600 mr-3 mt-0.5 flex-shrink-0" />
                     <span>Collaboration & referral focus</span>
                   </li>
                 </ul>
@@ -138,26 +141,26 @@ export default function HomePage() {
             {/* Business Growth Opportunities */}
             <Card className="basa-card group hover:scale-105 transition-all duration-500">
               <CardHeader className="text-center pb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <TrendingUp className="w-10 h-10 text-white" />
+                <div className="w-20 h-20 bg-gradient-to-br from-gold-500 to-gold-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <TrendingUp className="w-10 h-10 text-basa-gold-900" />
                 </div>
-                <CardTitle className="text-2xl text-gradient-green">Business Growth</CardTitle>
+                <CardTitle className="text-2xl text-gradient-gold">Business Growth</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <CardDescription className="text-lg mb-8 text-gray-600 leading-relaxed">
+                <CardDescription className="text-lg mb-8 text-basa-charcoal leading-relaxed">
                   Exclusive sponsorship opportunities, ribbon cutting celebrations, and partnership development that drives real revenue.
                 </CardDescription>
-                <ul className="text-left space-y-4 text-gray-600">
+                <ul className="text-left space-y-4 text-basa-charcoal">
                   <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-gold-600 mr-3 mt-0.5 flex-shrink-0" />
                     <span>Exclusive sponsorship opportunities</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-gold-600 mr-3 mt-0.5 flex-shrink-0" />
                     <span>Ribbon cutting celebrations</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-gold-600 mr-3 mt-0.5 flex-shrink-0" />
                     <span>Partnership development</span>
                   </li>
                 </ul>
@@ -167,26 +170,26 @@ export default function HomePage() {
             {/* Community Impact */}
             <Card className="basa-card group hover:scale-105 transition-all duration-500">
               <CardHeader className="text-center pb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <Heart className="w-10 h-10 text-white" />
+                <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <Heart className="w-10 h-10 text-basa-teal-500" />
                 </div>
-                <CardTitle className="text-2xl text-gradient-purple">Community Impact</CardTitle>
+                <CardTitle className="text-2xl text-gradient-teal">Community Impact</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <CardDescription className="text-lg mb-8 text-gray-600 leading-relaxed">
+                <CardDescription className="text-lg mb-8 text-basa-charcoal leading-relaxed">
                   Make a difference while you network. Our Networking and Giving partnerships create meaningful community connections that enhance your business reputation.
                 </CardDescription>
-                <ul className="text-left space-y-4 text-gray-600">
+                <ul className="text-left space-y-4 text-basa-charcoal">
                   <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-purple-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-teal-600 mr-3 mt-0.5 flex-shrink-0" />
                     <span>Networking and Giving partnerships</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-purple-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-teal-600 mr-3 mt-0.5 flex-shrink-0" />
                     <span>Meaningful community connections</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-purple-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-teal-600 mr-3 mt-0.5 flex-shrink-0" />
                     <span>Enhanced business reputation</span>
                   </li>
                 </ul>
@@ -198,32 +201,40 @@ export default function HomePage() {
 
       {/* CTA Section */}
       <section className="basa-section basa-gradient-secondary text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-pattern-grid opacity-5"></div>
-        <div className="relative basa-container text-center">
+        {/* Handshake Background Image */}
+        <Image
+          src="/images/backgrounds/basa-handshake.jpg"
+          alt="Handshake"
+          fill
+          priority
+          className="object-cover object-center z-0"
+        />
+        <div className="absolute inset-0 basa-gradient-hero opacity-80 z-10"></div>
+        <div className="relative basa-container text-center z-20">
           <div className="max-w-4xl mx-auto">
             <Badge variant="secondary" className="mb-8 bg-white/20 text-white border-white/30 backdrop-blur-sm">
               <Zap className="w-4 h-4 mr-2" />
               Ready to Join?
             </Badge>
             
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-8">
               San Antonio's Premier
               <span className="block text-white">Business Network</span>
             </h2>
             
-            <p className="text-xl mb-12 text-blue-100 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg mb-12 text-navy-100 max-w-3xl mx-auto leading-relaxed">
               Connect with 150+ businesses, grow your network, and make a difference in our community. 
               Join the most influential business association in San Antonio.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <Button asChild size="lg" className="basa-btn-primary text-lg px-8 py-4 group">
+              <Button asChild size="lg" className="basa-btn-primary text-white text-lg px-8 py-4 group">
                 <Link href="/membership/join">
                   Become a Member
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10 text-lg px-8 py-4 backdrop-blur-sm">
+              <Button asChild variant="outline" size="lg" className="border-white/30 basa-text-navy hover:bg-white/10 text-lg px-8 py-4 backdrop-blur-sm">
                 <Link href="/contact">Contact Us</Link>
               </Button>
             </div>
@@ -241,19 +252,20 @@ export default function HomePage() {
       />
 
       {/* Featured Events Preview */}
-      <section className="basa-section bg-gradient-to-b from-gray-50 to-white relative">
+      <section className="basa-section relative bg-cover bg-center" style={{ backgroundImage: 'url(/images/backgrounds/calendar-bg.jpg)' }}>
+        <div className="absolute inset-0 bg-black/40"></div>
         <div className="absolute inset-0 bg-pattern-dots opacity-5"></div>
         <div className="relative basa-container">
           <div className="text-center mb-20">
-            <Badge variant="secondary" className="mb-6 bg-purple-100 text-purple-800">
+            <Badge variant="secondary" className="mb-6 bg-teal-100 text-teal-800">
               <Calendar className="w-4 h-4 mr-2" />
               Upcoming Events
             </Badge>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-gradient-purple">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-gradient-teal">
               Don't Miss Our Next
               <span className="block">Networking Opportunities</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg text-basa-charcoal max-w-3xl mx-auto leading-relaxed">
               Join our curated events designed to accelerate your business growth and build meaningful connections.
             </p>
           </div>
@@ -263,7 +275,7 @@ export default function HomePage() {
             <Card className="basa-card group hover:scale-105 transition-all duration-500">
               <CardHeader>
                 <div className="flex items-center justify-between mb-4">
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  <Badge variant="secondary" className="bg-navy-100 text-navy-800">
                     Networking
                   </Badge>
                   <div className="text-sm text-gray-500 flex items-center">
@@ -272,16 +284,16 @@ export default function HomePage() {
                   </div>
                 </div>
                 <CardTitle className="text-xl mb-2">BASA Monthly Mixer</CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardDescription className="text-basa-charcoal">
                   Connect with fellow business owners in a relaxed, professional setting with curated networking activities.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center text-sm text-gray-600 mb-6">
+                <div className="flex items-center text-sm text-basa-charcoal mb-6">
                   <MapPin className="w-4 h-4 mr-2" />
                   San Antonio, TX
                 </div>
-                <Button asChild className="w-full basa-btn-primary group">
+                <Button asChild className="w-full basa-btn-primary text-white group">
                   <Link href="/events">
                     Learn More
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -294,7 +306,7 @@ export default function HomePage() {
             <Card className="basa-card group hover:scale-105 transition-all duration-500">
               <CardHeader>
                 <div className="flex items-center justify-between mb-4">
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                  <Badge variant="secondary" className="bg-gold-100 text-gold-800">
                     Ribbon Cutting
                   </Badge>
                   <div className="text-sm text-gray-500 flex items-center">
@@ -303,12 +315,12 @@ export default function HomePage() {
                   </div>
                 </div>
                 <CardTitle className="text-xl mb-2">Member Business Celebrations</CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardDescription className="text-basa-charcoal">
                   Celebrate new member businesses with ribbon cutting ceremonies and community support.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center text-sm text-gray-600 mb-6">
+                <div className="flex items-center text-sm text-basa-charcoal mb-6">
                   <MapPin className="w-4 h-4 mr-2" />
                   Various Locations
                 </div>
@@ -325,7 +337,7 @@ export default function HomePage() {
             <Card className="basa-card group hover:scale-105 transition-all duration-500">
               <CardHeader>
                 <div className="flex items-center justify-between mb-4">
-                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                  <Badge variant="secondary" className="bg-teal-100 text-teal-800">
                     Community
                   </Badge>
                   <div className="text-sm text-gray-500 flex items-center">
@@ -334,16 +346,16 @@ export default function HomePage() {
                   </div>
                 </div>
                 <CardTitle className="text-xl mb-2">Networking & Giving Initiative</CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardDescription className="text-basa-charcoal">
                   Partner with local nonprofits to make a positive community impact while networking.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center text-sm text-gray-600 mb-6">
+                <div className="flex items-center text-sm text-basa-charcoal mb-6">
                   <MapPin className="w-4 h-4 mr-2" />
                   San Antonio Area
                 </div>
-                <Button asChild className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl group">
+                <Button asChild className="w-full basa-btn-accent text-white group">
                   <Link href="/events">
                     Learn More
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

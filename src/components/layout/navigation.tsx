@@ -47,7 +47,7 @@ export default function Navigation() {
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
       isScrolled 
         ? 'bg-white/95 backdrop-blur-md shadow-soft border-b border-gray-100' 
-        : 'bg-white/80 backdrop-blur-sm'
+        : 'basa-header'
     }`}>
       <div className="basa-container">
         <div className="flex justify-between items-center h-16 lg:h-20">
@@ -59,7 +59,7 @@ export default function Navigation() {
                 alt="BASA Logo"
                 width={140}
                 height={50}
-                className="h-8 w-auto lg:h-10 transition-transform duration-300 group-hover:scale-105"
+                className="h-8 w-auto lg:h-10 transition-transform duration-300 group-hover:scale-105 filter brightness-110"
                 priority
               />
             </Link>
@@ -74,13 +74,19 @@ export default function Navigation() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="relative px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 group"
+                    className={`relative px-4 py-2 font-medium transition-all duration-300 group ${
+                      isScrolled 
+                        ? 'text-gray-700 hover:text-navy-600' 
+                        : 'text-white hover:text-gold-300'
+                    }`}
                   >
                     <span className="flex items-center space-x-1">
                       <Icon className="w-4 h-4" />
                       <span>{item.label}</span>
                     </span>
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-600 to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+                    <span className={`absolute bottom-0 left-0 w-full h-0.5 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ${
+                      isScrolled ? 'bg-gradient-to-r from-navy-600 to-teal-600' : 'bg-gradient-to-r from-gold-400 to-gold-300'
+                    }`}></span>
                   </Link>
                 )
               })}
@@ -93,7 +99,11 @@ export default function Navigation() {
               {session ? (
                 <>
                   <Link href="/dashboard">
-                    <Button variant="ghost" className="text-gray-700 hover:text-blue-600 hover:bg-blue-50">
+                    <Button variant="ghost" className={`${
+                      isScrolled 
+                        ? 'text-gray-700 hover:text-navy-600 hover:bg-navy-50' 
+                        : 'text-white hover:text-gold-300 hover:bg-white/10'
+                    }`}>
                       <User className="w-4 h-4 mr-2" />
                       Dashboard
                     </Button>
@@ -101,7 +111,11 @@ export default function Navigation() {
                   <Button 
                     variant="outline" 
                     onClick={() => signOut({ callbackUrl: "/" })}
-                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                    className={`${
+                      isScrolled 
+                        ? 'border-gray-300 text-gray-700 hover:bg-gray-50' 
+                        : 'border-white/30 text-white hover:bg-white/10'
+                    }`}
                   >
                     <LogOut className="w-4 h-4 mr-2" />
                     Sign Out
@@ -110,12 +124,16 @@ export default function Navigation() {
               ) : (
                 <>
                   <Link href="/auth/sign-in">
-                    <Button variant="ghost" className="text-gray-700 hover:text-blue-600 hover:bg-blue-50">
+                    <Button variant="ghost" className={`${
+                      isScrolled 
+                        ? 'text-gray-700 hover:text-navy-600 hover:bg-navy-50' 
+                        : 'text-white hover:text-gold-300 hover:bg-white/10'
+                    }`}>
                       Login
                     </Button>
                   </Link>
                   <Link href="/membership/join">
-                    <Button className="basa-btn-primary">
+                    <Button className="basa-btn-secondary">
                       Join BASA
                     </Button>
                   </Link>
@@ -129,7 +147,11 @@ export default function Navigation() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+              className={`${
+                isScrolled 
+                  ? 'text-gray-700 hover:text-navy-600 hover:bg-navy-50' 
+                  : 'text-white hover:text-gold-300 hover:bg-white/10'
+              }`}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? (
@@ -151,7 +173,7 @@ export default function Navigation() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center px-3 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md text-base font-medium transition-colors duration-200"
+                    className="flex items-center px-3 py-3 text-gray-700 hover:text-navy-600 hover:bg-navy-50 rounded-md text-base font-medium transition-colors duration-200"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <Icon className="w-5 h-5 mr-3" />
@@ -166,7 +188,7 @@ export default function Navigation() {
                   <>
                     <Link
                       href="/dashboard"
-                      className="flex items-center px-3 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md text-base font-medium transition-colors duration-200"
+                      className="flex items-center px-3 py-3 text-gray-700 hover:text-navy-600 hover:bg-navy-50 rounded-md text-base font-medium transition-colors duration-200"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <User className="w-5 h-5 mr-3" />
@@ -187,7 +209,7 @@ export default function Navigation() {
                   <>
                     <Link
                       href="/auth/sign-in"
-                      className="flex items-center px-3 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md text-base font-medium transition-colors duration-200"
+                      className="flex items-center px-3 py-3 text-gray-700 hover:text-navy-600 hover:bg-navy-50 rounded-md text-base font-medium transition-colors duration-200"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <User className="w-5 h-5 mr-3" />
@@ -195,10 +217,9 @@ export default function Navigation() {
                     </Link>
                     <Link
                       href="/membership/join"
-                      className="flex items-center px-3 py-3 text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-md text-base font-medium transition-all duration-200 transform hover:scale-105"
+                      className="flex items-center px-3 py-3 text-navy-900 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 rounded-md text-base font-medium transition-all duration-200 transform hover:scale-105"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
-                      <Users className="w-5 h-5 mr-3" />
                       Join BASA
                     </Link>
                   </>
@@ -209,5 +230,5 @@ export default function Navigation() {
         )}
       </div>
     </nav>
-  );
+  )
 } 

@@ -21,6 +21,11 @@ export function generateMetadata(): Metadata {
     authors: [{ name: "BASA - Business Association of San Antonio" }],
     creator: "BASA",
     publisher: "BASA",
+    icons: {
+      icon: '/images/favicon4.png',
+      shortcut: '/images/favicon4.png',
+      apple: '/images/favicon4.png',
+    },
     formatDetection: {
       email: false,
       address: false,

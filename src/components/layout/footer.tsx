@@ -30,15 +30,6 @@ export default function Footer() {
     { href: "/contact", label: "Contact", icon: MessageSquare },
   ]
 
-  const memberLinks = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/dashboard/directory", label: "Member Directory" },
-    { href: "/dashboard/resources", label: "Resources" },
-    { href: "/dashboard/events", label: "My Events" },
-    { href: "/dashboard/profile", label: "Profile" },
-    { href: "/dashboard/account", label: "Account" },
-  ]
-
   const socialLinks = [
     { href: "#", label: "Facebook", icon: Facebook },
     { href: "#", label: "Twitter", icon: Twitter },
@@ -54,7 +45,7 @@ export default function Footer() {
       <div className="relative basa-container">
         {/* Main Footer Content */}
         <div className="py-16">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             {/* Company Info */}
             <div className="lg:col-span-1">
               <div className="mb-6">
@@ -74,15 +65,15 @@ export default function Footer() {
               <div className="space-y-3">
                 <div className="flex items-center text-gray-300">
                   <Mail className="w-4 h-4 mr-3 text-blue-400" />
-                  <span>info@basa.org</span>
+                  <span>info@businessassociationsa.com</span>
                 </div>
                 <div className="flex items-center text-gray-300">
                   <Phone className="w-4 h-4 mr-3 text-blue-400" />
-                  <span>(210) 555-0123</span>
+                  <span>(210) 549-7190</span>
                 </div>
                 <div className="flex items-start text-gray-300">
                   <MapPin className="w-4 h-4 mr-3 mt-0.5 text-blue-400 flex-shrink-0" />
-                  <span>San Antonio, Texas</span>
+                  <span>9002 Wurbach Rd<br />San Antonio, TX 78240</span>
                 </div>
               </div>
             </div>
@@ -106,33 +97,6 @@ export default function Footer() {
                   )
                 })}
               </ul>
-            </div>
-            
-            {/* Member Portal */}
-            <div>
-              <h4 className="text-lg font-semibold mb-6 text-white">Member Portal</h4>
-              <ul className="space-y-3">
-                {memberLinks.map((link) => (
-                  <li key={link.href}>
-                    <Link 
-                      href={link.href} 
-                      className="text-gray-300 hover:text-blue-400 transition-colors duration-200"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              
-              {/* Join CTA */}
-              <div className="mt-8">
-                <Link href="/membership/join">
-                  <Button className="basa-btn-primary w-full group">
-                    Join BASA Today
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
-              </div>
             </div>
             
             {/* Newsletter & Social */}
