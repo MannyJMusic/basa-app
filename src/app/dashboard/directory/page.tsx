@@ -1,4 +1,8 @@
+'use client'
+
 import Link from "next/link"
+import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -25,17 +29,73 @@ import {
   MessageSquare,
   TrendingUp,
   Plus,
-  X
+  X,
+  Crown
 } from "lucide-react"
+import { useMembers } from "@/hooks/use-members"
 
 export default function DirectoryPage() {
+  const { data: session } = useSession()
+  const { members, loading, fetchMembers, pagination } = useMembers()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [industryFilter, setIndustryFilter] = useState("all")
+  const [locationFilter, setLocationFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [viewMode, setViewMode] = useState("grid")
+  const [sortBy, setSortBy] = useState("recent")
+
+  useEffect(() => {
+    // Fetch members with filters
+    const filters: any = {}
+    if (searchTerm) filters.search = searchTerm
+    if (industryFilter !== "all") filters.industry = industryFilter
+    if (locationFilter !== "all") filters.city = locationFilter
+    if (statusFilter !== "all") filters.status = statusFilter
+
+    fetchMembers(filters, 1, 20, getSortField(sortBy), "desc")
+  }, [searchTerm, industryFilter, locationFilter, statusFilter, sortBy, fetchMembers])
+
+  const getSortField = (sort: string) => {
+    switch (sort) {
+      case "name": return "firstName"
+      case "company": return "businessName"
+      case "connections": return "joinedAt"
+      default: return "joinedAt"
+    }
+  }
+
+  // Filter members based on search
+  const filteredMembers = members.filter(member => {
+    if (!member.showInDirectory) return false
+    
+    const searchLower = searchTerm.toLowerCase()
+    const matchesSearch = !searchTerm || 
+      member.user.firstName?.toLowerCase().includes(searchLower) ||
+      member.user.lastName?.toLowerCase().includes(searchLower) ||
+      member.businessName?.toLowerCase().includes(searchLower) ||
+      member.industry.some(ind => ind.toLowerCase().includes(searchLower))
+
+    return matchesSearch
+  })
+
+  // Get unique industries for filter
+  const industries = Array.from(new Set(members.flatMap(m => m.industry))).sort()
+  
+  // Get unique cities for filter
+  const cities = Array.from(new Set(members.map(m => m.city).filter(Boolean))).sort()
+
+  // Calculate stats
+  const totalMembers = members.length
+  const activeMembers = members.filter(m => m.membershipStatus === "ACTIVE").length
+  const premiumMembers = members.filter(m => m.membershipTier === "PREMIUM" || m.membershipTier === "VIP").length
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Member Directory</h1>
-          <p className="text-gray-600 mt-2">Connect with 150+ business leaders across San Antonio</p>
+          <p className="text-gray-600 mt-2">Connect with {totalMembers}+ business leaders across San Antonio</p>
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline">
@@ -56,7 +116,7 @@ export default function DirectoryPage() {
             <div className="flex items-center space-x-2">
               <Users className="w-5 h-5 text-blue-600" />
               <div>
-                <p className="text-2xl font-bold">150</p>
+                <p className="text-2xl font-bold">{totalMembers}</p>
                 <p className="text-sm text-gray-600">Total Members</p>
               </div>
             </div>
@@ -67,8 +127,8 @@ export default function DirectoryPage() {
             <div className="flex items-center space-x-2">
               <Handshake className="w-5 h-5 text-green-600" />
               <div>
-                <p className="text-2xl font-bold">156</p>
-                <p className="text-sm text-gray-600">Your Connections</p>
+                <p className="text-2xl font-bold">{activeMembers}</p>
+                <p className="text-sm text-gray-600">Active Members</p>
               </div>
             </div>
           </CardContent>
@@ -76,10 +136,10 @@ export default function DirectoryPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Star className="w-5 h-5 text-yellow-600" />
+              <Crown className="w-5 h-5 text-yellow-600" />
               <div>
-                <p className="text-2xl font-bold">12</p>
-                <p className="text-sm text-gray-600">Referrals Given</p>
+                <p className="text-2xl font-bold">{premiumMembers}</p>
+                <p className="text-sm text-gray-600">Premium Members</p>
               </div>
             </div>
           </CardContent>
@@ -89,7 +149,12 @@ export default function DirectoryPage() {
             <div className="flex items-center space-x-2">
               <TrendingUp className="w-5 h-5 text-purple-600" />
               <div>
-                <p className="text-2xl font-bold">8</p>
+                <p className="text-2xl font-bold">{members.filter(m => {
+                  const joinedDate = new Date(m.joinedAt)
+                  const oneMonthAgo = new Date()
+                  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+                  return joinedDate >= oneMonthAgo
+                }).length}</p>
                 <p className="text-sm text-gray-600">New This Month</p>
               </div>
             </div>
@@ -108,60 +173,53 @@ export default function DirectoryPage() {
                 <Input 
                   placeholder="Search by name, company, or services..." 
                   className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
             
             {/* Industry Filter */}
             <div>
-              <Select>
+              <Select value={industryFilter} onValueChange={setIndustryFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Industry" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Industries</SelectItem>
-                  <SelectItem value="technology">Technology</SelectItem>
-                  <SelectItem value="healthcare">Healthcare</SelectItem>
-                  <SelectItem value="real-estate">Real Estate</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="marketing">Marketing</SelectItem>
-                  <SelectItem value="legal">Legal</SelectItem>
-                  <SelectItem value="consulting">Consulting</SelectItem>
-                  <SelectItem value="retail">Retail</SelectItem>
+                  {industries.map(industry => (
+                    <SelectItem key={industry} value={industry}>{industry}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             
             {/* Location Filter */}
             <div>
-              <Select>
+              <Select value={locationFilter} onValueChange={setLocationFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Location" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Locations</SelectItem>
-                  <SelectItem value="downtown">Downtown SA</SelectItem>
-                  <SelectItem value="north">North SA</SelectItem>
-                  <SelectItem value="south">South SA</SelectItem>
-                  <SelectItem value="east">East SA</SelectItem>
-                  <SelectItem value="west">West SA</SelectItem>
-                  <SelectItem value="suburbs">Suburbs</SelectItem>
+                  {cities.map(city => (
+                    <SelectItem key={city} value={city}>{city}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             {/* Status Filter */}
             <div>
-              <Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
-                  <SelectItem value="expert">Expert</SelectItem>
-                  <SelectItem value="innovator">Innovator</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value="SUSPENDED">Suspended</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -203,44 +261,24 @@ export default function DirectoryPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <Users className="w-5 h-5 text-green-600" />
+            {members.slice(0, 3).map((member, index) => (
+              <div key={member.id} className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <Users className="w-5 h-5 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-sm">
+                    {member.user.firstName} {member.user.lastName}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    Connected {index + 1} {index === 0 ? 'day' : 'days'} ago
+                  </p>
+                </div>
+                <Button size="sm" variant="outline">
+                  <MessageSquare className="w-4 h-4" />
+                </Button>
               </div>
-              <div className="flex-1">
-                <p className="font-medium text-sm">Sarah Johnson</p>
-                <p className="text-xs text-gray-600">Connected 2 days ago</p>
-              </div>
-              <Button size="sm" variant="outline">
-                <MessageSquare className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <Users className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-sm">Mike Chen</p>
-                <p className="text-xs text-gray-600">Connected 1 week ago</p>
-              </div>
-              <Button size="sm" variant="outline">
-                <MessageSquare className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <div className="flex items-center space-x-3 p-3 bg-purple-50 rounded-lg">
-              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                <Users className="w-5 h-5 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-sm">Lisa Rodriguez</p>
-                <p className="text-xs text-gray-600">Connected 2 weeks ago</p>
-              </div>
-              <Button size="sm" variant="outline">
-                <MessageSquare className="w-4 h-4" />
-              </Button>
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -250,7 +288,7 @@ export default function DirectoryPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">All Members</h2>
           <div className="flex items-center space-x-2">
-            <Select defaultValue="grid">
+            <Select value={viewMode} onValueChange={setViewMode}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
@@ -259,7 +297,7 @@ export default function DirectoryPage() {
                 <SelectItem value="list">List View</SelectItem>
               </SelectContent>
             </Select>
-            <Select defaultValue="recent">
+            <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>
@@ -273,357 +311,94 @@ export default function DirectoryPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          {/* Member Card 1 */}
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-blue-600" />
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading members...</p>
+          </div>
+        ) : filteredMembers.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>No members found matching your criteria.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredMembers.map(member => (
+              <Card key={member.id} className="hover:shadow-lg transition-shadow duration-300">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Building2 className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">
+                          {member.user.firstName} {member.user.lastName}
+                        </CardTitle>
+                        <CardDescription>{member.businessType || 'Business Owner'}</CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Button variant="ghost" size="sm">
+                        <Bookmark className="w-4 h-4" />
+                      </Button>
+                      <Badge variant="secondary" className={getStatusBadgeColor(member.membershipStatus)}>
+                        {member.membershipStatus}
+                      </Badge>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">Sarah Johnson</CardTitle>
-                    <CardDescription>Marketing Consultant</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {member.businessName && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Building2 className="w-4 h-4 mr-2" />
+                        {member.businessName}
+                      </div>
+                    )}
+                    {member.city && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        {member.city}{member.state && `, ${member.state}`}
+                      </div>
+                    )}
+                    {member.industry.length > 0 && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Target className="w-4 h-4 mr-2" />
+                        {member.industry.slice(0, 2).join(", ")}
+                        {member.industry.length > 2 && "..."}
+                      </div>
+                    )}
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Star className="w-4 h-4 mr-2" />
+                      Member since {new Date(member.joinedAt).getFullYear()}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Handshake className="w-4 h-4 mr-2" />
+                      {member.eventRegistrations.length} events attended
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Button variant="ghost" size="sm">
-                    <Bookmark className="w-4 h-4" />
-                  </Button>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    Available
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Johnson Marketing Group
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Downtown San Antonio
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Target className="w-4 h-4 mr-2" />
-                  Digital Marketing, Brand Strategy
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Star className="w-4 h-4 mr-2" />
-                  Member since 2021
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Handshake className="w-4 h-4 mr-2" />
-                  8 connections made
-                </div>
-              </div>
-              <div className="flex space-x-2 mt-4">
-                <Button asChild size="sm" className="flex-1">
-                  <Link href="/dashboard/directory/profile/1">View Profile</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/dashboard/directory/connect/1">Connect</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Member Card 2 */}
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-green-600" />
+                  <div className="flex space-x-2 mt-4">
+                    <Button asChild size="sm" className="flex-1">
+                      <Link href={`/dashboard/directory/profile/${member.id}`}>View Profile</Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/dashboard/directory/connect/${member.id}`}>Connect</Link>
+                    </Button>
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">Michael Chen</CardTitle>
-                    <CardDescription>Real Estate Developer</CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Button variant="ghost" size="sm">
-                    <Bookmark className="w-4 h-4" />
-                  </Button>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    Premium
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Chen Development Group
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  North San Antonio
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Target className="w-4 h-4 mr-2" />
-                  Commercial Real Estate, Investment
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Star className="w-4 h-4 mr-2" />
-                  Member since 2020
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Award className="w-4 h-4 mr-2" />
-                  Top Referrer 2023
-                </div>
-              </div>
-              <div className="flex space-x-2 mt-4">
-                <Button asChild size="sm" className="flex-1">
-                  <Link href="/dashboard/directory/profile/2">View Profile</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/dashboard/directory/connect/2">Connect</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Member Card 3 */}
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">Lisa Rodriguez</CardTitle>
-                    <CardDescription>Legal Consultant</CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Button variant="ghost" size="sm">
-                    <Bookmark className="w-4 h-4" />
-                  </Button>
-                  <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                    Expert
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Rodriguez Legal Services
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  West San Antonio
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Target className="w-4 h-4 mr-2" />
-                  Business Law, Contract Review
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Star className="w-4 h-4 mr-2" />
-                  Member since 2022
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Handshake className="w-4 h-4 mr-2" />
-                  15 consultations provided
-                </div>
-              </div>
-              <div className="flex space-x-2 mt-4">
-                <Button asChild size="sm" className="flex-1">
-                  <Link href="/dashboard/directory/profile/3">View Profile</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/dashboard/directory/connect/3">Connect</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Member Card 4 */}
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-red-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">David Thompson</CardTitle>
-                    <CardDescription>Financial Advisor</CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Button variant="ghost" size="sm">
-                    <Bookmark className="w-4 h-4" />
-                  </Button>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    Available
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Thompson Financial Group
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  South San Antonio
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Target className="w-4 h-4 mr-2" />
-                  Investment Planning, Retirement
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Star className="w-4 h-4 mr-2" />
-                  Member since 2021
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Handshake className="w-4 h-4 mr-2" />
-                  12 connections made
-                </div>
-              </div>
-              <div className="flex space-x-2 mt-4">
-                <Button asChild size="sm" className="flex-1">
-                  <Link href="/dashboard/directory/profile/4">View Profile</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/dashboard/directory/connect/4">Connect</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Member Card 5 */}
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-yellow-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">Jennifer Martinez</CardTitle>
-                    <CardDescription>Tech Startup Founder</CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Button variant="ghost" size="sm">
-                    <Bookmark className="w-4 h-4" />
-                  </Button>
-                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                    Innovator
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  TechFlow Solutions
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  East San Antonio
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Target className="w-4 h-4 mr-2" />
-                  SaaS, Mobile Apps, Consulting
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Star className="w-4 h-4 mr-2" />
-                  Member since 2023
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Award className="w-4 h-4 mr-2" />
-                  Rising Star Award
-                </div>
-              </div>
-              <div className="flex space-x-2 mt-4">
-                <Button asChild size="sm" className="flex-1">
-                  <Link href="/dashboard/directory/profile/5">View Profile</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/dashboard/directory/connect/5">Connect</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Member Card 6 */}
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-indigo-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">Robert Wilson</CardTitle>
-                    <CardDescription>Healthcare Administrator</CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Button variant="ghost" size="sm">
-                    <Bookmark className="w-4 h-4" />
-                  </Button>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    Available
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Wilson Healthcare Management
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Suburbs
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Target className="w-4 h-4 mr-2" />
-                  Healthcare Management, Consulting
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Star className="w-4 h-4 mr-2" />
-                  Member since 2020
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Handshake className="w-4 h-4 mr-2" />
-                  20 connections made
-                </div>
-              </div>
-              <div className="flex space-x-2 mt-4">
-                <Button asChild size="sm" className="flex-1">
-                  <Link href="/dashboard/directory/profile/6">View Profile</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/dashboard/directory/connect/6">Connect</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Load More */}
-        <div className="text-center mt-8">
-          <Button asChild variant="outline" size="lg">
-            <Link href="/dashboard/directory?page=2">Load More Members</Link>
-          </Button>
-        </div>
+        {pagination && pagination.hasNextPage && (
+          <div className="text-center mt-8">
+            <Button asChild variant="outline" size="lg">
+              <Link href={`/dashboard/directory?page=${pagination.page + 1}`}>Load More Members</Link>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Connection Tools */}
@@ -681,4 +456,17 @@ export default function DirectoryPage() {
       </div>
     </div>
   )
+}
+
+function getStatusBadgeColor(status: string) {
+  switch (status) {
+    case 'ACTIVE':
+      return 'bg-green-100 text-green-800'
+    case 'INACTIVE':
+      return 'bg-gray-100 text-gray-800'
+    case 'SUSPENDED':
+      return 'bg-red-100 text-red-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
 } 

@@ -37,7 +37,7 @@ const searchParamsSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -49,6 +49,11 @@ export async function GET(request: NextRequest) {
       user: {
         isActive: true,
       },
+    }
+
+    // For non-admin users, only show members who have opted to be in directory
+    if (session.user.role !== "ADMIN") {
+      where.showInDirectory = true
     }
 
     // Search functionality
@@ -105,6 +110,19 @@ export async function GET(request: NextRequest) {
               isActive: true,
               lastLogin: true,
               createdAt: true,
+            },
+          },
+          eventRegistrations: {
+            select: {
+              id: true,
+              event: {
+                select: {
+                  id: true,
+                  title: true,
+                  startDate: true,
+                  status: true,
+                },
+              },
             },
           },
         },

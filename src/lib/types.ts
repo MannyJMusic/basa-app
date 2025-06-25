@@ -18,6 +18,7 @@ declare module "next-auth" {
       lastName: string
       role: string
       isActive: boolean
+      image?: string
     } & DefaultSession["user"]
   }
 
@@ -27,6 +28,18 @@ declare module "next-auth" {
     lastName: string
     role: string
     isActive: boolean
+    image?: string
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string
+    firstName: string
+    lastName: string
+    role: string
+    isActive: boolean
+    image?: string
   }
 }
 

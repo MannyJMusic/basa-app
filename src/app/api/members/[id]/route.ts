@@ -29,11 +29,13 @@ export async function GET(
 ) {
   try {
     const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const { id } = await params
+    console.log('Fetching member with ID:', id)
+    console.log('User role:', session.user.role)
 
     const member = await prisma.member.findUnique({
       where: { id },
@@ -62,10 +64,10 @@ export async function GET(
               },
             },
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: { id: "desc" },
           take: 10,
         },
-        sponsorships: {
+        eventSponsors: {
           include: {
             event: {
               select: {
@@ -75,14 +77,26 @@ export async function GET(
               },
             },
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: { id: "desc" },
           take: 10,
         },
       },
     })
 
+    console.log('Member found:', member ? 'Yes' : 'No')
+    if (member) {
+      console.log('Member showInDirectory:', member.showInDirectory)
+      console.log('User role:', session.user.role)
+    }
+
     if (!member) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 })
+    }
+
+    // For non-admins, only allow viewing if showInDirectory is true
+    if (session.user.role !== "ADMIN" && !member.showInDirectory) {
+      console.log('Access denied: member not in directory')
+      return NextResponse.json({ error: "Not allowed" }, { status: 403 })
     }
 
     return NextResponse.json(member)

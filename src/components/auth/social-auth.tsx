@@ -1,12 +1,10 @@
 "use client"
 
-import { signIn, getSession } from "next-auth/react"
+import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { FcGoogle } from "react-icons/fc"
 import { FaLinkedin } from "react-icons/fa"
-import { getRedirectUrl } from "@/lib/utils"
-import { UserRole } from "@/lib/types"
 
 export default function SocialAuth() {
   const [loading, setLoading] = useState<string | null>(null)
@@ -14,17 +12,13 @@ export default function SocialAuth() {
   async function handleSocialSignIn(provider: string) {
     setLoading(provider)
     try {
-      const result = await signIn(provider, { redirect: false })
-      if (result?.ok) {
-        // Wait for session to update and get the user's role
-        const session = await getSession()
-        const role = (session?.user?.role as UserRole) || "GUEST"
-        const redirectUrl = getRedirectUrl(role)
-        window.location.href = redirectUrl
-      }
+      // Use redirect: true to let NextAuth handle the redirect automatically
+      await signIn(provider, { 
+        callbackUrl: "/dashboard",
+        redirect: true 
+      })
     } catch (error) {
       console.error("Social login error:", error)
-    } finally {
       setLoading(null)
     }
   }

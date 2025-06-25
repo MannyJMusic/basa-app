@@ -1,4 +1,7 @@
+'use client'
+
 import { useState, useCallback } from "react"
+import { toast } from "@/components/ui/use-toast"
 
 export interface Member {
   id: string
@@ -6,6 +9,10 @@ export interface Member {
   businessName?: string
   businessType?: string
   industry: string[]
+  ein?: string
+  yearEstablished?: number
+  numberOfEmployees?: string
+  annualRevenue?: string
   businessEmail?: string
   businessPhone?: string
   businessAddress?: string
@@ -16,6 +23,23 @@ export interface Member {
   membershipTier?: "BASIC" | "PREMIUM" | "VIP"
   membershipStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED"
   joinedAt: string
+  renewalDate?: string
+  stripeCustomerId?: string
+  subscriptionId?: string
+  logo?: string
+  coverImage?: string
+  description?: string
+  tagline?: string
+  specialties: string[]
+  certifications: string[]
+  linkedin?: string
+  facebook?: string
+  instagram?: string
+  twitter?: string
+  youtube?: string
+  showInDirectory: boolean
+  allowContact: boolean
+  showAddress: boolean
   user: {
     id: string
     firstName?: string
@@ -26,6 +50,37 @@ export interface Member {
     lastLogin?: string
     createdAt: string
   }
+  eventRegistrations: Array<{
+    id: string
+    event: {
+      id: string
+      title: string
+      startDate: string
+      status: string
+    }
+  }>
+  referralsGiven: Array<{
+    id: string
+    referred: {
+      id: string
+      businessName?: string
+      user: {
+        firstName?: string
+        lastName?: string
+      }
+    }
+  }>
+  referralsReceived: Array<{
+    id: string
+    referrer: {
+      id: string
+      businessName?: string
+      user: {
+        firstName?: string
+        lastName?: string
+      }
+    }
+  }>
 }
 
 export interface CreateMemberData {
@@ -73,13 +128,15 @@ export interface MemberFilters {
   status?: "ACTIVE" | "INACTIVE" | "SUSPENDED"
   membershipTier?: "BASIC" | "PREMIUM" | "VIP"
   industry?: string
+  city?: string
+  showInDirectory?: boolean
   page?: number
   limit?: number
   sortBy?: "firstName" | "lastName" | "businessName" | "joinedAt" | "membershipTier"
   sortOrder?: "asc" | "desc"
 }
 
-export interface MembersResponse {
+export interface MemberListResponse {
   members: Member[]
   pagination: {
     page: number
@@ -102,202 +159,247 @@ export interface BulkUploadResult {
 }
 
 export function useMembers() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const [members, setMembers] = useState<Member[]>([])
-  const [pagination, setPagination] = useState<MembersResponse['pagination'] | null>(null)
+  const [pagination, setPagination] = useState<MemberListResponse['pagination'] | null>(null)
+  const [currentMember, setCurrentMember] = useState<Member | null>(null)
 
-  const fetchMembers = useCallback(async (filters: MemberFilters = {}): Promise<MembersResponse | null> => {
-    setIsLoading(true)
-    setError(null)
-
+  const fetchMembers = useCallback(async (
+    filters: MemberFilters = {},
+    page: number = 1,
+    limit: number = 20,
+    sortBy: string = 'joinedAt',
+    sortOrder: 'asc' | 'desc' = 'desc'
+  ) => {
+    setLoading(true)
     try {
-      const params = new URLSearchParams()
-      
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== "") {
-          params.append(key, String(value))
-        }
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sortBy,
+        sortOrder,
+        ...filters,
       })
 
-      const response = await fetch(`/api/members?${params.toString()}`)
+      const url = `/api/members?${params}`
+      console.log('useMembers: fetching members from', url)
+      
+      const response = await fetch(url)
+      console.log('useMembers: response status', response.status, response.ok)
       
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to fetch members")
+        const errorText = await response.text()
+        console.error('useMembers: response not ok', errorText)
+        throw new Error('Failed to fetch members')
       }
 
-      const data = await response.json()
+      const data: MemberListResponse = await response.json()
+      console.log('useMembers: received data', data)
+      console.log('useMembers: members count', data.members?.length)
+      
       setMembers(data.members)
       setPagination(data.pagination)
       return data
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to fetch members"
-      setError(errorMessage)
-      return null
+    } catch (error) {
+      console.error('Error fetching members:', error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch members",
+        variant: "destructive",
+      })
+      throw error
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }, [])
 
-  const fetchMember = useCallback(async (id: string): Promise<Member | null> => {
-    setIsLoading(true)
-    setError(null)
-
+  const fetchMember = useCallback(async (id: string) => {
+    setLoading(true)
     try {
       const response = await fetch(`/api/members/${id}`)
-      
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to fetch member")
+        throw new Error('Failed to fetch member')
       }
 
-      return await response.json()
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to fetch member"
-      setError(errorMessage)
-      return null
+      const member: Member = await response.json()
+      setCurrentMember(member)
+      return member
+    } catch (error) {
+      console.error('Error fetching member:', error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch member",
+        variant: "destructive",
+      })
+      throw error
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }, [])
 
-  const createMember = useCallback(async (data: CreateMemberData): Promise<Member | null> => {
-    setIsLoading(true)
-    setError(null)
-
+  const createMember = useCallback(async (data: any) => {
+    setLoading(true)
     try {
-      const response = await fetch("/api/members", {
-        method: "POST",
+      const response = await fetch('/api/members', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to create member")
+        throw new Error(errorData.error || 'Failed to create member')
       }
 
-      return await response.json()
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to create member"
-      setError(errorMessage)
-      return null
+      const member: Member = await response.json()
+      toast({
+        title: "Success",
+        description: "Member created successfully",
+      })
+      return member
+    } catch (error) {
+      console.error('Error creating member:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create member",
+        variant: "destructive",
+      })
+      throw error
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }, [])
 
-  const updateMember = useCallback(async (id: string, data: UpdateMemberData): Promise<Member | null> => {
-    setIsLoading(true)
-    setError(null)
-
+  const updateMember = useCallback(async (id: string, data: any) => {
+    setLoading(true)
     try {
       const response = await fetch(`/api/members/${id}`, {
-        method: "PUT",
+        method: 'PUT',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to update member")
+        throw new Error(errorData.error || 'Failed to update member')
       }
 
-      return await response.json()
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to update member"
-      setError(errorMessage)
-      return null
+      const member: Member = await response.json()
+      
+      // Update the current member if it's the one being updated
+      if (currentMember?.id === id) {
+        setCurrentMember(member)
+      }
+
+      // Update the member in the list
+      setMembers(prev => prev.map(m => m.id === id ? member : m))
+
+      toast({
+        title: "Success",
+        description: "Member updated successfully",
+      })
+      return member
+    } catch (error) {
+      console.error('Error updating member:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update member",
+        variant: "destructive",
+      })
+      throw error
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
-  }, [])
+  }, [currentMember])
 
-  const deleteMember = useCallback(async (id: string): Promise<boolean> => {
-    setIsLoading(true)
-    setError(null)
-
+  const deleteMember = useCallback(async (id: string) => {
+    setLoading(true)
     try {
       const response = await fetch(`/api/members/${id}`, {
-        method: "DELETE",
+        method: 'DELETE',
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to delete member")
+        throw new Error(errorData.error || 'Failed to delete member')
       }
 
-      return true
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to delete member"
-      setError(errorMessage)
-      return false
+      // Remove from members list
+      setMembers(prev => prev.filter(m => m.id !== id))
+      
+      // Clear current member if it's the one being deleted
+      if (currentMember?.id === id) {
+        setCurrentMember(null)
+      }
+
+      toast({
+        title: "Success",
+        description: "Member deleted successfully",
+      })
+    } catch (error) {
+      console.error('Error deleting member:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete member",
+        variant: "destructive",
+      })
+      throw error
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
-  }, [])
+  }, [currentMember])
 
-  const exportMembers = useCallback(async (filters: MemberFilters = {}, format: "csv" | "json" = "csv"): Promise<void> => {
-    setIsLoading(true)
-    setError(null)
-
+  const exportMembers = useCallback(async (
+    filters: MemberFilters = {},
+    format: 'csv' | 'json' = 'csv'
+  ) => {
     try {
-      const params = new URLSearchParams()
-      
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== "") {
-          params.append(key, String(value))
-        }
+      const params = new URLSearchParams({
+        format,
+        ...filters,
       })
-      
-      params.append("format", format)
 
-      const response = await fetch(`/api/members/export?${params.toString()}`)
-      
+      const response = await fetch(`/api/members/export?${params}`)
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to export members")
+        throw new Error('Failed to export members')
       }
 
-      if (format === "csv") {
+      if (format === 'csv') {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
+        const a = document.createElement('a')
         a.href = url
-        a.download = `basa-members-${new Date().toISOString().split("T")[0]}.csv`
+        a.download = `basa-members-${new Date().toISOString().split('T')[0]}.csv`
         document.body.appendChild(a)
         a.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
       } else {
         const data = await response.json()
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `basa-members-${new Date().toISOString().split("T")[0]}.json`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
+        return data
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to export members"
-      setError(errorMessage)
-    } finally {
-      setIsLoading(false)
+
+      toast({
+        title: "Success",
+        description: `Members exported successfully as ${format.toUpperCase()}`,
+      })
+    } catch (error) {
+      console.error('Error exporting members:', error)
+      toast({
+        title: "Error",
+        description: "Failed to export members",
+        variant: "destructive",
+      })
+      throw error
     }
   }, [])
 
   const bulkUploadMembers = useCallback(async (file: File): Promise<BulkUploadResult | null> => {
-    setIsLoading(true)
-    setError(null)
-
+    setLoading(true)
     try {
       const formData = new FormData()
       formData.append("file", file)
@@ -314,20 +416,24 @@ export function useMembers() {
 
       const result = await response.json()
       return result.results
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to upload members"
-      setError(errorMessage)
-      return null
+    } catch (error) {
+      console.error('Error uploading members:', error)
+      toast({
+        title: "Error",
+        description: "Failed to upload members",
+        variant: "destructive",
+      })
+      throw error
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }, [])
 
   return {
-    isLoading,
-    error,
+    loading,
     members,
     pagination,
+    currentMember,
     fetchMembers,
     fetchMember,
     createMember,
