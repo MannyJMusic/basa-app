@@ -2,6 +2,7 @@
 
 import { AdminOnly } from "@/components/auth/role-guard"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { LogOut, BarChart2, Users, FileText, Calendar, DollarSign, UserPlus, Settings } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
@@ -16,8 +17,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="flex min-h-screen bg-gray-50">
         {/* Sidebar */}
         <aside className="w-64 bg-white border-r flex flex-col">
-          <div className="h-16 flex items-center justify-center border-b">
-            <span className="font-bold text-xl tracking-tight text-blue-900">BASA Admin</span>
+          <div className="h-16 flex items-center justify-center border-b px-4">
+            <div className="flex items-center">
+              <Image
+                src="/images/BASA-LOGO.png"
+                alt="BASA Logo"
+                width={80}
+                height={28}
+                className="h-6 w-auto"
+              />
+              <span className="ml-2 text-sm font-medium text-blue-900">
+                Admin
+              </span>
+            </div>
           </div>
           <nav className="flex-1 px-4 py-6 space-y-2">
             <Link href="/admin" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-blue-50 text-blue-900 font-medium">

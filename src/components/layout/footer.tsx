@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 
 export default function Footer() {
   return (
@@ -7,7 +8,15 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">BASA</h3>
+            <div className="mb-4">
+              <Image
+                src="/images/BASA-LOGO.png"
+                alt="BASA Logo"
+                width={100}
+                height={35}
+                className="h-8 w-auto"
+              />
+            </div>
             <p className="text-gray-300">
               Building stronger business communities through networking and giving.
             </p>
@@ -53,6 +62,15 @@ export default function Footer() {
         </div>
         
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-300">
+          <div className="flex items-center justify-center mb-2">
+            <Image
+              src="/images/BASA-LOGO.png"
+              alt="BASA Logo"
+              width={80}
+              height={28}
+              className="h-6 w-auto"
+            />
+          </div>
           <p>&copy; 2024 BASA. All rights reserved.</p>
         </div>
       </div>
