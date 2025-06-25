@@ -1,9 +1,16 @@
+"use client"
+
 import { AdminOnly } from "@/components/auth/role-guard"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { LogOut, BarChart2, Users, FileText, Calendar, DollarSign, UserPlus, Settings } from "lucide-react"
+import { signOut, useSession } from "next-auth/react"
+import { UserCircleIcon } from "@heroicons/react/24/outline"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession()
+  const user = session?.user
+
   return (
     <AdminOnly fallback={<div className="p-8 text-center text-red-600">Access denied. Admins only.</div>}>
       <div className="flex min-h-screen bg-gray-50">
@@ -39,11 +46,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Link>
           </nav>
           <div className="p-4 border-t">
-            <form action="/api/auth/signout" method="post">
-              <Button variant="outline" className="w-full flex items-center gap-2" type="submit">
-                <LogOut className="w-4 h-4" /> Log out
-              </Button>
-            </form>
+            <Button 
+              variant="outline" 
+              className="w-full flex items-center gap-2" 
+              onClick={() => signOut({ callbackUrl: "/" })}
+            >
+              <LogOut className="w-4 h-4" /> Log out
+            </Button>
           </div>
         </aside>
         {/* Main content */}
@@ -51,7 +60,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* Topbar */}
           <header className="h-16 bg-white border-b flex items-center px-6 justify-between">
             <div className="font-semibold text-lg text-blue-900">Admin Panel</div>
-            {/* Add user info, notifications, etc. here if needed */}
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <UserCircleIcon className="h-6 w-6 text-gray-600" />
+                <span className="text-sm text-gray-700">
+                  {user?.firstName} {user?.lastName}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => signOut({ callbackUrl: "/" })}
+              >
+                Sign out
+              </Button>
+            </div>
           </header>
           <div className="flex-1 p-8 overflow-y-auto">{children}</div>
         </main>

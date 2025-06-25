@@ -1,4 +1,4 @@
-import { useSession, signIn, signOut } from "next-auth/react"
+import { useSession, signIn, signOut, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { LoginFormData, RegisterFormData, PasswordResetRequestData } from "@/lib/validations"
@@ -27,7 +27,11 @@ export function useAuth() {
       }
 
       if (result?.ok) {
-        const redirectUrl = getRedirectUrl(session?.user?.role || "GUEST")
+        // Wait for session to update
+        await update()
+        const newSession = await getSession()
+        const role = newSession?.user?.role || "GUEST"
+        const redirectUrl = getRedirectUrl(role)
         router.push(redirectUrl)
         return true
       }
