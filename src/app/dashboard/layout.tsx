@@ -34,7 +34,8 @@ export default async function DashboardLayout({
           firstName: session.user.firstName || '',
           lastName: session.user.lastName || '',
           role: session.user.role || '',
-          isActive: session.user.isActive || false
+          isActive: session.user.isActive || false,
+          image: session.user.image || undefined
         }} />
         <main className="flex-1 p-6">
           {children}
