@@ -1,0 +1,33 @@
+# Development Dockerfile
+FROM node:18-alpine AS base
+
+# Install pnpm and OpenSSL dependencies for Prisma
+RUN apk add --no-cache openssl
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Copy prisma schema first (needed for postinstall script)
+COPY prisma ./prisma
+
+# Set Prisma to use OpenSSL 3.x for Alpine compatibility
+ENV PRISMA_QUERY_ENGINE_TYPE=binary
+ENV PRISMA_QUERY_ENGINE_BINARY=linux-musl-openssl-3.0.x
+
+# Install dependencies (postinstall will now find the schema)
+RUN pnpm install --frozen-lockfile
+
+# Copy the rest of the application
+COPY . .
+
+# Expose port
+EXPOSE 3000
+
+# Start development server
+CMD ["pnpm", "dev"] 
