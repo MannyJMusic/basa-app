@@ -13,6 +13,7 @@ import type { Session } from "next-auth"
 export const authConfig: NextAuthConfig = {
     debug: false,
     adapter: PrismaAdapter(prisma),
+    trustHost: true,
     providers: [
       GoogleProvider({
         clientId: process.env.GOOGLE_CLIENT_ID!,
