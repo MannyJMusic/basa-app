@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { LoginFormData, RegisterFormData, PasswordResetRequestData } from "@/lib/validations"
 import { getRedirectUrl } from "@/lib/utils"
+import { Role } from "@/lib/types"
 
 export function useAuth() {
   const { data: session, status, update } = useSession()
@@ -31,7 +32,7 @@ export function useAuth() {
         await update()
         const newSession = await getSession()
         const role = newSession?.user?.role || "GUEST"
-        const redirectUrl = getRedirectUrl(role)
+        const redirectUrl = getRedirectUrl(role as Role)
         router.push(redirectUrl)
         return true
       }
@@ -73,7 +74,7 @@ export function useAuth() {
       })
 
       if (loginResult?.ok) {
-        const redirectUrl = getRedirectUrl("MEMBER")
+        const redirectUrl = getRedirectUrl(Role.MEMBER)
         router.push(redirectUrl)
         return true
       }

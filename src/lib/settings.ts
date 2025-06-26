@@ -76,12 +76,11 @@ export async function shouldAutoApproveMembers() {
 
 export async function getAdminEmails() {
   const settings = await getSettings()
-  if (!settings?.adminEmails) return []
-  
-  return settings.adminEmails
+  if (!(settings as any)?.adminEmails) return []
+  return (settings as any).adminEmails
     .split('\n')
-    .map(email => email.trim())
-    .filter(email => email.length > 0)
+    .map((email: string) => email.trim())
+    .filter((email: string) => email.length > 0)
 }
 
 export async function shouldNotifyNewMembers() {
@@ -107,8 +106,8 @@ export async function shouldNotifySystemAlerts() {
 export async function getStripeConfig() {
   const settings = await getSettings()
   return {
-    publicKey: settings?.stripePublicKey,
-    secretKey: settings?.stripeSecretKey,
+    publicKey: (settings as any)?.stripePublicKey,
+    secretKey: (settings as any)?.stripeSecretKey,
     testMode: settings?.stripeTestMode || true,
   }
 }
@@ -116,18 +115,18 @@ export async function getStripeConfig() {
 export async function getSmtpConfig() {
   const settings = await getSettings()
   return {
-    host: settings?.smtpHost,
-    port: settings?.smtpPort,
-    username: settings?.smtpUsername,
-    password: settings?.smtpPassword,
+    host: (settings as any)?.smtpHost,
+    port: (settings as any)?.smtpPort,
+    username: (settings as any)?.smtpUsername,
+    password: (settings as any)?.smtpPassword,
   }
 }
 
 export async function getAppearanceSettings() {
   const settings = await getSettings()
   return {
-    logoUrl: settings?.logoUrl,
-    faviconUrl: settings?.faviconUrl,
+    logoUrl: (settings as any)?.logoUrl,
+    faviconUrl: (settings as any)?.faviconUrl,
     primaryColor: settings?.primaryColor || '#1e40af',
     secondaryColor: settings?.secondaryColor || '#059669',
     showMemberCount: settings?.showMemberCount || true,

@@ -14,7 +14,7 @@ interface UseFormWithValidationProps<T extends FieldValues> extends Omit<UseForm
 interface UseFormWithValidationReturn<T extends FieldValues> extends UseFormReturn<T> {
   isSubmitting: boolean
   submitError: string | null
-  handleSubmit: (e?: React.FormEvent) => Promise<void>
+  customHandleSubmit: (e?: React.FormEvent) => Promise<void>
 }
 
 export function useFormWithValidation<T extends FieldValues>({
@@ -61,7 +61,7 @@ export function useFormWithValidation<T extends FieldValues>({
     ...form,
     isSubmitting,
     submitError,
-    handleSubmit
+    customHandleSubmit: handleSubmit
   }
 }
 
@@ -129,17 +129,17 @@ export function useFormReset<T extends FieldValues>(
   const { reset, formState } = form
 
   const resetForm = (data?: Partial<T>) => {
-    reset(data)
+    reset(data as any)
   }
 
   const resetFormWithConfirmation = (data?: Partial<T>) => {
     if (formState.isDirty) {
       const confirmed = window.confirm('Are you sure you want to reset the form? All changes will be lost.')
       if (confirmed) {
-        reset(data)
+        reset(data as any)
       }
     } else {
-      reset(data)
+      reset(data as any)
     }
   }
 

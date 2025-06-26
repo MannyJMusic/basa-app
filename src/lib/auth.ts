@@ -13,6 +13,7 @@ import type { Session } from "next-auth"
 export const authConfig: NextAuthConfig = {
     debug: false,
     adapter: PrismaAdapter(prisma),
+    trustHost: true,
     providers: [
       GoogleProvider({
         clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -32,7 +33,9 @@ export const authConfig: NextAuthConfig = {
           if (!credentials?.email || !credentials?.password) {
             return null
           }
-
+          if (typeof credentials.email !== "string") {
+            return null
+          }
           const user = await prisma.user.findUnique({
             where: { email: credentials.email as string }
           })

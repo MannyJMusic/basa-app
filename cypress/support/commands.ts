@@ -24,4 +24,7 @@ Cypress.Commands.add('logout', () => {
   cy.visit('/dashboard')
   cy.get('[data-testid="user-menu"]').click()
   cy.get('[data-testid="logout-button"]').click()
-}) 
+})
+
+// Export to make this a module
+export {} 

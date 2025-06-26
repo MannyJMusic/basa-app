@@ -82,7 +82,7 @@ export default function DirectoryPage() {
   const industries = Array.from(new Set(members.flatMap(m => m.industry))).sort()
   
   // Get unique cities for filter
-  const cities = Array.from(new Set(members.map(m => m.city).filter(Boolean))).sort()
+  const cities = Array.from(new Set(members.map(m => m.city).filter(Boolean))).sort() as string[]
 
   // Calculate stats
   const totalMembers = members.length

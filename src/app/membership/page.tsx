@@ -14,7 +14,6 @@ import {
   Handshake,
   TrendingUp,
   Globe,
-  Microphone,
   Gift,
   Crown,
   Zap,

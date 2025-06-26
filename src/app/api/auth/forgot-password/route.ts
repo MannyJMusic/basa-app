@@ -35,12 +35,9 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Create reset URL
-    const resetUrl = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}`
-
     // Send password reset email using Mailgun
     try {
-      await sendPasswordResetEmail(email, user.firstName, resetToken)
+      await sendPasswordResetEmail(email, user.firstName || 'User', resetToken)
     } catch (emailError) {
       console.error("Failed to send password reset email:", emailError)
       return NextResponse.json(

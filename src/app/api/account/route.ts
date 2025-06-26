@@ -20,7 +20,7 @@ const accountSettingsSchema = z.object({
   showPhone: z.boolean().optional(),
 })
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth()
     

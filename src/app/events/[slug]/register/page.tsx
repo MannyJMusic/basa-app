@@ -414,7 +414,7 @@ export default function EventRegistrationPage() {
                     {/* Event Features */}
                     <div className="space-y-2">
                       <h4 className="font-semibold text-gray-900">What's Included</h4>
-                      {event.features.map((feature, index) => (
+                      {event.features.map((feature: string, index: number) => (
                         <div key={index} className="flex items-center text-sm">
                           <CheckCircle className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
                           <span className="text-gray-700">{feature}</span>

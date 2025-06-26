@@ -7,21 +7,21 @@ import { z } from "zod"
 const updateTestimonialSchema = z.object({
   authorName: z.string().min(1, "Author name is required").optional(),
   authorTitle: z.string().optional(),
-  authorCompany: z.string().optional(),
-  authorImage: z.string().url().optional(),
+  company: z.string().optional(),
   content: z.string().min(1, "Content is required").optional(),
   rating: z.number().min(1).max(5).optional(),
-  status: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
   isFeatured: z.boolean().optional(),
   memberId: z.string().optional(),
 })
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
+    const params = await context.params
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -60,10 +60,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
+    const params = await context.params
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -118,10 +119,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
+    const params = await context.params
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
