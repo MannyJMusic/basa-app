@@ -17,14 +17,21 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { tier, paymentMethod } = body
 
-    // Validate tier
-    const validTiers = ['essential', 'professional', 'corporate']
-    if (!validTiers.includes(tier)) {
+    // Validate tier and map to MembershipTier enum
+    const tierMapping = {
+      essential: 'BASIC',
+      professional: 'PREMIUM', 
+      corporate: 'VIP'
+    }
+    
+    if (!tierMapping[tier as keyof typeof tierMapping]) {
       return NextResponse.json(
         { error: 'Invalid membership tier' },
         { status: 400 }
       )
     }
+
+    const membershipTier = tierMapping[tier as keyof typeof tierMapping] as 'BASIC' | 'PREMIUM' | 'VIP'
 
     // Get tier pricing
     const tierPricing = {
@@ -57,34 +64,16 @@ export async function POST(request: NextRequest) {
         member: {
           upsert: {
             create: {
-              tier,
-              status: 'ACTIVE',
-              startDate: new Date(),
-              endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
-              paymentHistory: {
-                create: {
-                  amount,
-                  currency: 'usd',
-                  status: 'COMPLETED',
-                  stripePaymentIntentId: paymentIntent.id,
-                  description: `${tier} membership`
-                }
-              }
+              membershipTier,
+              membershipStatus: 'ACTIVE',
+              joinedAt: new Date(),
+              stripeCustomerId: paymentIntent.customer as string || undefined
             },
             update: {
-              tier,
-              status: 'ACTIVE',
-              startDate: new Date(),
-              endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
-              paymentHistory: {
-                create: {
-                  amount,
-                  currency: 'usd',
-                  status: 'COMPLETED',
-                  stripePaymentIntentId: paymentIntent.id,
-                  description: `${tier} membership`
-                }
-              }
+              membershipTier,
+              membershipStatus: 'ACTIVE',
+              joinedAt: new Date(),
+              stripeCustomerId: paymentIntent.customer as string || undefined
             }
           }
         }
@@ -100,6 +89,7 @@ export async function POST(request: NextRequest) {
         entityId: paymentIntent.id,
         newValues: {
           tier,
+          membershipTier,
           amount,
           currency: 'usd'
         }

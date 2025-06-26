@@ -16,7 +16,8 @@ import {
   ArrowRight,
   Download,
   Share2,
-  Star
+  Star,
+  AlertCircle
 } from 'lucide-react'
 import Link from 'next/link'
 

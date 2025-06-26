@@ -30,7 +30,7 @@ export default function EventsPage() {
   useEffect(() => {
     console.log('EventsPage: useEffect triggered')
     // Fetch only published and upcoming events
-    fetchEvents({ status: "PUBLISHED", sortBy: "startDate", sortOrder: "asc" })
+    fetchEvents({ status: "PUBLISHED" }, 1, 20, "startDate", "asc")
       .then(data => {
         console.log('EventsPage: fetchEvents success', data)
       })

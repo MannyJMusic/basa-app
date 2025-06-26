@@ -159,7 +159,7 @@ export async function PUT(request: NextRequest) {
       if (validatedData.lastName !== undefined) userUpdateData.lastName = validatedData.lastName
       if (validatedData.email !== undefined) userUpdateData.email = validatedData.email
 
-      let updatedUser = session.user
+      let updatedUser: any = session.user
       if (Object.keys(userUpdateData).length > 0) {
         updatedUser = await tx.user.update({
           where: { id: session.user.id },

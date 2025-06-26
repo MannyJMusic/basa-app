@@ -25,8 +25,9 @@ const SAMPLE_POSTS = {
   // Add more sample posts here...
 }
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = SAMPLE_POSTS[params.slug] || SAMPLE_POSTS["networking-tips-for-san-antonio-entrepreneurs"]
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const post = (SAMPLE_POSTS as any)[slug] || SAMPLE_POSTS["networking-tips-for-san-antonio-entrepreneurs"]
   return (
     <div className="min-h-screen bg-gray-50">
       {/* SEO Meta Tags */}
@@ -54,7 +55,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
           <p className="text-lg text-gray-600 mb-4">{post.excerpt}</p>
         </div>
         <div className="prose prose-blue max-w-none mb-8">
-          {post.content.map((para, idx) => (
+          {post.content.map((para: string, idx: number) => (
             <p key={idx}>{para}</p>
           ))}
         </div>

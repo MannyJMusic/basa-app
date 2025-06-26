@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
         lastName,
         phone,
         role: "MEMBER",
-        isVerified: false,
         isActive: true
       }
     })
