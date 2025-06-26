@@ -186,9 +186,60 @@ export const authConfig: NextAuthConfig = {
               
               return true;
             } else {
-              // User doesn't exist - redirect to sign up with error
-              console.log("New social login user - redirecting to sign up");
-              return `/auth/sign-up?error=social_signup_required&provider=${account.provider}&email=${encodeURIComponent(user.email)}`;
+              // User doesn't exist - automatically create account for social login
+              console.log("Creating new user account for social login");
+              
+              // Split name into first and last name
+              const { firstName, lastName } = splitName(user.name);
+              
+              // Create new user
+              const newUser = await prisma.user.create({
+                data: {
+                  email: user.email,
+                  firstName: firstName,
+                  lastName: lastName,
+                  image: user.image,
+                  role: "MEMBER",
+                  isActive: true,
+                  lastLogin: new Date(),
+                  // Create the social account link
+                  accounts: {
+                    create: {
+                      type: account.type,
+                      provider: account.provider,
+                      providerAccountId: account.providerAccountId,
+                      refresh_token: account.refresh_token,
+                      access_token: account.access_token,
+                      expires_at: account.expires_at,
+                      token_type: account.token_type,
+                      scope: account.scope,
+                      id_token: account.id_token,
+                      session_state: account.session_state,
+                    }
+                  }
+                }
+              });
+
+              // Log account creation
+              await prisma.auditLog.create({
+                data: {
+                  userId: newUser.id,
+                  action: "ACCOUNT_CREATED",
+                  entityType: "USER",
+                  entityId: newUser.id,
+                  newValues: {
+                    timestamp: new Date().toISOString(),
+                    provider: account.provider,
+                    email: user.email,
+                    firstName: firstName,
+                    lastName: lastName,
+                    image: user.image || null
+                  }
+                }
+              });
+
+              console.log("New user account created:", newUser.id);
+              return true;
             }
 
           } catch (error) {
