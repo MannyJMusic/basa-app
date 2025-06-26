@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, Search, Calendar, CreditCard, Eye, Download, MoreHorizontal } from "lucide-react"
+import { DollarSign, Search, CreditCard, Eye, Download, MoreHorizontal } from "lucide-react"
 
 export default function PaymentsPage() {
   return (

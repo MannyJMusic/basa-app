@@ -23,20 +23,16 @@ import {
   DollarSign,
   Star,
   Edit,
-  Trash2,
   Eye,
-  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
-  CheckCircle,
   Clock,
   Building
 } from 'lucide-react'
 import { useEvents, Event, CreateEventData, EventFilters } from '@/hooks/use-events'
 import { useMembers } from '@/hooks/use-members'
 import { EventDetailDialog } from '@/components/events/event-detail-dialog'
-import { toast } from '@/components/ui/use-toast'
 
 export default function AdminEventsPage() {
   const {

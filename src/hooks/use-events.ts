@@ -112,13 +112,17 @@ export function useEvents() {
   ) => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        sortBy,
-        sortOrder,
-        ...filters,
-      })
+      const params = new URLSearchParams(
+        Object.entries({
+          page: page.toString(),
+          limit: limit.toString(),
+          sortBy,
+          sortOrder,
+          ...filters,
+        })
+          .filter(([_, v]) => v !== undefined && v !== null)
+          .map(([k, v]) => [k, String(v)])
+      )
 
       const url = `/api/events?${params}`
       console.log('useEvents: fetching events from', url)
@@ -296,10 +300,14 @@ export function useEvents() {
     format: 'csv' | 'json' = 'csv'
   ) => {
     try {
-      const params = new URLSearchParams({
-        format,
-        ...filters,
-      })
+      const params = new URLSearchParams(
+        Object.entries({
+          format,
+          ...filters,
+        })
+          .filter(([_, v]) => v !== undefined && v !== null)
+          .map(([k, v]) => [k, String(v)])
+      )
 
       const response = await fetch(`/api/events/export?${params}`)
       if (!response.ok) {

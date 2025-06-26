@@ -32,7 +32,9 @@ export const authConfig: NextAuthConfig = {
           if (!credentials?.email || !credentials?.password) {
             return null
           }
-
+          if (typeof credentials.email !== "string") {
+            return null
+          }
           const user = await prisma.user.findUnique({
             where: { email: credentials.email }
           })
