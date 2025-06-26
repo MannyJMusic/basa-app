@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react"
 import { ReactNode } from "react"
-import { UserRole, canAccess } from "@/lib/types"
+import { UserRole, canAccess, Role } from "@/lib/types"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
@@ -11,6 +11,10 @@ interface RoleGuardProps {
   requiredRole: UserRole
   fallback?: ReactNode
   redirectTo?: string
+}
+
+function isValidRole(role: string): role is UserRole {
+  return Object.values(Role).includes(role as Role);
 }
 
 export function RoleGuard({ 
@@ -35,7 +39,8 @@ export function RoleGuard({
       return
     }
 
-    if (!canAccess(session.user.role, requiredRole)) {
+    const userRole = session.user.role;
+    if (!isValidRole(userRole) || !canAccess(userRole as UserRole, requiredRole)) {
       if (redirectTo) {
         router.push(redirectTo)
       }
@@ -54,7 +59,8 @@ export function RoleGuard({
     return fallback
   }
 
-  if (!canAccess(session.user.role, requiredRole)) {
+  const userRole = session.user.role;
+  if (!isValidRole(userRole) || !canAccess(userRole as UserRole, requiredRole)) {
     return fallback
   }
 
@@ -63,17 +69,17 @@ export function RoleGuard({
 
 // Convenience components for specific roles
 export function AdminOnly({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
-  return <RoleGuard requiredRole="ADMIN" fallback={fallback}>{children}</RoleGuard>
+  return <RoleGuard requiredRole={Role.ADMIN} fallback={fallback}>{children}</RoleGuard>
 }
 
 export function ModeratorOnly({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
-  return <RoleGuard requiredRole="MODERATOR" fallback={fallback}>{children}</RoleGuard>
+  return <RoleGuard requiredRole={Role.MODERATOR} fallback={fallback}>{children}</RoleGuard>
 }
 
 export function MemberOnly({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
-  return <RoleGuard requiredRole="MEMBER" fallback={fallback}>{children}</RoleGuard>
+  return <RoleGuard requiredRole={Role.MEMBER} fallback={fallback}>{children}</RoleGuard>
 }
 
 export function AuthenticatedOnly({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
-  return <RoleGuard requiredRole="GUEST" fallback={fallback}>{children}</RoleGuard>
+  return <RoleGuard requiredRole={Role.GUEST} fallback={fallback}>{children}</RoleGuard>
 } 

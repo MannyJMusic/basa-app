@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-duplicate-enum-values */
 import { DefaultSession } from "next-auth"
 import { Status, MembershipTier } from "@prisma/client"
+import { Member } from '@/hooks/use-members'
 
 // Define Role enum locally since it's not exported from Prisma
 export enum Role {

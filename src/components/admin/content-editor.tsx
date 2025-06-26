@@ -143,22 +143,26 @@ export function ContentEditor({ type, initialData, onSave, onCancel }: ContentEd
   const currentForm = type === "blog" ? blogForm : type === "testimonial" ? testimonialForm : resourceForm
 
   const addTag = (tag: string) => {
-    const formValues = currentForm.getValues();
-    const tags = formValues.tags || [];
-    if (tag && !tags.includes(tag)) {
-      currentForm.setValue("tags", [...tags, tag])
-      setNewTag("")
+    if (type === "blog" || type === "resource") {
+      const formValues = currentForm.getValues() as { tags?: string[] };
+      const tags = formValues.tags || [];
+      if (tag && !tags.includes(tag)) {
+        (currentForm as any).setValue("tags", [...tags, tag]);
+        setNewTag("");
+      }
     }
-  }
+  };
 
   const removeTag = (tagToRemove: string) => {
-    const formValues = currentForm.getValues();
-    const tags = formValues.tags || [];
-    currentForm.setValue(
-      "tags",
-      tags.filter((tag: string) => tag !== tagToRemove)
-    )
-  }
+    if (type === "blog" || type === "resource") {
+      const formValues = currentForm.getValues() as { tags?: string[] };
+      const tags = formValues.tags || [];
+      (currentForm as any).setValue(
+        "tags",
+        tags.filter((tag: string) => tag !== tagToRemove)
+      );
+    }
+  };
 
   const handleSave = async (data: any) => {
     setIsLoading(true)

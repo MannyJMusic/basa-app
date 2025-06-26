@@ -12,9 +12,7 @@ import {
   Award,
   Handshake,
   Building2,
-  MapPin,
-  Target,
-  CheckCircle
+  Target
 } from "lucide-react"
 
 export default function AboutPage() {

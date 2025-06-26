@@ -29,7 +29,7 @@ const demoFormSchema = z.object({
   company: z.string().min(1, 'Company is required'),
   role: z.enum(['owner', 'manager', 'employee']),
   message: z.string().min(10, 'Message must be at least 10 characters'),
-  newsletter: z.boolean().default(false),
+  newsletter: z.boolean().transform(val => val ?? false),
   terms: z.boolean().refine(val => val === true, 'You must accept the terms')
 })
 
@@ -284,13 +284,14 @@ export function TechStackDemo() {
                 loadingText="Submitting..."
                 resetText="Reset Form"
               >
+                {/* @ts-expect-error control is injected by EnhancedForm */}
                 <FormField
                   name="name"
                   label="Full Name"
                   placeholder="Enter your full name"
                   required
                 />
-                
+                {/* @ts-expect-error control is injected by EnhancedForm */}
                 <FormField
                   name="email"
                   label="Email Address"
@@ -298,14 +299,14 @@ export function TechStackDemo() {
                   placeholder="Enter your email"
                   required
                 />
-                
+                {/* @ts-expect-error control is injected by EnhancedForm */}
                 <FormField
                   name="company"
                   label="Company"
                   placeholder="Enter your company name"
                   required
                 />
-                
+                {/* @ts-expect-error control is injected by EnhancedForm */}
                 <FormField
                   name="role"
                   label="Role"
@@ -317,7 +318,7 @@ export function TechStackDemo() {
                   ]}
                   required
                 />
-                
+                {/* @ts-expect-error control is injected by EnhancedForm */}
                 <FormField
                   name="message"
                   label="Message"
@@ -326,13 +327,13 @@ export function TechStackDemo() {
                   rows={4}
                   required
                 />
-                
+                {/* @ts-expect-error control is injected by EnhancedForm */}
                 <FormField
                   name="newsletter"
                   label="Subscribe to Newsletter"
                   type="checkbox"
                 />
-                
+                {/* @ts-expect-error control is injected by EnhancedForm */}
                 <FormField
                   name="terms"
                   label="I accept the terms and conditions"

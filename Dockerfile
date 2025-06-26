@@ -23,6 +23,9 @@ ENV PRISMA_QUERY_ENGINE_BINARY=linux-musl-openssl-3.0.x
 # Install dependencies (postinstall will now find the schema)
 RUN pnpm install --frozen-lockfile --prod=false
 
+# Generate Prisma client in base stage
+RUN pnpm prisma generate
+
 # Copy source code
 COPY . .
 
@@ -63,7 +66,7 @@ RUN npm pkg delete scripts.postinstall
 # Remove devDependencies to keep production image lean
 RUN pnpm prune --prod
 
-# Copy prisma generated client
+# Copy prisma generated client from base stage
 COPY --from=base /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copy built application

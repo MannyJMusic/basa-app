@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { UserPlus, Search, Mail, Phone, Calendar, Eye, Edit, MoreHorizontal } from "lucide-react"
+import { UserPlus, Search, Mail, Phone, Eye, Edit, MoreHorizontal } from "lucide-react"
 
 export default function LeadsPage() {
   return (

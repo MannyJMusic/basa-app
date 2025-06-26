@@ -1,6 +1,6 @@
 'use client'
 
-import { motion, AnimatePresence, useTransform, useScroll } from "framer-motion"
+import { motion, AnimatePresence, useTransform, useScroll, MotionProps } from "framer-motion"
 import { ReactNode, useState, useEffect } from "react"
 
 // Common animation variants
@@ -290,7 +290,7 @@ export const ScrollReveal = ({
   <motion.div
     initial={{ opacity: 0, y: 50 }}
     whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, threshold }}
+    viewport={{ once: true }}
     transition={{ duration: 0.8, ease: "easeOut" }}
     className={className}
   >
