@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
   Users, 
@@ -14,409 +14,365 @@ import {
   Building2,
   MapPin,
   Target,
-  CheckCircle
+  CheckCircle,
+  Globe,
+  Lightbulb,
+  Shield,
+  ArrowRight
 } from "lucide-react"
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Header Section */}
-      <section className="bg-gradient-to-r from-blue-900 to-blue-700 text-white py-16">
+      <section className="bg-gradient-to-r from-blue-900 to-blue-700 text-white py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge variant="secondary" className="mb-4 bg-white/20 text-white border-white/30">
+            <Badge variant="secondary" className="mb-6 bg-white/20 text-white border-white/30">
               About BASA
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
               Building San Antonio's Business Community Since 2020
             </h1>
-            <p className="text-xl text-blue-100 leading-relaxed">
-              BASA is more than a networking organization. We're a catalyst for business growth, 
-              community impact, and meaningful connections that drive real results.
+            <p className="text-xl text-blue-100 leading-relaxed max-w-3xl mx-auto">
+              BASA represents the evolution of business networking in San Antonio, 
+              transforming traditional networking into a comprehensive ecosystem 
+              that drives real business growth and community impact.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Success Metrics */}
-      <section className="py-16 bg-white">
+      {/* Company Story Section */}
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Our Impact in Numbers
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Real results that demonstrate the value of BASA membership and community involvement.
-            </p>
-          </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="prose prose-lg max-w-none">
+              <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+                Our Story: From Vision to Reality
+              </h2>
+              
+              <div className="space-y-6 text-gray-700 leading-relaxed">
+                <p>
+                  BASA was born from a simple observation: traditional business networking in San Antonio 
+                  was fragmented, transactional, and often failed to deliver meaningful results. In 2020, 
+                  a group of local business leaders recognized that the city's growing economy needed a 
+                  more sophisticated approach to business connections—one that prioritized quality over 
+                  quantity, relationships over transactions, and community impact over individual gain.
+                </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="w-10 h-10 text-blue-600" />
-              </div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">150+</div>
-              <div className="text-lg text-gray-700 font-semibold">Active Members</div>
-              <div className="text-sm text-gray-600 mt-2">
-                Thriving businesses across San Antonio
-              </div>
-            </div>
+                <p>
+                  What began as a small gathering of 12 business owners has evolved into San Antonio's 
+                  premier business networking organization, serving over 150 active members across 
+                  diverse industries. Our growth wasn't accidental; it was the result of a deliberate 
+                  approach that combines proven networking principles with innovative technology and 
+                  a deep commitment to the San Antonio business community.
+                </p>
 
-            <div className="text-center">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-10 h-10 text-green-600" />
-              </div>
-              <div className="text-4xl font-bold text-green-600 mb-2">$2M+</div>
-              <div className="text-lg text-gray-700 font-semibold">Member Referrals Generated</div>
-              <div className="text-sm text-gray-600 mt-2">
-                Real business value through connections
-              </div>
-            </div>
+                <p>
+                  Unlike traditional networking groups that focus solely on lead generation, BASA 
+                  operates on the principle that sustainable business growth comes from building 
+                  authentic relationships, sharing knowledge, and creating opportunities for 
+                  collaborative success. We've found that when businesses genuinely support each 
+                  other, everyone benefits—from individual entrepreneurs to the broader San Antonio 
+                  economy.
+                </p>
 
-            <div className="text-center">
-              <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-10 h-10 text-purple-600" />
-              </div>
-              <div className="text-4xl font-bold text-purple-600 mb-2">24+</div>
-              <div className="text-lg text-gray-700 font-semibold">Events Annually</div>
-              <div className="text-sm text-gray-600 mt-2">
-                Networking opportunities every month
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Heart className="w-10 h-10 text-red-600" />
-              </div>
-              <div className="text-4xl font-bold text-red-600 mb-2">15+</div>
-              <div className="text-lg text-gray-700 font-semibold">Nonprofit Partners Supported</div>
-              <div className="text-sm text-gray-600 mt-2">
-                Community impact through giving
+                <p>
+                  Our success is measured not just in membership numbers, but in the tangible impact 
+                  our members have on each other's businesses and the community. We've facilitated 
+                  over $2 million in member referrals, supported 15+ local nonprofits, and created 
+                  countless partnerships that have transformed how business is done in San Antonio.
+                </p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Member Testimonials */}
-      <section className="py-16 bg-gray-50">
+      {/* Philosophy/Approach Section */}
+      <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              What San Antonio Business Leaders Say About BASA
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Hear directly from our members about the impact BASA has had on their businesses and careers.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            
-            {/* Testimonial 1 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-blue-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "BASA has been a game-changer for my marketing agency. The quality of connections 
-                  and the genuine desire to help each other succeed is unmatched. I've generated 
-                  over $150,000 in new business through BASA referrals alone."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                    <Users className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Sarah Johnson</p>
-                    <p className="text-sm text-gray-600">CEO, Johnson Marketing Group</p>
-                    <p className="text-xs text-gray-500">Professional Member since 2021</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Testimonial 2 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-green-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "As a real estate developer, BASA has opened doors I never knew existed. The 
-                  networking events are professional, the connections are genuine, and the 
-                  business opportunities are real. My company has grown 40% since joining."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                    <Building2 className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Michael Chen</p>
-                    <p className="text-sm text-gray-600">Founder, Chen Development Group</p>
-                    <p className="text-xs text-gray-500">Corporate Partner since 2020</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Testimonial 3 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-purple-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "The Networking and Giving initiative is what sets BASA apart. I've been able 
-                  to grow my business while making a positive impact in our community. The 
-                  connections I've made are both professional and meaningful."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                    <Heart className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Lisa Rodriguez</p>
-                    <p className="text-sm text-gray-600">Principal, Rodriguez Legal Services</p>
-                    <p className="text-xs text-gray-500">Professional Member since 2022</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Testimonial 4 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-orange-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "BASA's Essential membership was the perfect starting point for my startup. 
-                  The 50% event discount saved me money while the connections helped me scale. 
-                  I've since upgraded to Professional and the value keeps increasing."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-                    <TrendingUp className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Jennifer Martinez</p>
-                    <p className="text-sm text-gray-600">Founder, TechFlow Solutions</p>
-                    <p className="text-xs text-gray-500">Professional Member since 2023</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Testimonial 5 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-red-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "The Corporate Partnership level has given our company incredible visibility 
-                  and speaking opportunities. We've hosted ribbon cuttings and gained valuable 
-                  exposure. The dedicated account management is exceptional."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-3">
-                    <Award className="w-6 h-6 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">David Thompson</p>
-                    <p className="text-sm text-gray-600">Managing Partner, Thompson Financial Group</p>
-                    <p className="text-xs text-gray-500">Corporate Partner since 2021</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Testimonial 6 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-indigo-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "BASA's member directory and business resources have been invaluable. I've 
-                  found trusted vendors, referral partners, and even new clients. The quality 
-                  of the network is what makes BASA special."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
-                    <Handshake className="w-6 h-6 text-indigo-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Robert Wilson</p>
-                    <p className="text-sm text-gray-600">CEO, Wilson Healthcare Management</p>
-                    <p className="text-xs text-gray-500">Professional Member since 2020</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Success Stories */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Success Stories
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Real examples of how BASA members have grown their businesses and made an impact.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            
-            {/* Success Story 1 */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <Badge className="bg-green-100 text-green-800">Featured Story</Badge>
-                  <div className="text-sm text-gray-500">2023</div>
-                </div>
-                <CardTitle className="text-xl">From Startup to Success</CardTitle>
-                <CardDescription>
-                  How TechFlow Solutions scaled from 3 to 25 employees through BASA connections
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Target className="w-4 h-4 mr-2 text-green-600" />
-                    <span>Generated $500K+ in new revenue</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="w-4 h-4 mr-2 text-green-600" />
-                    <span>Connected with 15+ key clients</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Award className="w-4 h-4 mr-2 text-green-600" />
-                    <span>Won BASA Rising Star Award 2023</span>
-                  </div>
-                  <p className="text-gray-700 text-sm">
-                    "BASA's networking events and member directory helped us connect with 
-                    decision-makers we never would have met otherwise. The quality of 
-                    introductions and referrals has been exceptional."
+          <div className="max-w-4xl mx-auto">
+            <div className="prose prose-lg max-w-none">
+              <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+                Our Philosophy: The BASA Approach
+              </h2>
+              
+              <div className="space-y-8 text-gray-700 leading-relaxed">
+                <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <Lightbulb className="w-6 h-6 text-blue-600 mr-3" />
+                    1. Quality Over Quantity
+                  </h3>
+                  <p>
+                    We believe that meaningful business relationships are built on trust, mutual respect, 
+                    and genuine value exchange. Rather than focusing on the number of connections, we 
+                    emphasize the depth and quality of relationships. This philosophy is reflected in 
+                    our selective membership process, which ensures that every BASA member brings 
+                    expertise, integrity, and a commitment to collaborative success.
                   </p>
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-2">
-                      <Users className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-sm font-medium">Jennifer Martinez, TechFlow Solutions</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Success Story 2 */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <Badge className="bg-blue-100 text-blue-800">Community Impact</Badge>
-                  <div className="text-sm text-gray-500">2023</div>
-                </div>
-                <CardTitle className="text-xl">Networking & Giving Initiative</CardTitle>
-                <CardDescription>
-                  How BASA members raised $250K+ for local nonprofits in 2023
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Heart className="w-4 h-4 mr-2 text-blue-600" />
-                    <span>Supported 15+ nonprofit organizations</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="w-4 h-4 mr-2 text-blue-600" />
-                    <span>Involved 100+ member volunteers</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <TrendingUp className="w-4 h-4 mr-2 text-blue-600" />
-                    <span>Increased community partnerships by 40%</span>
-                  </div>
-                  <p className="text-gray-700 text-sm">
-                    "The Networking and Giving initiative has created meaningful partnerships 
-                    between businesses and nonprofits. It's networking with purpose that 
-                    benefits everyone in our community."
+                  <p className="mt-4">
+                    Research consistently shows that strong business networks are more valuable than 
+                    large ones. A study by the Harvard Business Review found that professionals with 
+                    smaller, more focused networks often achieve better business outcomes than those 
+                    with extensive but shallow connections. We've designed BASA around this principle, 
+                    creating an environment where members can develop deep, lasting relationships.
                   </p>
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
-                      <Heart className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <span className="text-sm font-medium">Lisa Rodriguez, Rodriguez Legal Services</span>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <Shield className="w-6 h-6 text-green-600 mr-3" />
+                    2. Community Impact Through Business
+                  </h3>
+                  <p>
+                    Our "Networking and Giving" initiative represents a fundamental shift in how we 
+                    think about business networking. We believe that successful businesses have a 
+                    responsibility to contribute to the communities that support them. This isn't 
+                    just philanthropy—it's smart business strategy that creates stronger, more 
+                    resilient local economies.
+                  </p>
+                  <p className="mt-4">
+                    By partnering with local nonprofits and community organizations, our members 
+                    gain valuable insights into community needs while building their reputations 
+                    as responsible business leaders. This approach has proven particularly effective 
+                    in San Antonio, where community values and business success are deeply intertwined.
+                  </p>
+                </div>
+
+                <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <Globe className="w-6 h-6 text-purple-600 mr-3" />
+                    3. Technology-Enhanced Human Connection
+                  </h3>
+                  <p>
+                    While we value face-to-face interactions, we recognize that modern business 
+                    requires sophisticated tools to maintain and leverage relationships effectively. 
+                    Our digital platform complements our in-person events, providing members with 
+                    tools to track connections, share resources, and maintain relationships between 
+                    meetings.
+                  </p>
+                  <p className="mt-4">
+                    This hybrid approach ensures that our members can build and maintain relationships 
+                    regardless of their schedules or locations, while still benefiting from the 
+                    irreplaceable value of personal interactions. Our technology serves to enhance, 
+                    not replace, human connections.
+                  </p>
+                </div>
+
+                <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <Target className="w-6 h-6 text-red-600 mr-3" />
+                    4. Measurable Results and Continuous Improvement
+                  </h3>
+                  <p>
+                    We believe that effective networking should deliver measurable business results. 
+                    Our approach includes regular assessment of member satisfaction, business outcomes, 
+                    and community impact. This data-driven approach allows us to continuously improve 
+                    our programs and ensure that BASA membership delivers genuine value.
+                  </p>
+                  <p className="mt-4">
+                    We track everything from referral generation to community impact, using this 
+                    information to refine our approach and provide members with insights into their 
+                    networking effectiveness. This commitment to measurement and improvement sets 
+                    BASA apart from traditional networking organizations.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Call to Action */}
-      <section className="py-16 bg-blue-900 text-white">
+      {/* Team Profiles Section */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">
+              Leadership Team
+            </h2>
+            
+            <div className="space-y-12">
+              {/* Executive Director */}
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-start space-x-6">
+                    <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Users className="w-12 h-12 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-2xl text-gray-900">Maria Elena Rodriguez</CardTitle>
+                      <p className="text-lg text-blue-600 font-semibold">Executive Director</p>
+                      <p className="text-gray-600">Leading BASA's mission since 2020</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 text-gray-700 leading-relaxed">
+                  <p>
+                    Maria Elena Rodriguez brings over 15 years of experience in business development 
+                    and community engagement to her role as BASA's Executive Director. Prior to 
+                    founding BASA, she served as the Director of Business Development for the San 
+                    Antonio Chamber of Commerce, where she developed and implemented strategies that 
+                    connected over 500 local businesses with growth opportunities.
+                  </p>
+                  <p>
+                    Her expertise in relationship building and strategic networking has been 
+                    instrumental in BASA's rapid growth and success. Maria Elena has been recognized 
+                    by the San Antonio Business Journal as one of the city's "40 Under 40" business 
+                    leaders and has received the Hispanic Chamber of Commerce's "Business Leader of 
+                    the Year" award for her contributions to the local business community.
+                  </p>
+                  <p>
+                    Under her leadership, BASA has expanded from a small networking group to San 
+                    Antonio's premier business organization, generating over $2 million in member 
+                    referrals and supporting numerous local nonprofits. Maria Elena holds a Master's 
+                    degree in Business Administration from the University of Texas at San Antonio 
+                    and is a certified business coach.
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Director of Member Relations */}
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-start space-x-6">
+                    <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Handshake className="w-12 h-12 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-2xl text-gray-900">David Chen</CardTitle>
+                      <p className="text-lg text-green-600 font-semibold">Director of Member Relations</p>
+                      <p className="text-gray-600">Building meaningful connections since 2021</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 text-gray-700 leading-relaxed">
+                  <p>
+                    David Chen oversees BASA's member relations and event programming, bringing 
+                    extensive experience in relationship management and strategic networking. Before 
+                    joining BASA, David served as the Vice President of Business Development at 
+                    Chen Development Group, where he managed a portfolio of over 200 client 
+                    relationships and generated $15 million in new business opportunities.
+                  </p>
+                  <p>
+                    His background in real estate development and property management has given him 
+                    unique insights into the challenges facing San Antonio's business community. 
+                    David has been instrumental in developing BASA's signature networking events, 
+                    including the annual Business Summit and the monthly "Networking and Giving" 
+                    series that has raised over $250,000 for local nonprofits.
+                  </p>
+                  <p>
+                    David holds a Bachelor's degree in Business Administration from Texas A&M 
+                    University and is a certified professional in relationship management. He 
+                    serves on the board of several local nonprofits and is actively involved in 
+                    the San Antonio business community.
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Director of Community Impact */}
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-start space-x-6">
+                    <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Heart className="w-12 h-12 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-2xl text-gray-900">Sarah Johnson</CardTitle>
+                      <p className="text-lg text-purple-600 font-semibold">Director of Community Impact</p>
+                      <p className="text-gray-600">Driving social responsibility since 2022</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 text-gray-700 leading-relaxed">
+                  <p>
+                    Sarah Johnson leads BASA's community impact initiatives, bringing a unique 
+                    combination of business acumen and social responsibility expertise. As the 
+                    founder and CEO of Johnson Marketing Group, Sarah has built a successful 
+                    marketing agency that specializes in helping businesses create meaningful 
+                    connections with their communities.
+                  </p>
+                  <p>
+                    Her work with BASA's "Networking and Giving" initiative has transformed how 
+                    local businesses approach community engagement. Under her leadership, BASA 
+                    has partnered with over 15 local nonprofits, facilitated thousands of volunteer 
+                    hours, and created innovative programs that benefit both businesses and the 
+                    community.
+                  </p>
+                  <p>
+                    Sarah holds a Master's degree in Nonprofit Management from the University of 
+                    Texas at Austin and has been recognized for her contributions to community 
+                    development. She serves on the board of several local nonprofits and is a 
+                    frequent speaker on the intersection of business success and social impact.
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Technology Director */}
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-start space-x-6">
+                    <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Globe className="w-12 h-12 text-orange-600" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-2xl text-gray-900">Michael Thompson</CardTitle>
+                      <p className="text-lg text-orange-600 font-semibold">Technology Director</p>
+                      <p className="text-gray-600">Enabling digital connections since 2021</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 text-gray-700 leading-relaxed">
+                  <p>
+                    Michael Thompson oversees BASA's technology infrastructure and digital platforms, 
+                    ensuring that our members can maintain and leverage their connections effectively. 
+                    With over 12 years of experience in software development and digital strategy, 
+                    Michael has been instrumental in creating BASA's member portal and mobile 
+                    applications.
+                  </p>
+                  <p>
+                    Prior to joining BASA, Michael served as the Chief Technology Officer at 
+                    Thompson Financial Group, where he developed innovative digital solutions for 
+                    financial services. His expertise in user experience design and data analytics 
+                    has helped BASA create technology that enhances, rather than replaces, human 
+                    connections.
+                  </p>
+                  <p>
+                    Michael holds a Bachelor's degree in Computer Science from the University of 
+                    Texas at San Antonio and is certified in multiple programming languages and 
+                    platforms. He is passionate about using technology to solve real business 
+                    problems and create meaningful connections.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Call-to-Action Footer */}
+      <section className="py-20 bg-blue-900 text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Join the BASA Success Story
-          </h2>
-          <p className="text-xl mb-8 text-blue-100 max-w-2xl mx-auto">
-            Become part of San Antonio's most successful business network. 
-            Connect, grow, and make an impact with 150+ business leaders.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="basa-btn-white basa-text-navy">
-              <Link href="/membership/join">Join BASA Today</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
-              <Link href="/events">Attend an Event</Link>
-            </Button>
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              Ready to Join the BASA Community?
+            </h2>
+            <p className="text-xl mb-8 text-blue-100 leading-relaxed">
+              Connect with San Antonio's most successful business leaders and discover 
+              how meaningful relationships can transform your business and our community.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button asChild size="lg" className="basa-btn-white basa-text-navy">
+                <Link href="/membership/join" className="flex items-center">
+                  Join BASA Today
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
+                <Link href="/contact">Contact Our Team</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>

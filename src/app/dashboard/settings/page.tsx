@@ -19,8 +19,11 @@ import {
   Shield,
   Users,
   Mail,
-  Smartphone
+  Smartphone,
+  Link,
+  Unlink
 } from "lucide-react"
+import SocialAccounts from "@/components/auth/social-accounts"
 
 export default function AccountSettingsPage() {
   return (
@@ -32,6 +35,9 @@ export default function AccountSettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Social Accounts */}
+        <SocialAccounts />
+
         {/* Appearance Settings */}
         <Card>
           <CardHeader>

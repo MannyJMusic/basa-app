@@ -34,7 +34,7 @@ export const authConfig: NextAuthConfig = {
           }
 
           const user = await prisma.user.findUnique({
-            where: { email: credentials.email }
+            where: { email: credentials.email as string }
           })
 
           if (!user || !user.hashedPassword) {
@@ -109,42 +109,23 @@ export const authConfig: NextAuthConfig = {
               provider: account?.provider
             });
 
-            console.log("Profile data:", profile);
-            console.log("Account data:", account);
-
-            // Get name from OAuth provider's specific fields
-            let firstName = '';
-            let lastName = '';
-
-            if (account?.provider === 'google' && profile) {
-              // Google provides given_name and family_name
-              firstName = profile.given_name || '';
-              lastName = profile.family_name || '';
-              console.log("Google OAuth name data:", { given_name: profile.given_name, family_name: profile.family_name });
-            } else if (account?.provider === 'linkedin' && profile) {
-              // LinkedIn might have different field names
-              firstName = profile.localizedFirstName || profile.firstName || '';
-              lastName = profile.localizedLastName || profile.lastName || '';
-              console.log("LinkedIn OAuth name data:", { firstName, lastName });
-            } else {
-              // Fallback to splitting the full name
-              const splitResult = splitName(user.name);
-              firstName = splitResult.firstName;
-              lastName = splitResult.lastName;
-              console.log("Fallback name splitting:", { firstName, lastName });
+            // For credentials login, we don't need to do anything special
+            // as the authorize function already handles validation
+            if (!account?.provider) {
+              return true;
             }
 
-            // Check if user exists by id
-            let dbUser = await prisma.user.findUnique({ 
-              where: { id: user.id },
+            // For social logins, check if user exists
+            const existingUser = await prisma.user.findUnique({
+              where: { email: user.email },
               include: { accounts: true }
             });
 
-            if (dbUser) {
-              console.log("Existing user found:", dbUser.id);
+            if (existingUser) {
+              console.log("Existing user found by email:", existingUser.id);
               
-              // Check if this provider account already exists
-              if (account?.provider && account?.providerAccountId) {
+              // Check if this provider account already exists for this user
+              if (account?.providerAccountId) {
                 const existingAccount = await prisma.account.findUnique({
                   where: {
                     provider_providerAccountId: {
@@ -158,7 +139,7 @@ export const authConfig: NextAuthConfig = {
                   // Create the account link
                   await prisma.account.create({
                     data: {
-                      userId: dbUser.id,
+                      userId: existingUser.id,
                       type: account.type,
                       provider: account.provider,
                       providerAccountId: account.providerAccountId,
@@ -174,159 +155,39 @@ export const authConfig: NextAuthConfig = {
                 }
               }
 
-              // Update last login, image, and name if provided
+              // Update last login and image if provided
               const updateData: any = { lastLogin: new Date() };
               if (user.image) {
                 updateData.image = user.image;
-                console.log("Updating user image:", user.image);
-              }
-              // Update name fields if they're empty and we have name data
-              if ((!dbUser.firstName || !dbUser.lastName) && (firstName || lastName)) {
-                if (firstName && !dbUser.firstName) updateData.firstName = firstName;
-                if (lastName && !dbUser.lastName) updateData.lastName = lastName;
-                console.log("Updating user name:", { firstName, lastName });
               }
 
               await prisma.user.update({
-                where: { id: dbUser.id },
+                where: { id: existingUser.id },
                 data: updateData
               });
 
               // Log sign in
               await prisma.auditLog.create({
                 data: {
-                  userId: dbUser.id,
+                  userId: existingUser.id,
                   action: "SIGN_IN",
                   entityType: "USER",
-                  entityId: dbUser.id,
+                  entityId: existingUser.id,
                   newValues: {
                     timestamp: new Date().toISOString(),
-                    provider: account?.provider || 'credentials',
+                    provider: account.provider,
                     image: user.image || null
                   }
                 }
               });
               
               return true;
+            } else {
+              // User doesn't exist - redirect to sign up with error
+              console.log("New social login user - redirecting to sign up");
+              return `/auth/sign-up?error=social_signup_required&provider=${account.provider}&email=${encodeURIComponent(user.email)}`;
             }
 
-            // User doesn't exist, check by email for social logins
-            if (account?.provider && user.email) {
-              const existingByEmail = await prisma.user.findUnique({ 
-                where: { email: user.email },
-                include: { accounts: true }
-              });
-
-              if (existingByEmail) {
-                console.log("Existing user found by email:", existingByEmail.id);
-                
-                // Check if this provider account already exists for this user
-                if (account?.providerAccountId) {
-                  const existingAccount = await prisma.account.findUnique({
-                    where: {
-                      provider_providerAccountId: {
-                        provider: account.provider,
-                        providerAccountId: account.providerAccountId
-                      }
-                    }
-                  });
-
-                  if (!existingAccount) {
-                    // Create the account link
-                    await prisma.account.create({
-                      data: {
-                        userId: existingByEmail.id,
-                        type: account.type,
-                        provider: account.provider,
-                        providerAccountId: account.providerAccountId,
-                        refresh_token: account.refresh_token,
-                        access_token: account.access_token,
-                        expires_at: account.expires_at,
-                        token_type: account.token_type,
-                        scope: account.scope,
-                        id_token: account.id_token,
-                        session_state: account.session_state,
-                      }
-                    });
-                  }
-                }
-
-                // Update last login, image, and name if provided
-                const updateData: any = { lastLogin: new Date() };
-                if (user.image) {
-                  updateData.image = user.image;
-                  console.log("Updating existing user image:", user.image);
-                }
-                // Update name fields if they're empty and we have name data
-                if ((!existingByEmail.firstName || !existingByEmail.lastName) && (firstName || lastName)) {
-                  if (firstName && !existingByEmail.firstName) updateData.firstName = firstName;
-                  if (lastName && !existingByEmail.lastName) updateData.lastName = lastName;
-                  console.log("Updating existing user name:", { firstName, lastName });
-                }
-
-                await prisma.user.update({
-                  where: { id: existingByEmail.id },
-                  data: updateData
-                });
-
-                // Log sign in
-                await prisma.auditLog.create({
-                  data: {
-                    userId: existingByEmail.id,
-                    action: "SIGN_IN",
-                    entityType: "USER",
-                    entityId: existingByEmail.id,
-                    newValues: {
-                      timestamp: new Date().toISOString(),
-                      provider: account.provider,
-                      image: user.image || null
-                    }
-                  }
-                });
-                
-                return true;
-              }
-            }
-
-            // For new social login users, the PrismaAdapter will create the user
-            // We need to update the user with the image and name after creation
-            if (account?.provider) {
-              console.log("New social login user, will update with image and name");
-              
-              // Wait a moment for the PrismaAdapter to create the user
-              setTimeout(async () => {
-                try {
-                  const newUser = await prisma.user.findUnique({
-                    where: { id: user.id }
-                  });
-                  
-                  if (newUser) {
-                    const updateData: any = { 
-                      role: "MEMBER",
-                      isActive: true
-                    };
-                    
-                    if (user.image) {
-                      updateData.image = user.image;
-                    }
-                    
-                    // Add name fields if we have them
-                    if (firstName) updateData.firstName = firstName;
-                    if (lastName) updateData.lastName = lastName;
-                    
-                    await prisma.user.update({
-                      where: { id: user.id },
-                      data: updateData
-                    });
-                    console.log("Successfully updated new user with image and name:", { firstName, lastName });
-                  }
-                } catch (error) {
-                  console.error("Error updating new user with image and name:", error);
-                }
-              }, 1000);
-            }
-
-            return true;
           } catch (error) {
             console.error("SignIn error:", error);
             throw error;
