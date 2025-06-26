@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -63,8 +64,8 @@ export default function WriteForUsPage() {
                 <p className="text-xl text-gray-600 mb-6">
                   Thank you for your interest in contributing to the BASA Blog. Our editorial team will review your submission and contact you soon.
                 </p>
-                <Button href="/blog" asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
-                  Back to Blog
+                <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
+                  <Link href="/blog">Back to Blog</Link>
                 </Button>
               </CardContent>
             </Card>

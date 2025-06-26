@@ -203,7 +203,7 @@ export function EnhancedForm<T extends FieldValues>({
 
   const form = useForm<T>({
     resolver: zodResolver(schema),
-    defaultValues,
+    defaultValues: defaultValues as any,
     mode: 'onBlur'
   })
 
@@ -254,10 +254,10 @@ export function EnhancedForm<T extends FieldValues>({
     if (formState.isDirty) {
       const confirmed = window.confirm('Are you sure you want to reset the form? All changes will be lost.')
       if (confirmed) {
-        reset(defaultValues)
+        reset(defaultValues as any)
       }
     } else {
-      reset(defaultValues)
+      reset(defaultValues as any)
     }
   }
 
@@ -265,7 +265,7 @@ export function EnhancedForm<T extends FieldValues>({
     <motion.form
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      onSubmit={handleSubmit(onSubmitHandler)}
+      onSubmit={handleSubmit(onSubmitHandler as any)}
       className={cn('space-y-6', className)}
     >
       {/* Auto-save indicator */}

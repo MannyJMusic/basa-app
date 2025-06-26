@@ -90,7 +90,9 @@ export function MemberDetailDialog({
         website: member.website || "",
         membershipTier: member.membershipTier || "BASIC",
         membershipStatus: member.membershipStatus || "ACTIVE",
-        role: member.user.role || "MEMBER"
+        role: (member.user.role === "ADMIN" || member.user.role === "MODERATOR" || member.user.role === "MEMBER") 
+          ? member.user.role 
+          : "MEMBER"
       })
       setError(null)
     }
@@ -327,7 +329,7 @@ export function MemberDetailDialog({
                     <Label htmlFor="industry">Industry (comma-separated)</Label>
                     <Input
                       id="industry"
-                      value={formData.industry.join(", ")}
+                      value={formData.industry?.join(", ") || ""}
                       onChange={(e) => setFormData(prev => ({ 
                         ...prev, 
                         industry: e.target.value.split(",").map(i => i.trim()).filter(Boolean)

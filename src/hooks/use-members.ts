@@ -173,13 +173,17 @@ export function useMembers() {
   ) => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        sortBy,
-        sortOrder,
-        ...filters,
-      })
+      const params = new URLSearchParams(
+        Object.entries({
+          page: page.toString(),
+          limit: limit.toString(),
+          sortBy,
+          sortOrder,
+          ...filters,
+        })
+          .filter(([_, v]) => v !== undefined && v !== null)
+          .map(([k, v]) => [k, String(v)])
+      )
 
       const url = `/api/members?${params}`
       console.log('useMembers: fetching members from', url)
@@ -358,10 +362,14 @@ export function useMembers() {
     format: 'csv' | 'json' = 'csv'
   ) => {
     try {
-      const params = new URLSearchParams({
-        format,
-        ...filters,
-      })
+      const params = new URLSearchParams(
+        Object.entries({
+          format,
+          ...filters,
+        })
+          .filter(([_, v]) => v !== undefined && v !== null)
+          .map(([k, v]) => [k, String(v)])
+      )
 
       const response = await fetch(`/api/members/export?${params}`)
       if (!response.ok) {

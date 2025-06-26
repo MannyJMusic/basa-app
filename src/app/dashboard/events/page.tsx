@@ -37,7 +37,7 @@ export default function MyEventsPage() {
   const [status, setStatus] = useState("all")
 
   useEffect(() => {
-    fetchEvents({ sortBy: "startDate", sortOrder: "asc" })
+    fetchEvents({}, 1, 20, "startDate", "asc")
   }, [fetchEvents])
 
   // Filter events based on search and filters

@@ -28,6 +28,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
+    // Check if user has a password set
+    if (!user.hashedPassword) {
+      return NextResponse.json({ error: "User has no password set" }, { status: 400 })
+    }
+
     // Verify current password
     const isCurrentPasswordValid = await verifyPassword(currentPassword, user.hashedPassword)
     if (!isCurrentPasswordValid) {

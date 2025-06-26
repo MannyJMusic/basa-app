@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/db"
 import { sendNewsletter, sendBulkEmail } from "@/lib/email"
+import { getSystemUser } from "@/lib/system-user"
 
 const newsletterSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -31,54 +32,86 @@ export async function POST(request: NextRequest) {
       
       switch (segment) {
         case "all":
-          recipients = await prisma.user.findMany({
-            where: { 
-              isActive: true,
-              newsletterSubscribed: true 
-            },
-            select: { email: true, firstName: true }
-          })
-          break
-        case "active":
-          recipients = await prisma.user.findMany({
+          const allUsers = await prisma.user.findMany({
             where: { 
               isActive: true,
               newsletterSubscribed: true,
+              email: { not: null }
+            },
+            select: { email: true, firstName: true }
+          })
+          recipients = allUsers
+            .filter(user => user.email !== null)
+            .map(user => ({ 
+              email: user.email!, 
+              firstName: user.firstName || 'User' 
+            }))
+          break
+        case "active":
+          const activeUsers = await prisma.user.findMany({
+            where: { 
+              isActive: true,
+              newsletterSubscribed: true,
+              email: { not: null },
               lastLogin: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
             },
             select: { email: true, firstName: true }
           })
+          recipients = activeUsers
+            .filter(user => user.email !== null)
+            .map(user => ({ 
+              email: user.email!, 
+              firstName: user.firstName || 'User' 
+            }))
           break
         case "new":
-          recipients = await prisma.user.findMany({
+          const newUsers = await prisma.user.findMany({
             where: { 
               isActive: true,
               newsletterSubscribed: true,
+              email: { not: null },
               createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
             },
             select: { email: true, firstName: true }
           })
+          recipients = newUsers
+            .filter(user => user.email !== null)
+            .map(user => ({ 
+              email: user.email!, 
+              firstName: user.firstName || 'User' 
+            }))
           break
         case "premium":
-          recipients = await prisma.user.findMany({
+          const premiumUsers = await prisma.user.findMany({
             where: { 
               isActive: true,
               newsletterSubscribed: true,
+              email: { not: null },
               member: {
-                tier: { in: ["professional", "corporate"] }
+                membershipTier: { in: ["PREMIUM", "VIP"] }
               }
             },
             select: { email: true, firstName: true }
           })
+          recipients = premiumUsers
+            .filter(user => user.email !== null)
+            .map(user => ({ 
+              email: user.email!, 
+              firstName: user.firstName || 'User' 
+            }))
           break
       }
       
       // Send bulk email
       const results = await sendBulkEmail(recipients, subject, content)
       
+      // Get system user for audit log
+      const systemUser = await getSystemUser()
+      
       // Log newsletter send
       await prisma.auditLog.create({
         data: {
+          userId: systemUser.id,
           action: "NEWSLETTER_SENT",
           entityType: "NEWSLETTER",
           entityId: "bulk",
@@ -102,25 +135,31 @@ export async function POST(request: NextRequest) {
       const { email, firstName, lastName, preferences, source } = newsletterSchema.parse(body)
       
       // Check if already subscribed
-      const existingSubscription = await prisma.newsletterSubscription.findUnique({
+      const existingUser = await prisma.user.findUnique({
         where: { email }
       })
       
-      if (existingSubscription) {
+      if (existingUser?.newsletterSubscribed) {
         return NextResponse.json(
           { error: "Email is already subscribed to the newsletter" },
           { status: 400 }
         )
       }
       
-      // Create subscription
-      const subscription = await prisma.newsletterSubscription.create({
-        data: {
+      // Create or update user subscription
+      const user = await prisma.user.upsert({
+        where: { email },
+        update: {
+          newsletterSubscribed: true,
+          firstName: firstName || existingUser?.firstName,
+          lastName: lastName || existingUser?.lastName
+        },
+        create: {
           email,
           firstName,
           lastName,
-          preferences: preferences || [],
-          source: source || "website",
+          newsletterSubscribed: true,
+          role: "MEMBER",
           isActive: true
         }
       })
@@ -144,12 +183,16 @@ export async function POST(request: NextRequest) {
         // Don't fail the subscription if email fails
       }
       
+      // Get system user for audit log
+      const systemUser = await getSystemUser()
+      
       // Log subscription
       await prisma.auditLog.create({
         data: {
+          userId: systemUser.id,
           action: "NEWSLETTER_SUBSCRIPTION_CREATED",
-          entityType: "NEWSLETTER_SUBSCRIPTION",
-          entityId: subscription.id,
+          entityType: "USER",
+          entityId: user.id,
           newValues: {
             email,
             firstName,
@@ -196,17 +239,32 @@ export async function DELETE(request: NextRequest) {
     }
     
     // Unsubscribe from newsletter
-    await prisma.newsletterSubscription.updateMany({
-      where: { email },
-      data: { isActive: false }
+    const user = await prisma.user.findUnique({
+      where: { email }
     })
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      )
+    }
+    
+    await prisma.user.update({
+      where: { email },
+      data: { newsletterSubscribed: false }
+    })
+    
+    // Get system user for audit log
+    const systemUser = await getSystemUser()
     
     // Log unsubscription
     await prisma.auditLog.create({
       data: {
+        userId: systemUser.id,
         action: "NEWSLETTER_UNSUBSCRIBED",
-        entityType: "NEWSLETTER_SUBSCRIPTION",
-        entityId: email,
+        entityType: "USER",
+        entityId: user.id,
         newValues: {
           email,
           timestamp: new Date().toISOString()

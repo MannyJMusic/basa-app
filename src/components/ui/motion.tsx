@@ -1,6 +1,6 @@
 'use client'
 
-import { motion, AnimatePresence, useTransform, useScroll } from "framer-motion"
+import { motion, AnimatePresence, useTransform, useScroll, MotionProps } from "framer-motion"
 import { ReactNode, useState, useEffect } from "react"
 
 // Common animation variants
@@ -290,7 +290,7 @@ export const ScrollReveal = ({
   <motion.div
     initial={{ opacity: 0, y: 50 }}
     whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, threshold }}
+    viewport={{ once: true }}
     transition={{ duration: 0.8, ease: "easeOut" }}
     className={className}
   >
@@ -348,11 +348,79 @@ export const TiltCard = ({
 }) => (
   <motion.div
     whileHover={{ 
-      rotateX: 5,
+      scale: 1.05,
       rotateY: 5,
-      scale: 1.02,
-      transition: { duration: 0.3, ease: "easeOut" }
+      rotateX: 5
     }}
+    transition={{ duration: 0.3 }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+)
+
+// AnimatedCard component
+export const AnimatedCard = ({ 
+  children, 
+  className = "",
+  delay = 0
+}: { 
+  children: ReactNode
+  className?: string
+  delay?: number
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.6, delay, ease: "easeOut" }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+)
+
+// AnimatedList component
+export const AnimatedList = ({ 
+  children, 
+  className = "",
+  staggerDelay = 0.1
+}: { 
+  children: ReactNode
+  className?: string
+  staggerDelay?: number
+}) => (
+  <motion.div
+    initial="hidden"
+    animate="visible"
+    variants={{
+      hidden: { opacity: 0 },
+      visible: {
+        opacity: 1,
+        transition: {
+          staggerChildren: staggerDelay
+        }
+      }
+    }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+)
+
+// AnimatedListItem component
+export const AnimatedListItem = ({ 
+  children, 
+  className = ""
+}: { 
+  children: ReactNode
+  className?: string
+}) => (
+  <motion.div
+    variants={{
+      hidden: { opacity: 0, x: -20 },
+      visible: { opacity: 1, x: 0 }
+    }}
+    transition={{ duration: 0.5, ease: "easeOut" }}
     className={className}
   >
     {children}
