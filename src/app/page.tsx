@@ -60,7 +60,7 @@ export default function HomePage() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-slide-up" style={{ animationDelay: '0.4s' }}>
-              <Button asChild size="lg" className="basa-btn-secondary text-lg px-8 py-4 group" style={{ boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
+              <Button asChild size="lg" className="basa-btn-secondary text-navy text-lg px-8 py-4 group" style={{ boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
                 <Link href="/membership/join">
                   Join BASA Today
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
