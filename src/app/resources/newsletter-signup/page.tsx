@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Mail, TrendingUp, CheckCircle, Lock, Star } from "lucide-react"
+import Link from "next/link"
 
 export default function NewsletterSignupPage() {
   const [formData, setFormData] = useState({
@@ -65,8 +66,10 @@ export default function NewsletterSignupPage() {
                 <p className="text-xl text-gray-600 mb-6">
                   Thank you for subscribing to Monthly Market Insights. Check your inbox for the latest business intelligence and networking tips.
                 </p>
-                <Button href="/resources" asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
-                  Back to Resources
+                <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
+                  <Link href="/resources">
+                    Back to Resources
+                  </Link>
                 </Button>
               </CardContent>
             </Card>

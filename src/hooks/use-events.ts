@@ -241,7 +241,6 @@ export function useEvents() {
         title: "Success",
         description: "Event updated successfully",
       })
-      return event
     } catch (error) {
       console.error('Error updating event:', error)
       toast({

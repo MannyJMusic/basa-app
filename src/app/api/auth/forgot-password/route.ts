@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     // Send password reset email using Mailgun
     try {
-      await sendPasswordResetEmail(email, user.firstName, resetToken)
+      await sendPasswordResetEmail(email, user.firstName || 'User', resetToken)
     } catch (emailError) {
       console.error("Failed to send password reset email:", emailError)
       return NextResponse.json(

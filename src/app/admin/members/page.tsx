@@ -14,7 +14,7 @@ import { MemberDetailDialog } from "@/components/members/member-detail-dialog"
 import { formatDate } from "@/lib/utils"
 
 export default function MembersPage() {
-  const { fetchMembers, createMember, deleteMember, updateMember, exportMembers, bulkUploadMembers, isLoading, error } = useMembers()
+  const { fetchMembers, createMember, deleteMember, updateMember, exportMembers, bulkUploadMembers, loading } = useMembers()
   const [members, setMembers] = useState<Member[]>([])
   const [pagination, setPagination] = useState({
     page: 1,
@@ -84,8 +84,8 @@ export default function MembersPage() {
 
   const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault()
-    const result = await createMember(createFormData)
-    if (result) {
+    try {
+      await createMember(createFormData)
       setIsCreateDialogOpen(false)
       setCreateFormData({
         firstName: "",
@@ -97,23 +97,29 @@ export default function MembersPage() {
         role: "MEMBER",
       })
       loadMembers() // Refresh the list
+    } catch (error) {
+      // Error handling is done via toast notifications in the hook
     }
   }
 
   const handleUpdateMember = async (id: string, data: any) => {
-    const success = await updateMember(id, data)
-    if (success) {
+    try {
+      await updateMember(id, data)
       loadMembers() // Refresh the list
+      return true
+    } catch (error) {
+      return false
     }
-    return success
   }
 
   const handleDeleteMember = async (id: string) => {
-    const success = await deleteMember(id)
-    if (success) {
+    try {
+      await deleteMember(id)
       loadMembers() // Refresh the list
+      return true
+    } catch (error) {
+      return false
     }
-    return success
   }
 
   const handleViewMember = (member: Member) => {
@@ -204,7 +210,7 @@ export default function MembersPage() {
             <Filter className="w-4 h-4 mr-2" />
             Filter
           </Button>
-          <Button variant="outline" onClick={handleExport} disabled={isLoading}>
+          <Button variant="outline" onClick={handleExport} disabled={loading}>
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
@@ -308,9 +314,9 @@ export default function MembersPage() {
                   </Button>
                   <Button 
                     onClick={handleBulkUpload} 
-                    disabled={!selectedFile || isLoading}
+                    disabled={!selectedFile || loading}
                   >
-                    {isLoading ? "Uploading..." : "Upload Members"}
+                    {loading ? "Uploading..." : "Upload Members"}
                   </Button>
                 </div>
               </div>
@@ -415,8 +421,8 @@ export default function MembersPage() {
                   <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? "Creating..." : "Create Member"}
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Creating..." : "Create Member"}
                   </Button>
                 </div>
               </form>
@@ -424,13 +430,6 @@ export default function MembersPage() {
           </Dialog>
         </div>
       </div>
-
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Search and Filters */}
       <Card>
@@ -446,8 +445,8 @@ export default function MembersPage() {
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}
               />
             </div>
-            <Button onClick={handleSearch} disabled={isLoading}>
-              {isLoading ? "Searching..." : "Search"}
+            <Button onClick={handleSearch} disabled={loading}>
+              {loading ? "Searching..." : "Search"}
             </Button>
             {filters.search && (
               <Button
@@ -473,7 +472,7 @@ export default function MembersPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {loading ? (
             <div className="text-center py-8">Loading members...</div>
           ) : (
             <>
@@ -591,7 +590,7 @@ export default function MembersPage() {
         }}
         onUpdate={handleUpdateMember}
         onDelete={handleDeleteMember}
-        isLoading={isLoading}
+        isLoading={loading}
       />
 
       {/* Filter Dialog */}

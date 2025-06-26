@@ -30,13 +30,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate total amount
-    const ticketPricing = {
-      general: event.generalPrice,
-      vip: event.vipPrice,
-      early_bird: event.earlyBirdPrice
+    let basePrice: number | undefined
+    const price = event.price ? (typeof event.price === 'object' && 'toNumber' in event.price ? event.price.toNumber() : event.price) : undefined
+    const memberPrice = event.memberPrice ? (typeof event.memberPrice === 'object' && 'toNumber' in event.memberPrice ? event.memberPrice.toNumber() : event.memberPrice) : undefined
+    if (ticketType === 'member') {
+      basePrice = memberPrice ?? price
+    } else {
+      basePrice = price
     }
-
-    const basePrice = ticketPricing[ticketType as keyof typeof ticketPricing] || event.generalPrice
+    if (typeof basePrice !== 'number') {
+      return NextResponse.json(
+        { error: 'Ticket price not available for this event.' },
+        { status: 400 }
+      )
+    }
     const totalAmount = basePrice * quantity
 
     // Create payment intent
@@ -55,16 +62,17 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Create ticket registration
-    const ticket = await prisma.ticket.create({
+    // Create event registration
+    const registration = await prisma.eventRegistration.create({
       data: {
         eventId,
-        userId: session.user.id,
-        ticketType,
-        quantity,
+        memberId: session.user.id,
+        name: session.user.name || `${session.user.firstName} ${session.user.lastName}` || 'Unknown',
+        email: session.user.email || '',
+        ticketCount: quantity,
         totalAmount,
         status: 'CONFIRMED',
-        stripePaymentIntentId: paymentIntent.id
+        paymentIntentId: paymentIntent.id
       }
     })
 
@@ -73,8 +81,8 @@ export async function POST(request: NextRequest) {
       data: {
         userId: session.user.id,
         action: 'EVENT_PAYMENT_COMPLETED',
-        entityType: 'TICKET',
-        entityId: ticket.id,
+        entityType: 'EVENT_REGISTRATION',
+        entityId: registration.id,
         newValues: {
           eventId,
           ticketType,
@@ -86,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      ticketId: ticket.id,
+      registrationId: registration.id,
       paymentIntentId: paymentIntent.id,
       clientSecret: paymentIntent.client_secret
     })

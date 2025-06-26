@@ -7,11 +7,10 @@ import { z } from "zod"
 const testimonialSchema = z.object({
   authorName: z.string().min(1, "Author name is required"),
   authorTitle: z.string().optional(),
-  authorCompany: z.string().optional(),
-  authorImage: z.string().url().optional(),
+  company: z.string().optional(),
   content: z.string().min(1, "Content is required"),
   rating: z.number().min(1).max(5).default(5),
-  status: z.enum(["PENDING", "APPROVED", "REJECTED"]).default("PENDING"),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("DRAFT"),
   isFeatured: z.boolean().default(false),
   memberId: z.string().optional(),
 })
@@ -35,7 +34,7 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { authorName: { contains: search, mode: "insensitive" } },
         { content: { contains: search, mode: "insensitive" } },
-        { authorCompany: { contains: search, mode: "insensitive" } },
+        { company: { contains: search, mode: "insensitive" } },
       ]
     }
 
