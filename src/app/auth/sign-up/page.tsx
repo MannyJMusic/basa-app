@@ -38,10 +38,13 @@ export default function SignUpPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-background">
       <Card className="w-full max-w-md shadow-lg">
-        <CardHeader>
-          <CardTitle>Create Your BASA Account</CardTitle>
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Join BASA</CardTitle>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Create your account to access the San Antonio business community
+          </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           {errorMessage && (
             <Alert variant={errorMessage.variant} className="mb-6">
               <Info className="h-4 w-4" />
@@ -52,9 +55,25 @@ export default function SignUpPage() {
               </AlertDescription>
             </Alert>
           )}
+          
+          {/* Social Authentication - Prominent placement */}
+          <div>
+            <SocialAuth mode="signup" />
+          </div>
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or create account with email
+              </span>
+            </div>
+          </div>
+          
+          {/* Email/Password Form */}
           <SignUpForm prefillEmail={email} />
-          <Separator className="my-6" />
-          <SocialAuth />
         </CardContent>
       </Card>
     </div>

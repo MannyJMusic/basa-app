@@ -63,7 +63,7 @@ export default function SignInPage() {
             )}
             <SignInForm prefillEmail={email} />
             <Separator className="my-6" />
-            <SocialAuth />
+            <SocialAuth mode="signin" />
           </CardContent>
         </Card>
       </div>

@@ -3,7 +3,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Testimonials } from "@/components/marketing/testimonials"
+import Testimonials from "@/components/marketing/testimonials"
 import { FeaturedEvents } from "@/components/marketing/featured-events"
 import { 
   Users, 
@@ -242,11 +242,39 @@ export default function HomePage() {
 
       {/* Social Proof - Testimonials & Success Metrics */}
       <Testimonials 
-        showMetrics={true}
-        maxTestimonials={3}
+        testimonials={[
+          {
+            id: "1",
+            name: "Sarah Johnson",
+            company: "Johnson Marketing Group",
+            membership: "Professional Member",
+            quote: "BASA has been a game-changer for my marketing agency. The quality of connections and the genuine desire to help each other succeed is unmatched. I've generated over $150,000 in new business through BASA referrals alone.",
+            results: "$150K+ Results",
+            rating: 5
+          },
+          {
+            id: "2",
+            name: "Michael Chen",
+            company: "Chen Development Group",
+            membership: "Corporate Partner",
+            quote: "As a real estate developer, BASA has opened doors I never knew existed. The networking events are professional, the connections are genuine, and the business opportunities are real. My company has grown 40% since joining.",
+            results: "40% Growth",
+            rating: 5
+          },
+          {
+            id: "3",
+            name: "Lisa Rodriguez",
+            company: "Rodriguez Legal Services",
+            membership: "Professional Member",
+            quote: "The Networking and Giving initiative is what sets BASA apart. I've been able to grow my business while making a positive impact in our community. The connections I've made are both professional and meaningful.",
+            results: "15+ Partnerships",
+            rating: 5
+          }
+        ]}
         title="What San Antonio Business Leaders Say About BASA"
         subtitle="Hear directly from our members about the impact BASA has had on their businesses and careers."
-        className="bg-white"
+        showViewAll={true}
+        viewAllHref="/testimonials"
       />
 
       {/* Featured Events Preview */}
