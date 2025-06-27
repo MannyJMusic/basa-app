@@ -31,9 +31,8 @@ import { EventsDisplay } from "@/components/events/events-display"
 export default function MyEventsPage() {
   const { data: session } = useSession()
   const { events, loading, fetchEvents } = useEvents()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [eventType, setEventType] = useState("all")
-  const [status, setStatus] = useState("all")
+  const [searchTerm, setSearchTerm] = useState('')
+  const [eventType, setEventType] = useState('all')
   const [isBannerCollapsed, setIsBannerCollapsed] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'calendar'>('list')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -47,8 +46,7 @@ export default function MyEventsPage() {
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          event.description.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = eventType === "all" || event.category.toLowerCase() === eventType
-    const matchesStatus = status === "all" || event.status.toLowerCase() === status
-    return matchesSearch && matchesType && matchesStatus
+    return matchesSearch && matchesType
   })
 
   // Separate upcoming and past events
@@ -124,81 +122,67 @@ export default function MyEventsPage() {
         </div>
       </div>
 
+      {/* Search and Filters - Full Width */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="md:col-span-2">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input 
+                  placeholder="Search events..." 
+                  className="pl-10 w-full" 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="w-full">
+              <Select value={eventType} onValueChange={setEventType}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Event Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  <SelectItem value="networking">Networking</SelectItem>
+                  <SelectItem value="educational">Educational</SelectItem>
+                  <SelectItem value="social">Social</SelectItem>
+                  <SelectItem value="charity">Charity</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-1"></div>
+            <div className="flex justify-end space-x-2 w-full">
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid3X3 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'calendar' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('calendar')}
+              >
+                <CalendarDays className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Main Content and Side Panel */}
       <div className="flex gap-6">
         {/* Main Content */}
         <div className="flex-1 space-y-6">
-          {/* Search and Filters */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-                <div className="md:col-span-2">
-                  <div className="relative w-full">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input 
-                      placeholder="Search events..." 
-                      className="pl-10 w-full" 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="w-full">
-                  <Select value={eventType} onValueChange={setEventType}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Event Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Events</SelectItem>
-                      <SelectItem value="networking">Networking</SelectItem>
-                      <SelectItem value="educational">Educational</SelectItem>
-                      <SelectItem value="social">Social</SelectItem>
-                      <SelectItem value="charity">Charity</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="w-full">
-                  <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="PUBLISHED">Published</SelectItem>
-                      <SelectItem value="DRAFT">Draft</SelectItem>
-                      <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                      <SelectItem value="COMPLETED">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="md:col-span-2"></div>
-                <div className="flex justify-end space-x-2 w-full">
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'grid' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                  >
-                    <Grid3X3 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'calendar' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode('calendar')}
-                  >
-                    <CalendarDays className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Upcoming Events */}
           <EventsDisplay 
             events={upcomingEvents}
@@ -211,8 +195,6 @@ export default function MyEventsPage() {
             setSearchTerm={setSearchTerm}
             eventType={eventType}
             setEventType={setEventType}
-            status={status}
-            setStatus={setStatus}
             selectedCategory={selectedCategory}
           />
         </div>
@@ -274,36 +256,6 @@ export default function MyEventsPage() {
                   <span className="text-sm">{category.name}</span>
                 </div>
               ))}
-            </CardContent>
-          </Card>
-
-          {/* Quick Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Stats</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Total Events</span>
-                <span className="font-semibold">{upcomingEvents.length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">This Month</span>
-                <span className="font-semibold">
-                  {upcomingEvents.filter(event => {
-                    const eventDate = new Date(event.startDate)
-                    const now = new Date()
-                    return eventDate.getMonth() === now.getMonth() && 
-                           eventDate.getFullYear() === now.getFullYear()
-                  }).length}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Published</span>
-                <span className="font-semibold">
-                  {upcomingEvents.filter(event => event.status === 'PUBLISHED').length}
-                </span>
-              </div>
             </CardContent>
           </Card>
         </div>

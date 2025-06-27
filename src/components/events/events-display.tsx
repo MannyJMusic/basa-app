@@ -54,8 +54,6 @@ interface EventsDisplayProps {
   setSearchTerm?: (term: string) => void
   eventType?: string
   setEventType?: (type: string) => void
-  status?: string
-  setStatus?: (status: string) => void
   selectedCategory?: string | null
 }
 
@@ -72,8 +70,6 @@ export function EventsDisplay({
   setSearchTerm,
   eventType = "all",
   setEventType,
-  status = "all",
-  setStatus,
   selectedCategory = null
 }: EventsDisplayProps) {
   const { data: session } = useSession()
@@ -95,20 +91,17 @@ export function EventsDisplay({
     const matchesType = eventType === "all" || 
       event.category?.toLowerCase() === eventType.toLowerCase()
     
-    const matchesStatus = status === "all" || 
-      event.status?.toLowerCase() === status.toLowerCase()
-    
     const matchesCategory = !selectedCategory || 
       event.category?.toLowerCase() === selectedCategory.toLowerCase()
 
-    return matchesSearch && matchesType && matchesStatus && matchesCategory
+    return matchesSearch && matchesType && matchesCategory
   })
 
   useEffect(() => {
     if (currentViewMode === 'calendar') {
       generateCalendarDays()
     }
-  }, [currentMonth, filteredEvents, currentViewMode])
+  }, [currentMonth, events, searchTerm, eventType, selectedCategory, currentViewMode])
 
   const generateCalendarDays = () => {
     const year = currentMonth.getFullYear()
