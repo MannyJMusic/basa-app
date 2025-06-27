@@ -333,8 +333,18 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header Section - Traditional Layout */}
-      <section className="bg-gradient-to-r from-blue-900 to-blue-700 text-white py-16">
-        <div className="container mx-auto px-4">
+      <section className="relative bg-gradient-to-r from-blue-900 to-blue-700 text-white py-16 overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/images/backgrounds/about-bg.jpg')"
+          }}
+        />
+        {/* Overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 to-blue-700/60"></div>
+        
+        <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -351,9 +361,9 @@ export default function AboutPage() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="text-4xl md:text-5xl font-bold mb-6 leading-tight"
+              className="text-4xl md:text-5xl font-bold mb-6 leading-tight text-basa-gold"
             >
-              Building San Antonio's Business Community Since 2020
+              San Antonio's Premier Business Network
             </motion.h1>
             
             <motion.p
@@ -362,16 +372,14 @@ export default function AboutPage() {
               transition={{ duration: 0.8, delay: 0.6 }}
               className="text-xl text-blue-100 leading-relaxed max-w-3xl mx-auto"
             >
-              BASA represents the evolution of business networking in San Antonio, 
-              transforming traditional networking into a comprehensive ecosystem 
-              that drives real business growth and community impact.
+              Connecting business leaders through meaningful relationships and collaborative growth since 2020.
             </motion.p>
           </div>
         </div>
       </section>
 
       {/* Impact Numbers - Traditional Grid */}
-      <section className="py-16 bg-gray-50">
+      {/* <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
@@ -428,7 +436,7 @@ export default function AboutPage() {
             />
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Our Story Section */}
       <section className="py-16 bg-white">
@@ -460,29 +468,39 @@ export default function AboutPage() {
               viewport={{ once: true }}
               className="prose prose-lg max-w-none text-gray-700 leading-relaxed space-y-6"
             >
+              <img 
+                src="/images/profile/Jen-Bio.jpg" 
+                alt="Jennifer Bonomo, Founder of BASA" 
+                className="float-left w-40 h-40 object-cover aspect-square rounded-full mr-8 mb-4 shadow-lg border-2 border-basa-gold max-sm:float-none max-sm:mx-auto max-sm:mb-6" 
+              />
               <p>
-                BASA was born from a simple observation: traditional business networking in San Antonio 
-                was fragmented, transactional, and often failed to deliver meaningful results. In 2020, 
-                a group of local business leaders recognized that the city's growing economy needed a 
-                more sophisticated approach to business connections—one that prioritized quality over 
-                quantity, relationships over transactions, and community impact over individual gain.
+                BASA was founded by Jennifer Bonomo in April 2020, during one of the most challenging periods 
+                for businesses worldwide. As a respected leader in San Antonio's marketing community, Jennifer 
+                brought unmatched experience from her work with top radio stations including Cox Media and 
+                iHeart Media, as well as direct mail marketing with ValPak and other print publications.
               </p>
 
               <p>
-                What began as a small gathering of 12 business owners has evolved into San Antonio's 
-                premier business networking organization, serving over 150 active members across 
-                diverse industries. Our growth wasn't accidental; it was the result of a deliberate 
-                approach that combines proven networking principles with innovative technology and 
-                a deep commitment to the San Antonio business community.
+                Jennifer's strongest value comes from her extensive experience planning and promoting events. 
+                Having been personally affected by the COVID-19 pandemic, she recognized the urgent need to 
+                support local businesses through this unprecedented crisis. Her motivation for founding BASA 
+                arose from a genuine desire to help local businesses endure and recover from the pandemic's 
+                devastating impact.
               </p>
 
               <p>
-                Unlike traditional networking groups that focus solely on lead generation, BASA 
-                operates on the principle that sustainable business growth comes from building 
-                authentic relationships, sharing knowledge, and creating opportunities for 
-                collaborative success. We've found that when businesses genuinely support each 
-                other, everyone benefits—from individual entrepreneurs to the broader San Antonio 
-                economy.
+                What began as a mission to connect like-minded professionals and help them prepare for 
+                reopening has evolved into San Antonio's premier business networking organization. Jennifer's 
+                vision of creating meaningful connections that go beyond traditional networking has resulted 
+                in a community where businesses genuinely support each other, driving growth for individual 
+                entrepreneurs and the broader San Antonio economy.
+              </p>
+
+              <p>
+                Beyond BASA, Jennifer is passionate about partnering with nonprofit organizations, 
+                particularly those supporting the military and elderly communities. When not working to 
+                strengthen San Antonio's business community, she enjoys traveling, sports, and relaxing 
+                on the beach.
               </p>
             </motion.div>
           </div>
@@ -718,7 +736,7 @@ export default function AboutPage() {
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10 text-lg px-8 py-4">
+              <Button asChild variant="outline" size="lg" className="border-white text-basa-navy hover:bg-white/10 text-lg px-8 py-4">
                 <Link href="/events">Attend an Event</Link>
               </Button>
             </div>
