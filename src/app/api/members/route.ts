@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
+import { sendEmailVerification } from "@/lib/email"
+import { generateVerificationToken } from "@/lib/utils"
 
 // Validation schemas
 const createMemberSchema = z.object({
@@ -21,6 +23,7 @@ const createMemberSchema = z.object({
   website: z.string().url().optional(),
   membershipTier: z.enum(["BASIC", "PREMIUM", "VIP"]).optional(),
   role: z.enum(["MEMBER", "MODERATOR", "ADMIN"]).default("MEMBER"),
+  membershipPaymentConfirmed: z.boolean().optional(),
 })
 
 const searchParamsSchema = z.object({
@@ -184,6 +187,16 @@ export async function POST(request: NextRequest) {
     const bcrypt = await import("bcryptjs")
     const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
+    // Email verification logic
+    let verificationToken = null
+    let verificationTokenExpiry = null
+    let accountStatus = "PENDING_VERIFICATION"
+    let isActive = false
+    if (validatedData.membershipPaymentConfirmed) {
+      verificationToken = generateVerificationToken()
+      verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    }
+
     // Create user and member in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create user
@@ -194,7 +207,11 @@ export async function POST(request: NextRequest) {
           email: validatedData.email,
           hashedPassword,
           role: validatedData.role,
-          isActive: true,
+          isActive,
+          accountStatus,
+          verificationToken,
+          verificationTokenExpiry,
+          membershipPaymentConfirmed: validatedData.membershipPaymentConfirmed || false,
         },
       })
 
@@ -247,8 +264,17 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      return member
+      return { user, member }
     })
+
+    // Send verification email if payment is confirmed
+    if (validatedData.membershipPaymentConfirmed && result.user.verificationToken) {
+      try {
+        await sendEmailVerification(result.user.email, result.user.firstName, result.user.verificationToken)
+      } catch (emailError) {
+        console.error("Failed to send verification email:", emailError)
+      }
+    }
 
     return NextResponse.json(result, { status: 201 })
   } catch (error) {

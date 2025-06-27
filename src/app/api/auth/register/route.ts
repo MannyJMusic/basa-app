@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { registerSchema } from "@/lib/validations"
 import { hashPassword } from "@/lib/utils"
 import { prisma } from "@/lib/db"
-import { sendWelcomeEmail } from "@/lib/email"
+import { sendWelcomeEmail, sendEmailVerification } from "@/lib/email"
+import { generateVerificationToken } from "@/lib/utils"
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,10 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await hashPassword(password)
 
+    // Generate verification token and expiry (24 hours)
+    const verificationToken = generateVerificationToken()
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
+
     // Create user
     const user = await prisma.user.create({
       data: {
@@ -33,7 +38,10 @@ export async function POST(request: NextRequest) {
         lastName,
         phone,
         role: "MEMBER",
-        isActive: true
+        isActive: false,
+        accountStatus: "PENDING_VERIFICATION",
+        verificationToken,
+        verificationTokenExpiry,
       }
     })
 
@@ -53,17 +61,17 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Send welcome email using Mailgun
+    // Send verification email
     try {
-      await sendWelcomeEmail(email, firstName)
+      await sendEmailVerification(email, firstName, verificationToken)
     } catch (emailError) {
-      console.error("Failed to send welcome email:", emailError)
+      console.error("Failed to send verification email:", emailError)
       // Don't fail the registration if email fails
     }
 
     return NextResponse.json(
       { 
-        message: "User registered successfully",
+        message: "User registered successfully. Please check your email to verify your account.",
         user: {
           id: user.id,
           email: user.email,

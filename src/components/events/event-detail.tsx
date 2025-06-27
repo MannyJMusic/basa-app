@@ -23,6 +23,7 @@ import {
   Award
 } from 'lucide-react'
 import { Event } from '@/lib/types'
+import { useSession } from 'next-auth/react'
 
 interface EventDetailProps {
   event: Event
@@ -37,6 +38,9 @@ export function EventDetail({
   onFavorite,
   onShare 
 }: EventDetailProps) {
+  const { data: session } = useSession();
+  const isGuest = session?.user?.role === 'GUEST';
+
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
