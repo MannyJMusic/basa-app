@@ -507,7 +507,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* What Sets BASA Apart - Traditional 3-Column Grid */}
+      {/* Leadership Team Section */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <motion.div
@@ -518,13 +518,96 @@ export default function AboutPage() {
             className="text-center mb-12"
           >
             <Badge variant="secondary" className="bg-basa-teal/10 text-basa-navy border-basa-teal/20 mb-4">
+              <Users2 className="w-4 h-4 mr-2" />
+              Leadership
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
+              Meet Our Leadership Team
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Experienced professionals dedicated to building San Antonio's premier business network.
+            </p>
+          </motion.div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {[
+              {
+                name: "Jennifer Bonomo",
+                title: "Founder",
+                tagline: "Visionary leader and BASA's original connector",
+                image: "/images/profile/Jen-Bio.jpg"
+              },
+              {
+                name: "Ernie Mores",
+                title: "Business Director",
+                tagline: "Driving business growth and partnerships",
+                image: "/images/profile/ernie-bio.jpg"
+              },
+              {
+                name: "Manny Moreno",
+                title: "Technical Lead",
+                tagline: "Empowering BASA with technology and innovation",
+                image: "/images/profile/Manny-Bio.jpg"
+              }
+            ].map((leader, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                whileHover={{ y: -8 }}
+                className="group"
+              >
+                <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+                  <CardContent className="p-8 text-center">
+                    <div className="w-20 h-20 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                      <img src={leader.image} alt={leader.name + ' profile photo'} className="w-20 h-20 rounded-full object-cover border-2 border-basa-gold shadow" />
+                    </div>
+                    <h3 className="text-xl font-bold text-basa-navy mb-2">{leader.name}</h3>
+                    <p className="text-basa-teal font-medium mb-2">{leader.title}</p>
+                    <p className="text-sm text-gray-600">{leader.tagline}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* What Sets BASA Apart - Traditional 3-Column Grid */}
+      <section className="relative py-16 bg-gray-50 overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/images/backgrounds/basa-approach-bg.jpg')"
+          }}
+        />
+        {/* Overlay for readability */}
+        <div className="absolute inset-0 bg-white/40"></div>
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <Badge variant="secondary" className="bg-basa-gold text-basa-navy border-basa-gold mb-4">
               <Star className="w-4 h-4 mr-2" />
               Our Approach
             </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
+            <h2
+              className="text-3xl md:text-4xl font-bold text-white mb-6"
+              style={{ textShadow: '0 4px 24px rgba(0,0,0,0.85), 0 1.5px 0 #000' }}
+            >
               What Sets BASA Apart
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p
+              className="text-xl text-white max-w-3xl mx-auto"
+              style={{ textShadow: '0 3px 16px rgba(0,0,0,0.85), 0 1px 0 #000' }}
+            >
               We've redefined business networking by focusing on quality, purpose, and local impact.
             </p>
           </motion.div>
@@ -600,7 +683,7 @@ export default function AboutPage() {
       </section>
 
       {/* Member Testimonials - Traditional Layout */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-basa-teal/10">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
@@ -630,91 +713,24 @@ export default function AboutPage() {
       </section>
 
       {/* Success Stories - Traditional Layout */}
+      {/*
       {successStories.map((story, index) => (
         <SuccessStory key={index} story={story} index={index} />
       ))}
-
-      {/* Leadership Team Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <Badge variant="secondary" className="bg-basa-teal/10 text-basa-navy border-basa-teal/20 mb-4">
-              <Users2 className="w-4 h-4 mr-2" />
-              Leadership
-            </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
-              Meet Our Leadership Team
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Experienced professionals dedicated to building San Antonio's premier business network.
-            </p>
-          </motion.div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-            {[
-              {
-                name: "Maria Elena Rodriguez",
-                title: "Executive Director",
-                description: "Leading BASA's mission since 2020",
-                icon: Users,
-                color: "from-basa-navy to-basa-teal"
-              },
-              {
-                name: "David Chen",
-                title: "Director of Member Relations",
-                description: "Building meaningful connections since 2021",
-                icon: Handshake,
-                color: "from-basa-gold to-basa-teal"
-              },
-              {
-                name: "Sarah Johnson",
-                title: "Director of Community Impact",
-                description: "Driving social responsibility since 2022",
-                icon: Heart,
-                color: "from-basa-teal to-basa-navy"
-              },
-              {
-                name: "Michael Thompson",
-                title: "Technology Director",
-                description: "Enabling digital connections since 2021",
-                icon: Globe,
-                color: "from-basa-navy to-basa-gold"
-              }
-            ].map((leader, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -8 }}
-                className="group"
-              >
-                <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
-                  <CardContent className="p-8 text-center">
-                    <div className={`w-20 h-20 bg-gradient-to-br ${leader.color} rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                      <leader.icon className="w-10 h-10 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold text-basa-navy mb-2">{leader.name}</h3>
-                    <p className="text-basa-teal font-medium mb-2">{leader.title}</p>
-                    <p className="text-sm text-gray-600">{leader.description}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      */}
 
       {/* Call-to-Action Section - Traditional Layout */}
-      <section className="py-16 bg-gradient-to-r from-blue-900 to-blue-700 text-white">
-        <div className="container mx-auto px-4 text-center">
+      <section className="relative py-16 text-white overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/images/backgrounds/basa-connect-bg.jpg')"
+          }}
+        />
+        {/* Overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/70 to-blue-700/70"></div>
+        <div className="container mx-auto px-4 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -722,21 +738,27 @@ export default function AboutPage() {
             viewport={{ once: true }}
             className="max-w-4xl mx-auto"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+            <h2
+              className="text-3xl md:text-4xl font-bold mb-6 text-basa-gold"
+              style={{ textShadow: '0 4px 24px rgba(0,0,0,0.85), 0 1.5px 0 #000' }}
+            >
               Ready to Join San Antonio's Most Connected Business Network?
             </h2>
-            <p className="text-xl mb-12 text-blue-100 leading-relaxed">
+            <p
+              className="text-xl mb-12 text-blue-100 leading-relaxed"
+              style={{ textShadow: '0 3px 16px rgba(0,0,0,0.85), 0 1px 0 #000' }}
+            >
               Connect with 150+ business leaders who've discovered the power of meaningful 
               relationships and collaborative growth.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="basa-btn-primary text-lg px-8 py-4">
+              <Button asChild size="lg" className="bg-basa-gold text-basa-navy hover:bg-basa-gold/90 focus:bg-basa-gold/80 text-lg px-8 py-4 border-2 border-basa-gold shadow-2xl">
                 <Link href="/membership/join" className="flex items-center">
                   Apply for Membership
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white text-basa-navy hover:bg-white/10 text-lg px-8 py-4">
+              <Button asChild variant="outline" size="lg" className="border-white text-basa-navy hover:bg-white/10 text-lg px-8 py-4 shadow-2xl">
                 <Link href="/events">Attend an Event</Link>
               </Button>
             </div>
