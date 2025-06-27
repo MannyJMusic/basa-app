@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2 } from "lucide-react"
+import { GuestOverlay } from "@/components/ui/guest-overlay"
 
 export default function DashboardPage() {
   const { data: session, status } = useSession()
@@ -42,20 +43,21 @@ export default function DashboardPage() {
       return
     }
 
-    // Check if user was created recently (within last 24 hours)
-    const checkNewUser = async () => {
+    // Check if this is the first login after email verification
+    const checkFirstLoginAfterVerification = async () => {
       try {
         const response = await fetch('/api/profile')
         const userData = await response.json()
         
-        if (userData.createdAt) {
-          const createdAt = new Date(userData.createdAt)
-          const now = new Date()
-          const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60)
+        if (userData.emailVerified && userData.accountStatus === 'ACTIVE') {
+          // Check if we've shown the welcome message before for this user
+          const hasShownWelcome = localStorage.getItem(`welcome-shown-${userData.id}`)
           
-          if (hoursSinceCreation < 24) {
+          if (!hasShownWelcome) {
             setIsNewUser(true)
             setShowWelcome(true)
+            // Mark that we've shown the welcome message for this user
+            localStorage.setItem(`welcome-shown-${userData.id}`, 'true')
           }
         }
       } catch (error) {
@@ -63,7 +65,7 @@ export default function DashboardPage() {
       }
     }
 
-    checkNewUser()
+    checkFirstLoginAfterVerification()
   }, [session, status, router])
 
   if (status === "loading") {
@@ -82,7 +84,7 @@ export default function DashboardPage() {
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
             <strong>Welcome to BASA, {session.user?.firstName || 'Member'}!</strong> 
-            Your account has been successfully created. We're excited to have you join the San Antonio business community. 
+            Your email has been successfully verified and your account is now active. We're excited to have you join the San Antonio business community. 
             Take a moment to explore your dashboard and complete your profile.
           </AlertDescription>
         </Alert>
@@ -269,21 +271,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {isGuest && (
-        <div className="fixed inset-0 flex flex-col items-center justify-center z-50 border-4 border-blue-400 rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(191,219,254,0.7) 0%, rgba(221,214,254,0.7) 100%)' }}>
-          <div className="bg-white/90 border-2 border-blue-400 rounded-2xl p-10 shadow-2xl text-center max-w-lg">
-            <h2 className="text-3xl font-extrabold mb-4 text-blue-800 drop-shadow">Unlock the Power of the BASA Network!</h2>
-            <p className="text-lg text-gray-800 mb-4 font-semibold">
-              <span className="text-purple-700">You're just one step away from exclusive access!</span><br />
-              <span className="text-blue-700">Join BASA as a member to connect with top business leaders, view full profiles, and unlock premium networking opportunities, events, and resources.</span>
-            </p>
-            <a href="/membership/join" className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:scale-105 hover:from-purple-600 hover:to-blue-600 transition-transform duration-200">
-              Become a Member &rarr;
-            </a>
-            <p className="mt-4 text-sm text-gray-600">Already a member? <a href="/auth/sign-in" className="underline text-blue-700">Sign in here</a>.</p>
-          </div>
-        </div>
-      )}
+      {isGuest && <GuestOverlay />}
     </div>
   )
 } 

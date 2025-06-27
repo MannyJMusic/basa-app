@@ -69,6 +69,19 @@ export async function POST(request: NextRequest) {
       // Don't fail the registration if email fails
     }
 
+    if (user.role === "GUEST") {
+      await prisma.member.create({
+        data: {
+          userId: user.id,
+          businessName: "Guest",
+          membershipTier: "BASIC",
+          membershipStatus: "ACTIVE",
+          joinedAt: new Date(),
+          // Add any other default fields as needed
+        }
+      });
+    }
+
     return NextResponse.json(
       { 
         message: "User registered successfully. Please check your email to verify your account.",

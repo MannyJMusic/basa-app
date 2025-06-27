@@ -150,6 +150,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
+    // For guests, return minimal user info if no member record
+    if (user.role === "GUEST" && !user.member) {
+      return NextResponse.json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        member: null
+      })
+    }
+
     return NextResponse.json(user)
   } catch (error) {
     console.error("Error fetching profile:", error)
