@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signIn, getSession } from "next-auth/react"
 import { Input } from "@/components/ui/input"
@@ -10,13 +10,24 @@ import { Alert } from "@/components/ui/alert"
 import { getRedirectUrl } from "@/lib/utils"
 import { UserRole } from "@/lib/types"
 
-export default function SignInForm() {
+interface SignInFormProps {
+  prefillEmail?: string | null
+}
+
+export default function SignInForm({ prefillEmail }: SignInFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Prefill email if provided
+  useEffect(() => {
+    if (prefillEmail) {
+      setEmail(prefillEmail)
+    }
+  }, [prefillEmail])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -52,6 +63,8 @@ export default function SignInForm() {
           value={email}
           onChange={e => setEmail(e.target.value)}
           required
+          readOnly={!!prefillEmail}
+          className={prefillEmail ? "bg-gray-50" : ""}
         />
       </div>
       <div>
@@ -65,7 +78,7 @@ export default function SignInForm() {
           required
         />
       </div>
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button type="submit" className="w-full text-white" disabled={isPending}>
         {isPending ? "Signing in..." : "Sign In"}
       </Button>
     </form>

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { TrendingUp, Users, BookOpen, Star, Calendar, Heart, Lightbulb, PenLine, ChevronRight } from "lucide-react"
+import { Metadata } from "next"
 
 const CATEGORIES = [
   { name: "Networking Tips", icon: Users },
@@ -71,15 +72,15 @@ const FEATURED_POSTS = [
   },
 ]
 
+export const metadata: Metadata = {
+  title: "San Antonio Business Networking Blog | BASA",
+  description: "Networking tips, member spotlights, industry insights, event recaps, and business resources for San Antonio entrepreneurs.",
+  keywords: "San Antonio business networking, professional associations San Antonio, business networking events San Antonio, San Antonio entrepreneurs networking, business partnerships San Antonio",
+}
+
 export default function BlogPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* SEO Meta Tags */}
-      <head>
-        <title>San Antonio Business Networking Blog | BASA</title>
-        <meta name="description" content="Networking tips, member spotlights, industry insights, event recaps, and business resources for San Antonio entrepreneurs." />
-        <meta name="keywords" content="San Antonio business networking, professional associations San Antonio, business networking events San Antonio, San Antonio entrepreneurs networking, business partnerships San Antonio" />
-      </head>
       {/* Header Section */}
       <section className="bg-gradient-to-r from-blue-900 to-blue-700 text-white py-16">
         <div className="container mx-auto px-4">

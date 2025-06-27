@@ -137,7 +137,7 @@ export default function Navigation() {
                     </Button>
                   </Link>
                   <Link href="/membership/join">
-                    <Button className="basa-btn-secondary">
+                    <Button className="basa-btn-secondary text-navy">
                       Join BASA
                     </Button>
                   </Link>

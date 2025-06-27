@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Testimonials } from "@/components/marketing/testimonials"
+import Testimonials from "@/components/marketing/testimonials"
 import { 
   Star, 
   Quote, 
@@ -101,11 +101,65 @@ export default function TestimonialsPage() {
 
       {/* All Testimonials */}
       <Testimonials 
-        showMetrics={false}
-        maxTestimonials={6}
+        testimonials={[
+          {
+            id: "1",
+            name: "Sarah Johnson",
+            company: "Johnson Marketing Group",
+            membership: "Professional Member",
+            quote: "BASA has been a game-changer for my marketing agency. The quality of connections and the genuine desire to help each other succeed is unmatched. I've generated over $150,000 in new business through BASA referrals alone.",
+            results: "$150K+ Results",
+            rating: 5
+          },
+          {
+            id: "2",
+            name: "Michael Chen",
+            company: "Chen Development Group",
+            membership: "Corporate Partner",
+            quote: "As a real estate developer, BASA has opened doors I never knew existed. The networking events are professional, the connections are genuine, and the business opportunities are real. My company has grown 40% since joining.",
+            results: "40% Growth",
+            rating: 5
+          },
+          {
+            id: "3",
+            name: "Lisa Rodriguez",
+            company: "Rodriguez Legal Services",
+            membership: "Professional Member",
+            quote: "The Networking and Giving initiative is what sets BASA apart. I've been able to grow my business while making a positive impact in our community. The connections I've made are both professional and meaningful.",
+            results: "15+ Partnerships",
+            rating: 5
+          },
+          {
+            id: "4",
+            name: "Jennifer Martinez",
+            company: "TechFlow Solutions",
+            membership: "Professional Member",
+            quote: "BASA's Essential membership was the perfect starting point for my startup. The 50% event discount saved me money while the connections helped me scale. I've since upgraded to Professional and the value keeps increasing.",
+            results: "25+ Employees",
+            rating: 5
+          },
+          {
+            id: "5",
+            name: "David Thompson",
+            company: "Thompson Financial Group",
+            membership: "Corporate Partner",
+            quote: "The Corporate Partnership level has given our company incredible visibility and speaking opportunities. We've hosted ribbon cuttings and gained valuable exposure. The dedicated account management is exceptional.",
+            results: "8+ Speaking Events",
+            rating: 5
+          },
+          {
+            id: "6",
+            name: "Robert Wilson",
+            company: "Wilson Healthcare Management",
+            membership: "Professional Member",
+            quote: "BASA's member directory and business resources have been invaluable. I've found trusted vendors, referral partners, and even new clients. The quality of the network is what makes BASA special.",
+            results: "12+ New Clients",
+            rating: 5
+          }
+        ]}
         title="Member Testimonials"
         subtitle="Hear directly from our members about the impact BASA has had on their businesses and careers."
-        className="bg-gray-50"
+        showViewAll={false}
       />
 
       {/* Success Stories */}
