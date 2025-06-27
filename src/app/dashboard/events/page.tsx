@@ -232,20 +232,31 @@ export default function MyEventsPage() {
                   </div>
                   
                   {/* Member Pricing Display */}
-                  <div className="bg-green-50 p-3 rounded-lg">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Member Price:</span>
-                      <span className="font-semibold text-green-700">
-                        ${(Number(event.memberPrice) || 0).toFixed(2)}
-                      </span>
-                    </div>
-                    {isMember && (
-                      <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
-                        <span>Regular Price:</span>
-                        <span className="line-through">${(Number(event.price) || 0).toFixed(2)}</span>
+                  {session?.user?.role === "GUEST" ? (
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Price:</span>
+                        <span className="font-semibold text-blue-700">
+                          ${(Number(event.price) || 0).toFixed(2)}
+                        </span>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="bg-green-50 p-3 rounded-lg">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Member Price:</span>
+                        <span className="font-semibold text-green-700">
+                          ${(Number(event.memberPrice) || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      {isMember && (
+                        <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
+                          <span>Regular Price:</span>
+                          <span className="line-through">${(Number(event.price) || 0).toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   <div className="flex space-x-2">
                     <Button asChild size="sm" className="flex-1">

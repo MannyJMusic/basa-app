@@ -32,6 +32,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [isNewUser, setIsNewUser] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
+  const isGuest = session?.user?.role === "GUEST"
 
   useEffect(() => {
     if (status === "loading") return
@@ -74,7 +75,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="relative min-h-screen">
       {/* Welcome Message for New Users */}
       {showWelcome && isNewUser && (
         <Alert className="border-green-200 bg-green-50">
@@ -267,6 +268,22 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {isGuest && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center z-50 border-4 border-blue-400 rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(191,219,254,0.7) 0%, rgba(221,214,254,0.7) 100%)' }}>
+          <div className="bg-white/90 border-2 border-blue-400 rounded-2xl p-10 shadow-2xl text-center max-w-lg">
+            <h2 className="text-3xl font-extrabold mb-4 text-blue-800 drop-shadow">Unlock the Power of the BASA Network!</h2>
+            <p className="text-lg text-gray-800 mb-4 font-semibold">
+              <span className="text-purple-700">You're just one step away from exclusive access!</span><br />
+              <span className="text-blue-700">Join BASA as a member to connect with top business leaders, view full profiles, and unlock premium networking opportunities, events, and resources.</span>
+            </p>
+            <a href="/membership/join" className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:scale-105 hover:from-purple-600 hover:to-blue-600 transition-transform duration-200">
+              Become a Member &rarr;
+            </a>
+            <p className="mt-4 text-sm text-gray-600">Already a member? <a href="/auth/sign-in" className="underline text-blue-700">Sign in here</a>.</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 
