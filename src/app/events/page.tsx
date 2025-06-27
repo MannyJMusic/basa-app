@@ -148,14 +148,14 @@ export default function EventsPage() {
               >
                 <Grid3X3 className="w-5 h-5" />
               </button>
-              <a
+              <Link
                 href="/events/calendar"
                 className="p-2 rounded border bg-white text-gray-500 border-gray-300 hover:bg-basa-gold hover:text-basa-navy hover:border-basa-gold transition flex items-center justify-center"
                 aria-label="View Calendar"
                 title="View Calendar"
               >
                 <CalendarIcon className="w-5 h-5" />
-              </a>
+              </Link>
               {/* Info icon with tooltip */}
               <div className="relative group ml-2">
                 <Info className="w-4 h-4 text-gray-400 cursor-pointer group-hover:text-basa-gold group-focus:text-basa-gold" tabIndex={0} />

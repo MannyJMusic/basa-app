@@ -14,25 +14,44 @@ const profileUpdateSchema = z.object({
   businessName: z.string().optional(),
   businessType: z.string().optional(),
   industry: z.array(z.string()).optional(),
-  businessEmail: z.string().email().optional(),
+  businessEmail: z.string().email("Invalid business email").optional().or(z.literal("")),
   businessPhone: z.string().optional(),
   businessAddress: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
   zipCode: z.string().optional(),
-  website: z.string().url().optional(),
+  website: z.string().url("Invalid website URL").optional().or(z.literal("")),
   description: z.string().optional(),
   tagline: z.string().optional(),
   specialties: z.array(z.string()).optional(),
   certifications: z.array(z.string()).optional(),
-  linkedin: z.string().url().optional(),
-  facebook: z.string().url().optional(),
-  instagram: z.string().url().optional(),
-  twitter: z.string().url().optional(),
-  youtube: z.string().url().optional(),
+  linkedin: z.string().url("Invalid LinkedIn URL").optional().or(z.literal("")),
+  facebook: z.string().url("Invalid Facebook URL").optional().or(z.literal("")),
+  instagram: z.string().url("Invalid Instagram URL").optional().or(z.literal("")),
+  twitter: z.string().url("Invalid Twitter URL").optional().or(z.literal("")),
+  youtube: z.string().url("Invalid YouTube URL").optional().or(z.literal("")),
   showInDirectory: z.boolean().optional(),
   allowContact: z.boolean().optional(),
   showAddress: z.boolean().optional(),
+}).transform((data) => {
+  // Convert empty strings to undefined for optional fields
+  const transformed = { ...data }
+  const urlFields = ['website', 'linkedin', 'facebook', 'instagram', 'twitter', 'youtube']
+  const emailFields = ['businessEmail']
+  
+  urlFields.forEach(field => {
+    if (transformed[field as keyof typeof transformed] === '') {
+      transformed[field as keyof typeof transformed] = undefined
+    }
+  })
+  
+  emailFields.forEach(field => {
+    if (transformed[field as keyof typeof transformed] === '') {
+      transformed[field as keyof typeof transformed] = undefined
+    }
+  })
+  
+  return transformed
 })
 
 export async function GET(request: NextRequest) {

@@ -4,10 +4,11 @@ import { prisma } from "@/lib/db"
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
+    const { id } = await params
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -19,7 +20,7 @@ export async function DELETE(
     // Verify the account belongs to the user
     const account = await prisma.account.findFirst({
       where: {
-        id: params.id,
+        id: id,
         userId: session.user.id
       }
     })
@@ -34,7 +35,7 @@ export async function DELETE(
     // Delete the account
     await prisma.account.delete({
       where: {
-        id: params.id
+        id: id
       }
     })
 
@@ -44,7 +45,7 @@ export async function DELETE(
         userId: session.user.id,
         action: "SOCIAL_ACCOUNT_DISCONNECTED",
         entityType: "ACCOUNT",
-        entityId: params.id,
+        entityId: id,
         newValues: {
           provider: account.provider,
           timestamp: new Date().toISOString()
