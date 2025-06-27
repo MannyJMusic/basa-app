@@ -39,9 +39,134 @@ import {
 
 export default function DashboardProfilePage() {
   const { toast } = useToast()
-  const { profile, loading, error, saving, updateProfile, getProfileCompletion, getNetworkingStats } = useProfile()
-  const [isEditing, setIsEditing] = useState(false)
+  const { profile, loading, error, saving, updateProfile, getProfileCompletion, getProfileCompletionDetails, getNetworkingStats } = useProfile()
   const [formData, setFormData] = useState<UpdateProfileData>({})
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [newSpecialty, setNewSpecialty] = useState("")
+  const [newCertification, setNewCertification] = useState("")
+  const [newIndustry, setNewIndustry] = useState("")
+  const [showServiceDropdown, setShowServiceDropdown] = useState(false)
+  const [showCertificationDropdown, setShowCertificationDropdown] = useState(false)
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
+
+  // Predefined lists for suggestions
+  const commonServices = [
+    "Web Development", "Mobile App Development", "UI/UX Design", "Digital Marketing", 
+    "SEO Optimization", "Content Creation", "Social Media Management", "Graphic Design",
+    "Video Production", "Photography", "Consulting", "Project Management", "Data Analysis",
+    "Cloud Solutions", "IT Support", "E-commerce", "Brand Strategy", "Public Relations",
+    "Event Planning", "Legal Services", "Accounting", "Financial Planning", "Real Estate",
+    "Insurance", "Healthcare", "Education", "Training", "Coaching", "Translation",
+    "Virtual Assistant", "Bookkeeping", "Tax Preparation", "Business Strategy"
+  ]
+
+  const commonCertifications = [
+    "AWS Certified", "Google Cloud Professional", "Microsoft Certified", "Cisco Certified",
+    "PMP (Project Management Professional)", "Six Sigma", "Lean Management", "Scrum Master",
+    "Agile Coach", "Certified Public Accountant", "Certified Financial Planner",
+    "Real Estate License", "Insurance License", "Bar License", "Medical License",
+    "Teaching Certificate", "Adobe Certified Expert", "Google Ads Certified",
+    "Facebook Blueprint", "HubSpot Certified", "Salesforce Certified", "QuickBooks ProAdvisor",
+    "Certified Management Consultant", "Chamber Management Professional", "Leadership Development"
+  ]
+
+  const commonIndustries = [
+    "Technology", "Healthcare", "Finance", "Education", "Real Estate", "Manufacturing",
+    "Retail", "Hospitality", "Transportation", "Construction", "Legal", "Marketing",
+    "Advertising", "Media", "Entertainment", "Food & Beverage", "Fitness & Wellness",
+    "Non-Profit", "Government", "Consulting", "Insurance", "Automotive", "Fashion",
+    "Beauty", "Sports", "Travel", "Energy", "Telecommunications", "Pharmaceuticals",
+    "Biotechnology", "Aerospace", "Defense", "Agriculture", "Mining", "Utilities"
+  ]
+
+  // Phone number formatting function
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digits
+    const phoneNumber = value.replace(/\D/g, '')
+    
+    // Format based on length
+    if (phoneNumber.length === 0) return ''
+    if (phoneNumber.length <= 3) return `(${phoneNumber}`
+    if (phoneNumber.length <= 6) return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`
+  }
+
+  const handlePhoneChange = (value: string) => {
+    const formatted = formatPhoneNumber(value)
+    handleInputChange('personalPhone', formatted)
+  }
+
+  const handleBusinessPhoneChange = (value: string) => {
+    const formatted = formatPhoneNumber(value)
+    handleInputChange('businessPhone', formatted)
+  }
+
+  const handleAddSpecialty = () => {
+    if (newSpecialty.trim()) {
+      handleArrayChange('specialties', newSpecialty.trim(), 'add')
+      setNewSpecialty("")
+    }
+  }
+
+  const handleAddCertification = () => {
+    if (newCertification.trim()) {
+      handleArrayChange('certifications', newCertification.trim(), 'add')
+      setNewCertification("")
+    }
+  }
+
+  const handleAddIndustry = () => {
+    if (newIndustry.trim()) {
+      handleArrayChange('industry', newIndustry.trim(), 'add')
+      setNewIndustry("")
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent, addFunction: () => void) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      addFunction()
+    }
+  }
+
+  const getFilteredServices = () => {
+    if (!newSpecialty.trim()) return commonServices
+    return commonServices.filter(service => 
+      service.toLowerCase().includes(newSpecialty.toLowerCase())
+    )
+  }
+
+  const getFilteredCertifications = () => {
+    if (!newCertification.trim()) return commonCertifications
+    return commonCertifications.filter(cert => 
+      cert.toLowerCase().includes(newCertification.toLowerCase())
+    )
+  }
+
+  const getFilteredIndustries = () => {
+    if (!newIndustry.trim()) return commonIndustries
+    return commonIndustries.filter(industry => 
+      industry.toLowerCase().includes(newIndustry.toLowerCase())
+    )
+  }
+
+  const handleServiceSelect = (service: string) => {
+    handleArrayChange('specialties', service, 'add')
+    setNewSpecialty("")
+    setShowServiceDropdown(false)
+  }
+
+  const handleCertificationSelect = (certification: string) => {
+    handleArrayChange('certifications', certification, 'add')
+    setNewCertification("")
+    setShowCertificationDropdown(false)
+  }
+
+  const handleIndustrySelect = (industry: string) => {
+    handleArrayChange('industry', industry, 'add')
+    setNewIndustry("")
+    setShowIndustryDropdown(false)
+  }
 
   // Initialize form data when profile loads
   useEffect(() => {
@@ -54,6 +179,7 @@ export default function DashboardProfilePage() {
         businessType: profile.member?.businessType || "",
         industry: profile.member?.industry || [],
         businessEmail: profile.member?.businessEmail || "",
+        personalPhone: profile.member?.businessPhone || "",
         businessPhone: profile.member?.businessPhone || "",
         businessAddress: profile.member?.businessAddress || "",
         city: profile.member?.city || "",
@@ -76,11 +202,29 @@ export default function DashboardProfilePage() {
     }
   }, [profile])
 
+  // Handle clicking outside dropdowns to close them
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (!target.closest('.dropdown-container')) {
+        setShowServiceDropdown(false)
+        setShowCertificationDropdown(false)
+        setShowIndustryDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
   const handleInputChange = (field: keyof UpdateProfileData, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
+    setHasUnsavedChanges(true)
   }
 
   const handleArrayChange = (field: keyof UpdateProfileData, value: string, action: 'add' | 'remove') => {
@@ -98,6 +242,7 @@ export default function DashboardProfilePage() {
         }
       }
     })
+    setHasUnsavedChanges(true)
   }
 
   const handleSave = async () => {
@@ -108,7 +253,7 @@ export default function DashboardProfilePage() {
           title: "Profile Updated",
           description: "Your profile has been successfully updated.",
         })
-        setIsEditing(false)
+        setHasUnsavedChanges(false)
       }
     } catch (error) {
       toast({
@@ -130,6 +275,7 @@ export default function DashboardProfilePage() {
         businessType: profile.member?.businessType || "",
         industry: profile.member?.industry || [],
         businessEmail: profile.member?.businessEmail || "",
+        personalPhone: profile.member?.businessPhone || "",
         businessPhone: profile.member?.businessPhone || "",
         businessAddress: profile.member?.businessAddress || "",
         city: profile.member?.city || "",
@@ -150,7 +296,7 @@ export default function DashboardProfilePage() {
         showAddress: profile.member?.showAddress ?? false,
       })
     }
-    setIsEditing(false)
+    setHasUnsavedChanges(false)
   }
 
   if (loading) {
@@ -190,6 +336,7 @@ export default function DashboardProfilePage() {
 
   const networkingStats = getNetworkingStats()
   const completionPercentage = getProfileCompletion()
+  const completionDetails = getProfileCompletionDetails()
 
   return (
     <div className="space-y-6">
@@ -198,12 +345,18 @@ export default function DashboardProfilePage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
           <p className="text-gray-600 mt-2">Manage your professional profile and networking presence</p>
+          {hasUnsavedChanges && (
+            <p className="text-sm text-orange-600 mt-1 flex items-center">
+              <AlertCircle className="w-4 h-4 mr-1" />
+              You have unsaved changes
+            </p>
+          )}
         </div>
         <div className="flex space-x-2">
-          {isEditing ? (
+          {hasUnsavedChanges && (
             <>
               <Button variant="outline" onClick={handleCancel}>
-                Cancel
+                Cancel Changes
               </Button>
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? (
@@ -219,11 +372,6 @@ export default function DashboardProfilePage() {
                 )}
               </Button>
             </>
-          ) : (
-            <Button onClick={() => setIsEditing(true)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Profile
-            </Button>
           )}
         </div>
       </div>
@@ -252,28 +400,27 @@ export default function DashboardProfilePage() {
                 </Avatar>
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold">
-                    {isEditing ? (
-                      <Input
-                        value={formData.firstName || ""}
-                        onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        placeholder="First Name"
-                        className="text-2xl font-bold h-8"
-                      />
-                    ) : (
-                      `${profile.firstName || 'First'} ${profile.lastName || 'Last'}`
-                    )}
+                    <Input
+                      value={`${formData.firstName || ""} ${formData.lastName || ""}`.trim()}
+                      onChange={(e) => {
+                        const fullName = e.target.value
+                        const nameParts = fullName.split(' ')
+                        const firstName = nameParts[0] || ""
+                        const lastName = nameParts.slice(1).join(' ') || ""
+                        handleInputChange('firstName', firstName)
+                        handleInputChange('lastName', lastName)
+                      }}
+                      placeholder="First Last"
+                      className="text-2xl font-bold h-8 border-0 p-0 bg-transparent focus:ring-0 focus:border-b-2 focus:border-blue-500"
+                    />
                   </h2>
                   <p className="text-gray-600">
-                    {isEditing ? (
-                      <Input
-                        value={formData.businessName || ""}
-                        onChange={(e) => handleInputChange('businessName', e.target.value)}
-                        placeholder="Business Name"
-                        className="text-gray-600 h-6"
-                      />
-                    ) : (
-                      profile.member?.businessName || "Business Owner"
-                    )}
+                    <Input
+                      value={formData.businessName || ""}
+                      onChange={(e) => handleInputChange('businessName', e.target.value)}
+                      placeholder="Business Name"
+                      className="text-gray-600 h-6 border-0 p-0 bg-transparent focus:ring-0 focus:border-b-2 focus:border-blue-500"
+                    />
                   </p>
                   <p className="text-sm text-gray-500">
                     Member since {new Date(profile.createdAt).toLocaleDateString()}
@@ -292,85 +439,76 @@ export default function DashboardProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="company">Company</Label>
-                  {isEditing ? (
-                    <Input
-                      id="company"
-                      value={formData.businessName || ""}
-                      onChange={(e) => handleInputChange('businessName', e.target.value)}
-                      placeholder="Enter company name"
-                    />
-                  ) : (
-                    <Input id="company" value={profile.member?.businessName || ""} readOnly />
-                  )}
+                  <Input
+                    id="company"
+                    value={formData.businessName || ""}
+                    onChange={(e) => handleInputChange('businessName', e.target.value)}
+                    placeholder="Enter company name"
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="businessType">Business Type</Label>
-                  {isEditing ? (
-                    <Select value={formData.businessType || ""} onValueChange={(value) => handleInputChange('businessType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select business type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="corporation">Corporation</SelectItem>
-                        <SelectItem value="llc">LLC</SelectItem>
-                        <SelectItem value="partnership">Partnership</SelectItem>
-                        <SelectItem value="sole-proprietorship">Sole Proprietorship</SelectItem>
-                        <SelectItem value="nonprofit">Non-Profit</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input id="businessType" value={profile.member?.businessType || ""} readOnly />
-                  )}
+                  <Label htmlFor="businessType">Industry Type</Label>
+                  <Select value={formData.businessType || ""} onValueChange={(value) => handleInputChange('businessType', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select industry type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Technology">Technology</SelectItem>
+                      <SelectItem value="Consulting">Consulting</SelectItem>
+                      <SelectItem value="Marketing">Marketing</SelectItem>
+                      <SelectItem value="Construction">Construction</SelectItem>
+                      <SelectItem value="Real Estate">Real Estate</SelectItem>
+                      <SelectItem value="Accounting">Accounting</SelectItem>
+                      <SelectItem value="Design">Design</SelectItem>
+                      <SelectItem value="Healthcare">Healthcare</SelectItem>
+                      <SelectItem value="Education">Education</SelectItem>
+                      <SelectItem value="Legal">Legal</SelectItem>
+                      <SelectItem value="Financial Services">Financial Services</SelectItem>
+                      <SelectItem value="Insurance">Insurance</SelectItem>
+                      <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                      <SelectItem value="Retail">Retail</SelectItem>
+                      <SelectItem value="Hospitality">Hospitality</SelectItem>
+                      <SelectItem value="Transportation">Transportation</SelectItem>
+                      <SelectItem value="Non-Profit">Non-Profit</SelectItem>
+                      <SelectItem value="Government">Government</SelectItem>
+                      <SelectItem value="Media">Media</SelectItem>
+                      <SelectItem value="Food & Beverage">Food & Beverage</SelectItem>
+                      <SelectItem value="Fitness & Wellness">Fitness & Wellness</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="email">Email Address</Label>
-                  {isEditing ? (
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email || ""}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      placeholder="Enter email address"
-                    />
-                  ) : (
-                    <Input id="email" type="email" value={profile.email || ""} readOnly />
-                  )}
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email || ""}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="Enter email address"
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Phone Number</Label>
-                  {isEditing ? (
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.businessPhone || ""}
-                      onChange={(e) => handleInputChange('businessPhone', e.target.value)}
-                      placeholder="Enter phone number"
-                    />
-                  ) : (
-                    <Input id="phone" type="tel" value={profile.member?.businessPhone || ""} readOnly />
-                  )}
+                  <Label htmlFor="phone">Personal Phone</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.personalPhone || ""}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    placeholder="(555) 123-4567"
+                  />
                 </div>
               </div>
               
               <div>
                 <Label htmlFor="bio">Professional Bio</Label>
-                {isEditing ? (
-                  <Textarea 
-                    id="bio" 
-                    value={formData.description || ""}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Tell us about your professional background and expertise..."
-                    rows={4}
-                  />
-                ) : (
-                  <Textarea 
-                    id="bio" 
-                    value={profile.member?.description || ""}
-                    rows={4}
-                    readOnly
-                  />
-                )}
+                <Textarea 
+                  id="bio" 
+                  value={formData.description || ""}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Tell us about your professional background and expertise..."
+                  rows={4}
+                />
               </div>
             </CardContent>
           </Card>
@@ -387,56 +525,50 @@ export default function DashboardProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="businessEmail">Business Email</Label>
-                  {isEditing ? (
-                    <Input
-                      id="businessEmail"
-                      type="email"
-                      value={formData.businessEmail || ""}
-                      onChange={(e) => handleInputChange('businessEmail', e.target.value)}
-                      placeholder="Enter business email"
-                    />
-                  ) : (
-                    <Input id="businessEmail" type="email" value={profile.member?.businessEmail || ""} readOnly />
-                  )}
+                  <Input
+                    id="businessEmail"
+                    type="email"
+                    value={formData.businessEmail || ""}
+                    onChange={(e) => handleInputChange('businessEmail', e.target.value)}
+                    placeholder="Enter business email"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="businessPhone">Business Phone</Label>
+                  <Input
+                    id="businessPhone"
+                    type="tel"
+                    value={formData.businessPhone || ""}
+                    onChange={(e) => handleBusinessPhoneChange(e.target.value)}
+                    placeholder="(555) 123-4567"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="website">Website</Label>
-                  {isEditing ? (
-                    <Input
-                      id="website"
-                      value={formData.website || ""}
-                      onChange={(e) => handleInputChange('website', e.target.value)}
-                      placeholder="https://yourwebsite.com"
-                    />
-                  ) : (
-                    <Input id="website" value={profile.member?.website || ""} readOnly />
-                  )}
+                  <Input
+                    id="website"
+                    value={formData.website || ""}
+                    onChange={(e) => handleInputChange('website', e.target.value)}
+                    placeholder="https://yourwebsite.com"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="linkedin">LinkedIn</Label>
-                  {isEditing ? (
-                    <Input
-                      id="linkedin"
-                      value={formData.linkedin || ""}
-                      onChange={(e) => handleInputChange('linkedin', e.target.value)}
-                      placeholder="https://linkedin.com/in/yourprofile"
-                    />
-                  ) : (
-                    <Input id="linkedin" value={profile.member?.linkedin || ""} readOnly />
-                  )}
+                  <Input
+                    id="linkedin"
+                    value={formData.linkedin || ""}
+                    onChange={(e) => handleInputChange('linkedin', e.target.value)}
+                    placeholder="https://linkedin.com/in/yourprofile"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="address">Business Address</Label>
-                  {isEditing ? (
-                    <Input
-                      id="address"
-                      value={formData.businessAddress || ""}
-                      onChange={(e) => handleInputChange('businessAddress', e.target.value)}
-                      placeholder="Enter business address"
-                    />
-                  ) : (
-                    <Input id="address" value={profile.member?.businessAddress || ""} readOnly />
-                  )}
+                  <Input
+                    id="address"
+                    value={formData.businessAddress || ""}
+                    onChange={(e) => handleInputChange('businessAddress', e.target.value)}
+                    placeholder="Enter business address"
+                  />
                 </div>
               </div>
             </CardContent>
@@ -458,35 +590,54 @@ export default function DashboardProfilePage() {
                     {(formData.specialties || []).map((specialty, index) => (
                       <Badge key={index} variant="secondary" className="flex items-center space-x-1">
                         {specialty}
-                        {isEditing && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-4 w-4 p-0"
-                            onClick={() => handleArrayChange('specialties', specialty, 'remove')}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-4 w-4 p-0"
+                          onClick={() => handleArrayChange('specialties', specialty, 'remove')}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
                       </Badge>
                     ))}
-                    {isEditing && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6"
-                        onClick={() => {
-                          const newSpecialty = prompt("Enter a new service:")
-                          if (newSpecialty) {
-                            handleArrayChange('specialties', newSpecialty, 'add')
-                          }
-                        }}
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Service
-                      </Button>
-                    )}
                   </div>
+                  {!showServiceDropdown ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowServiceDropdown(true)}
+                      className="mt-2"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Service
+                    </Button>
+                  ) : (
+                    <div className="relative mt-2 dropdown-container">
+                      <Input
+                        value={newSpecialty}
+                        onChange={(e) => {
+                          setNewSpecialty(e.target.value)
+                        }}
+                        onKeyPress={(e) => handleKeyPress(e, handleAddSpecialty)}
+                        onFocus={() => setShowServiceDropdown(true)}
+                        placeholder="Type to search or add a service..."
+                        className="w-80"
+                      />
+                      {showServiceDropdown && (newSpecialty.trim() || getFilteredServices().length > 0) && (
+                        <div className="absolute z-10 w-80 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {getFilteredServices().map((service, index) => (
+                            <button
+                              key={index}
+                              className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              onClick={() => handleServiceSelect(service)}
+                            >
+                              {service}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 <div>
@@ -495,35 +646,54 @@ export default function DashboardProfilePage() {
                     {(formData.certifications || []).map((certification, index) => (
                       <Badge key={index} variant="secondary" className="flex items-center space-x-1">
                         {certification}
-                        {isEditing && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-4 w-4 p-0"
-                            onClick={() => handleArrayChange('certifications', certification, 'remove')}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-4 w-4 p-0"
+                          onClick={() => handleArrayChange('certifications', certification, 'remove')}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
                       </Badge>
                     ))}
-                    {isEditing && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6"
-                        onClick={() => {
-                          const newCertification = prompt("Enter a new certification:")
-                          if (newCertification) {
-                            handleArrayChange('certifications', newCertification, 'add')
-                          }
-                        }}
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Expertise
-                      </Button>
-                    )}
                   </div>
+                  {!showCertificationDropdown ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowCertificationDropdown(true)}
+                      className="mt-2"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Expertise
+                    </Button>
+                  ) : (
+                    <div className="relative mt-2 dropdown-container">
+                      <Input
+                        value={newCertification}
+                        onChange={(e) => {
+                          setNewCertification(e.target.value)
+                        }}
+                        onKeyPress={(e) => handleKeyPress(e, handleAddCertification)}
+                        onFocus={() => setShowCertificationDropdown(true)}
+                        placeholder="Type to search or add an expertise area..."
+                        className="w-80"
+                      />
+                      {showCertificationDropdown && (newCertification.trim() || getFilteredCertifications().length > 0) && (
+                        <div className="absolute z-10 w-80 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {getFilteredCertifications().map((certification, index) => (
+                            <button
+                              key={index}
+                              className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              onClick={() => handleCertificationSelect(certification)}
+                            >
+                              {certification}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 <div>
@@ -532,35 +702,54 @@ export default function DashboardProfilePage() {
                     {(formData.industry || []).map((industry, index) => (
                       <Badge key={index} variant="secondary" className="flex items-center space-x-1">
                         {industry}
-                        {isEditing && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-4 w-4 p-0"
-                            onClick={() => handleArrayChange('industry', industry, 'remove')}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-4 w-4 p-0"
+                          onClick={() => handleArrayChange('industry', industry, 'remove')}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
                       </Badge>
                     ))}
-                    {isEditing && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6"
-                        onClick={() => {
-                          const newIndustry = prompt("Enter a new industry:")
-                          if (newIndustry) {
-                            handleArrayChange('industry', newIndustry, 'add')
-                          }
-                        }}
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Industry
-                      </Button>
-                    )}
                   </div>
+                  {!showIndustryDropdown ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowIndustryDropdown(true)}
+                      className="mt-2"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Industry
+                    </Button>
+                  ) : (
+                    <div className="relative mt-2 dropdown-container">
+                      <Input
+                        value={newIndustry}
+                        onChange={(e) => {
+                          setNewIndustry(e.target.value)
+                        }}
+                        onKeyPress={(e) => handleKeyPress(e, handleAddIndustry)}
+                        onFocus={() => setShowIndustryDropdown(true)}
+                        placeholder="Type to search or add an industry..."
+                        className="w-80"
+                      />
+                      {showIndustryDropdown && (newIndustry.trim() || getFilteredIndustries().length > 0) && (
+                        <div className="absolute z-10 w-80 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {getFilteredIndustries().map((industry, index) => (
+                            <button
+                              key={index}
+                              className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              onClick={() => handleIndustrySelect(industry)}
+                            >
+                              {industry}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -578,48 +767,30 @@ export default function DashboardProfilePage() {
                   <Label>Show in Directory</Label>
                   <p className="text-sm text-gray-500">Allow other members to find you in the member directory</p>
                 </div>
-                {isEditing ? (
-                  <Switch
-                    checked={formData.showInDirectory ?? true}
-                    onCheckedChange={(checked) => handleInputChange('showInDirectory', checked)}
-                  />
-                ) : (
-                  <Badge variant={profile.member?.showInDirectory ? "default" : "secondary"}>
-                    {profile.member?.showInDirectory ? "Visible" : "Hidden"}
-                  </Badge>
-                )}
+                <Switch
+                  checked={formData.showInDirectory ?? true}
+                  onCheckedChange={(checked) => handleInputChange('showInDirectory', checked)}
+                />
               </div>
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Allow Contact</Label>
                   <p className="text-sm text-gray-500">Allow other members to contact you directly</p>
                 </div>
-                {isEditing ? (
-                  <Switch
-                    checked={formData.allowContact ?? true}
-                    onCheckedChange={(checked) => handleInputChange('allowContact', checked)}
-                  />
-                ) : (
-                  <Badge variant={profile.member?.allowContact ? "default" : "secondary"}>
-                    {profile.member?.allowContact ? "Allowed" : "Blocked"}
-                  </Badge>
-                )}
+                <Switch
+                  checked={formData.allowContact ?? true}
+                  onCheckedChange={(checked) => handleInputChange('allowContact', checked)}
+                />
               </div>
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Show Address</Label>
                   <p className="text-sm text-gray-500">Display your business address to other members</p>
                 </div>
-                {isEditing ? (
-                  <Switch
-                    checked={formData.showAddress ?? false}
-                    onCheckedChange={(checked) => handleInputChange('showAddress', checked)}
-                  />
-                ) : (
-                  <Badge variant={profile.member?.showAddress ? "default" : "secondary"}>
-                    {profile.member?.showAddress ? "Visible" : "Hidden"}
-                  </Badge>
-                )}
+                <Switch
+                  checked={formData.showAddress ?? false}
+                  onCheckedChange={(checked) => handleInputChange('showAddress', checked)}
+                />
               </div>
             </CardContent>
           </Card>
@@ -673,28 +844,74 @@ export default function DashboardProfilePage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Basic Information</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  {completionDetails.basicInfo ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Contact Information</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  {completionDetails.contactInfo ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Services & Expertise</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  {completionDetails.servicesExpertise ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Professional Experience</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-sm">Business Details</span>
+                  {completionDetails.businessDetails ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Education</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-sm">Social Media</span>
+                  {completionDetails.socialMedia ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+                  )}
                 </div>
               </div>
-              <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                <p className="text-sm font-medium text-green-800">Profile Complete!</p>
-                <p className="text-xs text-green-600">Your profile is {completionPercentage}% complete</p>
+              <div className={`mt-4 p-3 rounded-lg ${
+                completionDetails.overall === 100 
+                  ? 'bg-green-50' 
+                  : completionDetails.overall >= 80 
+                  ? 'bg-yellow-50' 
+                  : 'bg-red-50'
+              }`}>
+                <p className={`text-sm font-medium ${
+                  completionDetails.overall === 100 
+                    ? 'text-green-800' 
+                    : completionDetails.overall >= 80 
+                    ? 'text-yellow-800' 
+                    : 'text-red-800'
+                }`}>
+                  {completionDetails.overall === 100 
+                    ? 'Profile Complete!' 
+                    : completionDetails.overall >= 80 
+                    ? 'Almost Complete!' 
+                    : 'Profile Incomplete'}
+                </p>
+                <p className={`text-xs ${
+                  completionDetails.overall === 100 
+                    ? 'text-green-600' 
+                    : completionDetails.overall >= 80 
+                    ? 'text-yellow-600' 
+                    : 'text-red-600'
+                }`}>
+                  Your profile is {completionDetails.overall}% complete
+                </p>
               </div>
             </CardContent>
           </Card>
