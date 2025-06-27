@@ -1,6 +1,6 @@
 'use client'
 
-import { motion, AnimatePresence, useTransform, useScroll, MotionProps } from "framer-motion"
+import { motion, AnimatePresence, useTransform, useScroll, MotionProps, Variants } from "framer-motion"
 import { ReactNode, useState, useEffect } from "react"
 
 // Common animation variants
@@ -89,184 +89,259 @@ export const MotionFooter = ({ children, className, ...props }: MotionDivProps) 
   </motion.footer>
 )
 
-// Fade in animation
-export const FadeIn = ({ 
-  children, 
-  delay = 0, 
-  duration = 0.6,
-  className = "" 
-}: { 
-  children: ReactNode
-  delay?: number
-  duration?: number
-  className?: string
-}) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ duration, delay }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-)
+// Fade In Animation
+const fadeInVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: "easeOut"
+    }
+  }
+}
 
-// Slide up animation
-export const SlideUp = ({ 
-  children, 
-  delay = 0, 
-  duration = 0.6,
-  className = "" 
-}: { 
-  children: ReactNode
-  delay?: number
-  duration?: number
-  className?: string
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration, delay, ease: "easeOut" }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-)
+// Scale In Animation
+const scaleInVariants: Variants = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: { 
+    opacity: 1, 
+    scale: 1,
+    transition: {
+      duration: 0.5,
+      ease: "easeOut"
+    }
+  }
+}
 
-// Scale in animation
-export const ScaleIn = ({ 
-  children, 
-  delay = 0, 
-  duration = 0.6,
-  className = "" 
-}: { 
-  children: ReactNode
-  delay?: number
-  duration?: number
-  className?: string
-}) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.9 }}
-    animate={{ opacity: 1, scale: 1 }}
-    transition={{ duration, delay, ease: "easeOut" }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-)
+// Slide In From Left
+const slideInLeftVariants: Variants = {
+  hidden: { opacity: 0, x: -50 },
+  visible: { 
+    opacity: 1, 
+    x: 0,
+    transition: {
+      duration: 0.6,
+      ease: "easeOut"
+    }
+  }
+}
 
-// Stagger children animation
-export const StaggerContainer = ({ 
-  children, 
-  staggerDelay = 0.1,
-  className = "" 
-}: { 
-  children: ReactNode
-  staggerDelay?: number
-  className?: string
-}) => (
+// Slide In From Right
+const slideInRightVariants: Variants = {
+  hidden: { opacity: 0, x: 50 },
+  visible: { 
+    opacity: 1, 
+    x: 0,
+    transition: {
+      duration: 0.6,
+      ease: "easeOut"
+    }
+  }
+}
+
+// Stagger Children Animation
+const staggerContainerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+}
+
+// Hover Lift Animation
+const hoverLiftVariants: Variants = {
+  initial: { y: 0 },
+  hover: { 
+    y: -8,
+    transition: {
+      duration: 0.3,
+      ease: "easeOut"
+    }
+  }
+}
+
+// Hover Scale Animation
+const hoverScaleVariants: Variants = {
+  initial: { scale: 1 },
+  hover: { 
+    scale: 1.05,
+    transition: {
+      duration: 0.3,
+      ease: "easeOut"
+    }
+  }
+}
+
+// Floating Animation
+const floatingVariants: Variants = {
+  initial: { y: 0 },
+  float: {
+    y: [-10, 10, -10],
+    transition: {
+      duration: 3,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }
+  }
+}
+
+// Pulse Animation
+const pulseVariants: Variants = {
+  initial: { scale: 1 },
+  pulse: {
+    scale: [1, 1.05, 1],
+    transition: {
+      duration: 2,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }
+  }
+}
+
+// Reusable Motion Components
+export const FadeIn = ({ children, delay = 0, ...props }: { children: ReactNode; delay?: number; [key: string]: any }) => (
   <motion.div
+    variants={fadeInVariants}
     initial="hidden"
-    animate="visible"
-    variants={{
-      hidden: { opacity: 0 },
-      visible: {
-        opacity: 1,
-        transition: {
-          staggerChildren: staggerDelay
-        }
-      }
-    }}
-    className={className}
+    whileInView="visible"
+    viewport={{ once: true, margin: "-50px" }}
+    transition={{ delay }}
+    {...props}
   >
     {children}
   </motion.div>
 )
 
-// Stagger item animation
-export const StaggerItem = ({ 
-  children, 
-  className = "" 
-}: { 
-  children: ReactNode
-  className?: string
-}) => (
+export const ScaleIn = ({ children, delay = 0, ...props }: { children: ReactNode; delay?: number; [key: string]: any }) => (
   <motion.div
-    variants={{
-      hidden: { opacity: 0, y: 20 },
-      visible: { opacity: 1, y: 0 }
-    }}
-    transition={{ duration: 0.6, ease: "easeOut" }}
-    className={className}
+    variants={scaleInVariants}
+    initial="hidden"
+    whileInView="visible"
+    viewport={{ once: true, margin: "-50px" }}
+    transition={{ delay }}
+    {...props}
   >
     {children}
   </motion.div>
 )
 
-// Hover animations
-export const HoverCard = ({ 
-  children, 
-  className = "" 
-}: { 
-  children: ReactNode
-  className?: string
-}) => (
+export const SlideInLeft = ({ children, delay = 0, ...props }: { children: ReactNode; delay?: number; [key: string]: any }) => (
   <motion.div
-    whileHover={{ 
+    variants={slideInLeftVariants}
+    initial="hidden"
+    whileInView="visible"
+    viewport={{ once: true, margin: "-50px" }}
+    transition={{ delay }}
+    {...props}
+  >
+    {children}
+  </motion.div>
+)
+
+export const SlideInRight = ({ children, delay = 0, ...props }: { children: ReactNode; delay?: number; [key: string]: any }) => (
+  <motion.div
+    variants={slideInRightVariants}
+    initial="hidden"
+    whileInView="visible"
+    viewport={{ once: true, margin: "-50px" }}
+    transition={{ delay }}
+    {...props}
+  >
+    {children}
+  </motion.div>
+)
+
+export const StaggerContainer = ({ children, ...props }: { children: ReactNode; [key: string]: any }) => (
+  <motion.div
+    variants={staggerContainerVariants}
+    initial="hidden"
+    whileInView="visible"
+    viewport={{ once: true, margin: "-50px" }}
+    {...props}
+  >
+    {children}
+  </motion.div>
+)
+
+export const HoverLift = ({ children, ...props }: { children: ReactNode; [key: string]: any }) => (
+  <motion.div
+    variants={hoverLiftVariants}
+    initial="initial"
+    whileHover="hover"
+    {...props}
+  >
+    {children}
+  </motion.div>
+)
+
+export const HoverScale = ({ children, ...props }: { children: ReactNode; [key: string]: any }) => (
+  <motion.div
+    variants={hoverScaleVariants}
+    initial="initial"
+    whileHover="hover"
+    {...props}
+  >
+    {children}
+  </motion.div>
+)
+
+export const Floating = ({ children, ...props }: { children: ReactNode; [key: string]: any }) => (
+  <motion.div
+    variants={floatingVariants}
+    initial="initial"
+    animate="float"
+    {...props}
+  >
+    {children}
+  </motion.div>
+)
+
+export const Pulse = ({ children, ...props }: { children: ReactNode; [key: string]: any }) => (
+  <motion.div
+    variants={pulseVariants}
+    initial="initial"
+    animate="pulse"
+    {...props}
+  >
+    {children}
+  </motion.div>
+)
+
+// Custom Animation Hooks
+export const useScrollAnimation = (threshold = 0.1) => {
+  return {
+    initial: { opacity: 0, y: 50 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, threshold },
+    transition: { duration: 0.6, ease: "easeOut" }
+  }
+}
+
+export const useHoverAnimation = () => {
+  return {
+    whileHover: { 
       y: -8,
       transition: { duration: 0.3, ease: "easeOut" }
-    }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-)
+    },
+    whileTap: { 
+      scale: 0.95,
+      transition: { duration: 0.1 }
+    }
+  }
+}
 
-// Floating animation
-export const Floating = ({ 
-  children, 
-  className = "" 
-}: { 
-  children: ReactNode
-  className?: string
-}) => (
-  <motion.div
-    animate={{ 
-      y: [0, -10, 0],
-      transition: { 
-        duration: 3, 
-        repeat: Infinity, 
-        ease: "easeInOut" 
-      }
-    }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-)
-
-// Pulse animation
-export const Pulse = ({ 
-  children, 
-  className = "" 
-}: { 
-  children: ReactNode
-  className?: string
-}) => (
-  <motion.div
-    animate={{ 
-      scale: [1, 1.05, 1],
-      transition: { 
-        duration: 2, 
-        repeat: Infinity, 
-        ease: "easeInOut" 
-      }
-    }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-)
+export const useParallaxAnimation = (speed = 0.5) => {
+  return {
+    style: {
+      y: useTransform(useScroll().scrollYProgress, [0, 1], [0, -100 * speed])
+    }
+  }
+}
 
 // Loading spinner animation
 export const LoadingSpinner = ({ className = "" }: { className?: string }) => (

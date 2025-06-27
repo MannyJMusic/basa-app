@@ -1,7 +1,11 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { motion } from "framer-motion"
+import { useRef, useState, useEffect } from "react"
 import { 
   Users, 
   TrendingUp, 
@@ -12,410 +16,753 @@ import {
   Award,
   Handshake,
   Building2,
-  Target
+  MapPin,
+  Target,
+  CheckCircle,
+  Globe,
+  Lightbulb,
+  Shield,
+  ArrowRight,
+  DollarSign,
+  Users2,
+  Sparkles
 } from "lucide-react"
 
-export default function AboutPage() {
+// TypeScript Interfaces
+interface AnimatedCounterProps {
+  value: number
+  suffix?: string
+  duration?: number
+}
+
+interface Testimonial {
+  name: string
+  company: string
+  membership: string
+  quote: string
+  results: string
+}
+
+interface TestimonialCardProps {
+  testimonial: Testimonial
+  index: number
+}
+
+interface ImpactCardProps {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  value: number
+  suffix: string
+  description: string
+  delay?: number
+}
+
+interface SuccessStory {
+  title: string
+  description: string
+  metrics: Array<{
+    value: number
+    suffix: string
+    label: string
+  }>
+  link: string
+  imageAlt: string
+}
+
+interface SuccessStoryProps {
+  story: SuccessStory
+  index: number
+}
+
+// Animated Counter Component
+const AnimatedCounter = ({ value, suffix = "", duration = 2 }: AnimatedCounterProps) => {
+  const [count, setCount] = useState(0)
+  const [isInView, setIsInView] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isInView) {
+          setIsInView(true)
+        }
+      },
+      { threshold: 0.5 }
+    )
+
+    if (ref.current) {
+      observer.observe(ref.current)
+    }
+
+    return () => observer.disconnect()
+  }, [isInView])
+
+  useEffect(() => {
+    if (isInView) {
+      const startTime = Date.now()
+      const animate = () => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(elapsed / (duration * 1000), 1)
+        const currentCount = Math.floor(progress * value)
+        
+        setCount(currentCount)
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate)
+        }
+      }
+      animate()
+    }
+  }, [isInView, value, duration])
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header Section */}
-      <section className="bg-gradient-to-r from-blue-900 to-blue-700 text-white py-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <Badge variant="secondary" className="mb-4 bg-white/20 text-white border-white/30">
-              About BASA
+    <span ref={ref} className="text-4xl md:text-5xl font-bold text-basa-navy">
+      {count.toLocaleString()}{suffix}
+    </span>
+  )
+}
+
+// Testimonial Card Component
+const TestimonialCard = ({ testimonial, index }: TestimonialCardProps) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      viewport={{ once: true }}
+      whileHover={{ 
+        y: -8,
+        transition: { duration: 0.3 }
+      }}
+      className="group"
+    >
+      <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+        <CardContent className="p-8">
+          <div className="flex items-start space-x-4 mb-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-basa-navy to-basa-teal rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+              <Quote className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-lg font-semibold text-basa-navy mb-1">{testimonial.name}</h4>
+              <p className="text-basa-teal font-medium">{testimonial.company}</p>
+              <p className="text-sm text-gray-500">{testimonial.membership}</p>
+            </div>
+          </div>
+          
+          <blockquote className="text-gray-700 leading-relaxed mb-6 italic">
+            "{testimonial.quote}"
+          </blockquote>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="w-4 h-4 fill-basa-gold text-basa-gold" />
+              ))}
+            </div>
+            <Badge variant="secondary" className="bg-basa-gold/10 text-basa-navy border-basa-gold/20">
+              {testimonial.results}
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Building San Antonio's Business Community Since 2020
-            </h1>
-            <p className="text-xl text-blue-100 leading-relaxed">
-              BASA is more than a networking organization. We're a catalyst for business growth, 
-              community impact, and meaningful connections that drive real results.
-            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+// Impact Number Card Component
+const ImpactCard = ({ icon: Icon, title, value, suffix, description, delay = 0 }: ImpactCardProps) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.6, delay }}
+      viewport={{ once: true }}
+      whileHover={{ 
+        scale: 1.05,
+        transition: { duration: 0.3 }
+      }}
+      className="group"
+    >
+      <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm overflow-hidden">
+        <CardContent className="p-8 relative">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-basa-gold/10 to-basa-teal/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
+          
+          <div className="relative z-10">
+            <div className="w-16 h-16 bg-gradient-to-br from-basa-navy to-basa-teal rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+              <Icon className="w-8 h-8 text-white" />
+            </div>
+            
+            <h3 className="text-2xl font-bold text-basa-navy mb-2">{title}</h3>
+            <div className="text-4xl font-bold text-basa-teal mb-4">
+              <AnimatedCounter value={value} suffix={suffix} />
+            </div>
+            <p className="text-gray-600 leading-relaxed">{description}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+// Success Story Component
+const SuccessStory = ({ story, index }: SuccessStoryProps) => {
+  return (
+    <motion.section
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      transition={{ duration: 0.8, delay: index * 0.2 }}
+      viewport={{ once: true }}
+      className={`py-16 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+    >
+      <div className="container mx-auto px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className={`grid lg:grid-cols-2 gap-12 items-center ${index % 2 === 1 ? 'lg:grid-flow-col-dense' : ''}`}>
+            <motion.div
+              initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              viewport={{ once: true }}
+              className="space-y-6"
+            >
+              <Badge variant="secondary" className="bg-basa-gold/10 text-basa-navy border-basa-gold/20 w-fit">
+                Success Story
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-basa-navy leading-tight">
+                {story.title}
+              </h2>
+              <p className="text-xl text-gray-600 leading-relaxed">
+                {story.description}
+              </p>
+              
+              <div className="grid grid-cols-2 gap-6 pt-6">
+                {story.metrics.map((metric, idx) => (
+                  <div key={idx} className="text-center">
+                    <div className="text-2xl font-bold text-basa-teal mb-1">
+                      <AnimatedCounter value={metric.value} suffix={metric.suffix} />
+                    </div>
+                    <p className="text-sm text-gray-600">{metric.label}</p>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="pt-4">
+                <Button asChild className="basa-btn-primary">
+                  <Link href={story.link}>
+                    Read Full Story
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </Button>
+              </div>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+              viewport={{ once: true }}
+              className="relative"
+            >
+              <div className="aspect-video bg-gradient-to-br from-basa-navy to-basa-teal rounded-2xl shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-basa-navy/80 to-basa-teal/80 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <Building2 className="w-16 h-16 mx-auto mb-4 opacity-80" />
+                    <p className="text-lg font-medium">{story.imageAlt}</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </motion.section>
+  )
+}
+
+export default function AboutPage() {
+  const testimonials = [
+    {
+      name: "Sarah Martinez",
+      company: "TechFlow Solutions",
+      membership: "Professional Member",
+      quote: "BASA transformed our business. Through their network, we've secured $150K+ in new contracts and built lasting partnerships that continue to drive growth.",
+      results: "$150K+ Results"
+    },
+    {
+      name: "Michael Chen",
+      company: "Chen Development Group",
+      membership: "Corporate Partner",
+      quote: "The quality of connections at BASA is unmatched. Every interaction has been meaningful and has directly contributed to our company's success.",
+      results: "40+ New Clients"
+    },
+    {
+      name: "Elena Rodriguez",
+      company: "Rodriguez Consulting",
+      membership: "Essential Member",
+      quote: "BASA's focus on community impact while building business relationships is what sets them apart. It's networking with purpose.",
+      results: "15+ Partnerships"
+    }
+  ]
+
+  const successStories = [
+    {
+      title: "TechFlow Solutions: From Startup to Market Leader",
+      description: "How a local tech startup leveraged BASA's network to secure major contracts and scale from 5 to 50 employees in just 18 months.",
+      metrics: [
+        { value: 150, suffix: "K+", label: "Revenue Generated" },
+        { value: 45, suffix: "", label: "New Employees" },
+        { value: 12, suffix: "", label: "Major Contracts" },
+        { value: 300, suffix: "%", label: "Growth Rate" }
+      ],
+      link: "/success-stories/techflow",
+      imageAlt: "TechFlow Solutions Office"
+    },
+    {
+      title: "Networking & Giving: $250K+ for Local Nonprofits",
+      description: "Our innovative approach to networking that combines business development with community impact, creating a win-win for everyone involved.",
+      metrics: [
+        { value: 250, suffix: "K+", label: "Funds Raised" },
+        { value: 15, suffix: "", label: "Nonprofits Supported" },
+        { value: 1000, suffix: "+", label: "Volunteer Hours" },
+        { value: 25, suffix: "", label: "Community Events" }
+      ],
+      link: "/success-stories/networking-giving",
+      imageAlt: "Community Impact Event"
+    }
+  ]
+
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Header Section - Traditional Layout */}
+      <section className="relative bg-gradient-to-r from-blue-900 to-blue-700 text-white py-16 overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/images/backgrounds/about-bg.jpg')"
+          }}
+        />
+        {/* Overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 to-blue-700/60"></div>
+        
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <Badge variant="secondary" className="mb-6 bg-white/20 text-white border-white/30">
+                <Sparkles className="w-4 h-4 mr-2" />
+                About BASA
+              </Badge>
+            </motion.div>
+            
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="text-4xl md:text-5xl font-bold mb-6 leading-tight text-basa-gold"
+            >
+              San Antonio's Premier Business Network
+            </motion.h1>
+            
+            <motion.p
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="text-xl text-blue-100 leading-relaxed max-w-3xl mx-auto"
+            >
+              Connecting business leaders through meaningful relationships and collaborative growth since 2020.
+            </motion.p>
           </div>
         </div>
       </section>
 
-      {/* Success Metrics */}
-      <section className="py-16 bg-white">
+      {/* Impact Numbers - Traditional Grid */}
+      {/* <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Our Impact in Numbers
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <Badge variant="secondary" className="bg-basa-gold/10 text-basa-navy border-basa-gold/20 mb-4">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Our Impact
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
+              Real Results, Real Growth
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Real results that demonstrate the value of BASA membership and community involvement.
+              Our members have achieved remarkable success through meaningful connections 
+              and collaborative opportunities.
             </p>
-          </div>
-
+          </motion.div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="w-10 h-10 text-blue-600" />
-              </div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">150+</div>
-              <div className="text-lg text-gray-700 font-semibold">Active Members</div>
-              <div className="text-sm text-gray-600 mt-2">
-                Thriving businesses across San Antonio
-              </div>
-            </div>
+            <ImpactCard
+              icon={Users}
+              title="Active Members"
+              value={150}
+              suffix="+"
+              description="Diverse business leaders across San Antonio"
+              delay={0.1}
+            />
+            <ImpactCard
+              icon={DollarSign}
+              title="Member Referrals"
+              value={2000}
+              suffix="K+"
+              description="Generated through BASA connections"
+              delay={0.2}
+            />
+            <ImpactCard
+              icon={Calendar}
+              title="Annual Events"
+              value={40}
+              suffix="+"
+              description="Networking and community events"
+              delay={0.3}
+            />
+            <ImpactCard
+              icon={Heart}
+              title="Community Impact"
+              value={250}
+              suffix="K+"
+              description="Raised for local nonprofits"
+              delay={0.4}
+            />
+          </div>
+        </div>
+      </section> */}
 
-            <div className="text-center">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-10 h-10 text-green-600" />
-              </div>
-              <div className="text-4xl font-bold text-green-600 mb-2">$2M+</div>
-              <div className="text-lg text-gray-700 font-semibold">Member Referrals Generated</div>
-              <div className="text-sm text-gray-600 mt-2">
-                Real business value through connections
-              </div>
-            </div>
+      {/* Our Story Section */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+              className="text-center mb-12"
+            >
+              <Badge variant="secondary" className="bg-basa-teal/10 text-basa-navy border-basa-teal/20 mb-4">
+                <Building2 className="w-4 h-4 mr-2" />
+                Our Story
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
+                From Vision to Reality
+              </h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                How BASA evolved from a small gathering of business leaders to San Antonio's premier networking organization.
+              </p>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              viewport={{ once: true }}
+              className="prose prose-lg max-w-none text-gray-700 leading-relaxed space-y-6"
+            >
+              <img 
+                src="/images/profile/Jen-Bio.jpg" 
+                alt="Jennifer Bonomo, Founder of BASA" 
+                className="float-left w-40 h-40 object-cover aspect-square rounded-full mr-8 mb-4 shadow-lg border-2 border-basa-gold max-sm:float-none max-sm:mx-auto max-sm:mb-6" 
+              />
+              <p>
+                BASA was founded by Jennifer Bonomo in April 2020, during one of the most challenging periods 
+                for businesses worldwide. As a respected leader in San Antonio's marketing community, Jennifer 
+                brought unmatched experience from her work with top radio stations including Cox Media and 
+                iHeart Media, as well as direct mail marketing with ValPak and other print publications.
+              </p>
 
-            <div className="text-center">
-              <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-10 h-10 text-purple-600" />
-              </div>
-              <div className="text-4xl font-bold text-purple-600 mb-2">24+</div>
-              <div className="text-lg text-gray-700 font-semibold">Events Annually</div>
-              <div className="text-sm text-gray-600 mt-2">
-                Networking opportunities every month
-              </div>
-            </div>
+              <p>
+                Jennifer's strongest value comes from her extensive experience planning and promoting events. 
+                Having been personally affected by the COVID-19 pandemic, she recognized the urgent need to 
+                support local businesses through this unprecedented crisis. Her motivation for founding BASA 
+                arose from a genuine desire to help local businesses endure and recover from the pandemic's 
+                devastating impact.
+              </p>
 
-            <div className="text-center">
-              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Heart className="w-10 h-10 text-red-600" />
-              </div>
-              <div className="text-4xl font-bold text-red-600 mb-2">15+</div>
-              <div className="text-lg text-gray-700 font-semibold">Nonprofit Partners Supported</div>
-              <div className="text-sm text-gray-600 mt-2">
-                Community impact through giving
-              </div>
-            </div>
+              <p>
+                What began as a mission to connect like-minded professionals and help them prepare for 
+                reopening has evolved into San Antonio's premier business networking organization. Jennifer's 
+                vision of creating meaningful connections that go beyond traditional networking has resulted 
+                in a community where businesses genuinely support each other, driving growth for individual 
+                entrepreneurs and the broader San Antonio economy.
+              </p>
+
+              <p>
+                Beyond BASA, Jennifer is passionate about partnering with nonprofit organizations, 
+                particularly those supporting the military and elderly communities. When not working to 
+                strengthen San Antonio's business community, she enjoys traveling, sports, and relaxing 
+                on the beach.
+              </p>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Member Testimonials */}
+      {/* Leadership Team Section */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              What San Antonio Business Leaders Say About BASA
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <Badge variant="secondary" className="bg-basa-teal/10 text-basa-navy border-basa-teal/20 mb-4">
+              <Users2 className="w-4 h-4 mr-2" />
+              Leadership
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
+              Meet Our Leadership Team
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Hear directly from our members about the impact BASA has had on their businesses and careers.
+              Experienced professionals dedicated to building San Antonio's premier business network.
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            
-            {/* Testimonial 1 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-blue-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "BASA has been a game-changer for my marketing agency. The quality of connections 
-                  and the genuine desire to help each other succeed is unmatched. I've generated 
-                  over $150,000 in new business through BASA referrals alone."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                    <Users className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Sarah Johnson</p>
-                    <p className="text-sm text-gray-600">CEO, Johnson Marketing Group</p>
-                    <p className="text-xs text-gray-500">Professional Member since 2021</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Testimonial 2 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-green-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "As a real estate developer, BASA has opened doors I never knew existed. The 
-                  networking events are professional, the connections are genuine, and the 
-                  business opportunities are real. My company has grown 40% since joining."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                    <Building2 className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Michael Chen</p>
-                    <p className="text-sm text-gray-600">Founder, Chen Development Group</p>
-                    <p className="text-xs text-gray-500">Corporate Partner since 2020</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Testimonial 3 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-purple-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "The Networking and Giving initiative is what sets BASA apart. I've been able 
-                  to grow my business while making a positive impact in our community. The 
-                  connections I've made are both professional and meaningful."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                    <Heart className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Lisa Rodriguez</p>
-                    <p className="text-sm text-gray-600">Principal, Rodriguez Legal Services</p>
-                    <p className="text-xs text-gray-500">Professional Member since 2022</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Testimonial 4 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-orange-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "BASA's Essential membership was the perfect starting point for my startup. 
-                  The 50% event discount saved me money while the connections helped me scale. 
-                  I've since upgraded to Professional and the value keeps increasing."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-                    <TrendingUp className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Jennifer Martinez</p>
-                    <p className="text-sm text-gray-600">Founder, TechFlow Solutions</p>
-                    <p className="text-xs text-gray-500">Professional Member since 2023</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Testimonial 5 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-red-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "The Corporate Partnership level has given our company incredible visibility 
-                  and speaking opportunities. We've hosted ribbon cuttings and gained valuable 
-                  exposure. The dedicated account management is exceptional."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-3">
-                    <Award className="w-6 h-6 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">David Thompson</p>
-                    <p className="text-sm text-gray-600">Managing Partner, Thompson Financial Group</p>
-                    <p className="text-xs text-gray-500">Corporate Partner since 2021</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Testimonial 6 */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                </div>
-                <Quote className="w-8 h-8 text-indigo-600 mb-4" />
-                <p className="text-gray-700 mb-6 italic">
-                  "BASA's member directory and business resources have been invaluable. I've 
-                  found trusted vendors, referral partners, and even new clients. The quality 
-                  of the network is what makes BASA special."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
-                    <Handshake className="w-6 h-6 text-indigo-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Robert Wilson</p>
-                    <p className="text-sm text-gray-600">CEO, Wilson Healthcare Management</p>
-                    <p className="text-xs text-gray-500">Professional Member since 2020</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          </motion.div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {[
+              {
+                name: "Jennifer Bonomo",
+                title: "Founder",
+                tagline: "Visionary leader and BASA's original connector",
+                image: "/images/profile/Jen-Bio.jpg"
+              },
+              {
+                name: "Ernie Mores",
+                title: "Business Director",
+                tagline: "Driving business growth and partnerships",
+                image: "/images/profile/ernie-bio.jpg"
+              },
+              {
+                name: "Manny Moreno",
+                title: "Technical Lead",
+                tagline: "Empowering BASA with technology and innovation",
+                image: "/images/profile/Manny-Bio.jpg"
+              }
+            ].map((leader, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                whileHover={{ y: -8 }}
+                className="group"
+              >
+                <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+                  <CardContent className="p-8 text-center">
+                    <div className="w-20 h-20 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                      <img src={leader.image} alt={leader.name + ' profile photo'} className="w-20 h-20 rounded-full object-cover border-2 border-basa-gold shadow" />
+                    </div>
+                    <h3 className="text-xl font-bold text-basa-navy mb-2">{leader.name}</h3>
+                    <p className="text-basa-teal font-medium mb-2">{leader.title}</p>
+                    <p className="text-sm text-gray-600">{leader.tagline}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Success Stories */}
-      <section className="py-16 bg-white">
+      {/* What Sets BASA Apart - Traditional 3-Column Grid */}
+      <section className="relative py-16 bg-gray-50 overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/images/backgrounds/basa-approach-bg.jpg')"
+          }}
+        />
+        {/* Overlay for readability */}
+        <div className="absolute inset-0 bg-white/40"></div>
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <Badge variant="secondary" className="bg-basa-gold text-basa-navy border-basa-gold mb-4">
+              <Star className="w-4 h-4 mr-2" />
+              Our Approach
+            </Badge>
+            <h2
+              className="text-3xl md:text-4xl font-bold text-white mb-6"
+              style={{ textShadow: '0 4px 24px rgba(0,0,0,0.85), 0 1.5px 0 #000' }}
+            >
+              What Sets BASA Apart
+            </h2>
+            <p
+              className="text-xl text-white max-w-3xl mx-auto"
+              style={{ textShadow: '0 3px 16px rgba(0,0,0,0.85), 0 1px 0 #000' }}
+            >
+              We've redefined business networking by focusing on quality, purpose, and local impact.
+            </p>
+          </motion.div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -8 }}
+              className="group"
+            >
+              <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+                <CardContent className="p-8 text-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-basa-navy to-basa-teal rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <Shield className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-basa-navy mb-4">Quality Over Quantity</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Curated membership ensures every connection is meaningful. We focus on building 
+                    deep, lasting relationships rather than superficial networks.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -8 }}
+              className="group"
+            >
+              <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+                <CardContent className="p-8 text-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-basa-gold to-basa-teal rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <Target className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-basa-navy mb-4">Networking with Purpose</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Our "Networking and Giving" initiative combines business development with 
+                    community impact, creating opportunities that benefit everyone.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -8 }}
+              className="group"
+            >
+              <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+                <CardContent className="p-8 text-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-basa-teal to-basa-navy rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <MapPin className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-basa-navy mb-4">Local Impact</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    San Antonio-focused connections that strengthen our local economy and 
+                    create opportunities for collaborative growth within our community.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Member Testimonials - Traditional Layout */}
+      <section className="py-16 bg-basa-teal/10">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Success Stories
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <Badge variant="secondary" className="bg-basa-gold/10 text-basa-navy border-basa-gold/20 mb-4">
+              <Quote className="w-4 h-4 mr-2" />
+              Member Stories
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
+              What Our Members Say
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Real examples of how BASA members have grown their businesses and made an impact.
+              Real testimonials from business leaders who've experienced the BASA difference.
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            
-            {/* Success Story 1 */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <Badge className="bg-green-100 text-green-800">Featured Story</Badge>
-                  <div className="text-sm text-gray-500">2023</div>
-                </div>
-                <CardTitle className="text-xl">From Startup to Success</CardTitle>
-                <CardDescription>
-                  How TechFlow Solutions scaled from 3 to 25 employees through BASA connections
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Target className="w-4 h-4 mr-2 text-green-600" />
-                    <span>Generated $500K+ in new revenue</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="w-4 h-4 mr-2 text-green-600" />
-                    <span>Connected with 15+ key clients</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Award className="w-4 h-4 mr-2 text-green-600" />
-                    <span>Won BASA Rising Star Award 2023</span>
-                  </div>
-                  <p className="text-gray-700 text-sm">
-                    "BASA's networking events and member directory helped us connect with 
-                    decision-makers we never would have met otherwise. The quality of 
-                    introductions and referrals has been exceptional."
-                  </p>
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-2">
-                      <Users className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-sm font-medium">Jennifer Martinez, TechFlow Solutions</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Success Story 2 */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <Badge className="bg-blue-100 text-blue-800">Community Impact</Badge>
-                  <div className="text-sm text-gray-500">2023</div>
-                </div>
-                <CardTitle className="text-xl">Networking & Giving Initiative</CardTitle>
-                <CardDescription>
-                  How BASA members raised $250K+ for local nonprofits in 2023
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Heart className="w-4 h-4 mr-2 text-blue-600" />
-                    <span>Supported 15+ nonprofit organizations</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="w-4 h-4 mr-2 text-blue-600" />
-                    <span>Involved 100+ member volunteers</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <TrendingUp className="w-4 h-4 mr-2 text-blue-600" />
-                    <span>Increased community partnerships by 40%</span>
-                  </div>
-                  <p className="text-gray-700 text-sm">
-                    "The Networking and Giving initiative has created meaningful partnerships 
-                    between businesses and nonprofits. It's networking with purpose that 
-                    benefits everyone in our community."
-                  </p>
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
-                      <Heart className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <span className="text-sm font-medium">Lisa Rodriguez, Rodriguez Legal Services</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          </motion.div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {testimonials.map((testimonial, index) => (
+              <TestimonialCard key={index} testimonial={testimonial} index={index} />
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Call to Action */}
-      <section className="py-16 bg-blue-900 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Join the BASA Success Story
-          </h2>
-          <p className="text-xl mb-8 text-blue-100 max-w-2xl mx-auto">
-            Become part of San Antonio's most successful business network. 
-            Connect, grow, and make an impact with 150+ business leaders.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="basa-btn-white basa-text-navy">
-              <Link href="/membership/join">Join BASA Today</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
-              <Link href="/events">Attend an Event</Link>
-            </Button>
-          </div>
+      {/* Success Stories - Traditional Layout */}
+      {/*
+      {successStories.map((story, index) => (
+        <SuccessStory key={index} story={story} index={index} />
+      ))}
+      */}
+
+      {/* Call-to-Action Section - Traditional Layout */}
+      <section className="relative py-16 text-white overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/images/backgrounds/basa-connect-bg.jpg')"
+          }}
+        />
+        {/* Overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/70 to-blue-700/70"></div>
+        <div className="container mx-auto px-4 text-center relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="max-w-4xl mx-auto"
+          >
+            <h2
+              className="text-3xl md:text-4xl font-bold mb-6 text-basa-gold"
+              style={{ textShadow: '0 4px 24px rgba(0,0,0,0.85), 0 1.5px 0 #000' }}
+            >
+              Ready to Join San Antonio's Most Connected Business Network?
+            </h2>
+            <p
+              className="text-xl mb-12 text-blue-100 leading-relaxed"
+              style={{ textShadow: '0 3px 16px rgba(0,0,0,0.85), 0 1px 0 #000' }}
+            >
+              Connect with 150+ business leaders who've discovered the power of meaningful 
+              relationships and collaborative growth.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button asChild size="lg" className="bg-basa-gold text-basa-navy hover:bg-basa-gold/90 focus:bg-basa-gold/80 text-lg px-8 py-4 border-2 border-basa-gold shadow-2xl">
+                <Link href="/membership/join" className="flex items-center">
+                  Apply for Membership
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="border-white text-basa-navy hover:bg-white/10 text-lg px-8 py-4 shadow-2xl">
+                <Link href="/events">Attend an Event</Link>
+              </Button>
+            </div>
+          </motion.div>
         </div>
       </section>
     </div>

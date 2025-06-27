@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Alert } from "@/components/ui/alert"
 
-export default function SignUpForm() {
+interface SignUpFormProps {
+  prefillEmail?: string | null
+}
+
+export default function SignUpForm({ prefillEmail }: SignUpFormProps) {
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
@@ -16,6 +20,13 @@ export default function SignUpForm() {
   const [error, setError] = useState("")
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+
+  // Prefill email if provided
+  useEffect(() => {
+    if (prefillEmail) {
+      setEmail(prefillEmail)
+    }
+  }, [prefillEmail])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -29,6 +40,11 @@ export default function SignUpForm() {
       })
       const data = await res.json()
       if (!res.ok) {
+        if (data.error === "Email already exists") {
+          // Redirect to sign-in with error message
+          router.push(`/auth/sign-in?error=email_exists&email=${encodeURIComponent(email)}`)
+          return
+        }
         setError(data.error || "Registration failed")
         return
       }
@@ -79,6 +95,8 @@ export default function SignUpForm() {
           value={email}
           onChange={e => setEmail(e.target.value)}
           required
+          readOnly={!!prefillEmail}
+          className={prefillEmail ? "bg-gray-50" : ""}
         />
       </div>
       <div>
