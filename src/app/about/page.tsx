@@ -333,8 +333,18 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header Section - Traditional Layout */}
-      <section className="bg-gradient-to-r from-blue-900 to-blue-700 text-white py-16">
-        <div className="container mx-auto px-4">
+      <section className="relative bg-gradient-to-r from-blue-900 to-blue-700 text-white py-16 overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/images/backgrounds/about-bg.jpg')"
+          }}
+        />
+        {/* Overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 to-blue-700/60"></div>
+        
+        <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -351,9 +361,9 @@ export default function AboutPage() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="text-4xl md:text-5xl font-bold mb-6 leading-tight"
+              className="text-4xl md:text-5xl font-bold mb-6 leading-tight text-basa-gold"
             >
-              Building San Antonio's Business Community Since 2020
+              San Antonio's Premier Business Network
             </motion.h1>
             
             <motion.p
@@ -362,16 +372,14 @@ export default function AboutPage() {
               transition={{ duration: 0.8, delay: 0.6 }}
               className="text-xl text-blue-100 leading-relaxed max-w-3xl mx-auto"
             >
-              BASA represents the evolution of business networking in San Antonio, 
-              transforming traditional networking into a comprehensive ecosystem 
-              that drives real business growth and community impact.
+              Connecting business leaders through meaningful relationships and collaborative growth since 2020.
             </motion.p>
           </div>
         </div>
       </section>
 
       {/* Impact Numbers - Traditional Grid */}
-      <section className="py-16 bg-gray-50">
+      {/* <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
@@ -428,7 +436,7 @@ export default function AboutPage() {
             />
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Our Story Section */}
       <section className="py-16 bg-white">
@@ -460,36 +468,46 @@ export default function AboutPage() {
               viewport={{ once: true }}
               className="prose prose-lg max-w-none text-gray-700 leading-relaxed space-y-6"
             >
+              <img 
+                src="/images/profile/Jen-Bio.jpg" 
+                alt="Jennifer Bonomo, Founder of BASA" 
+                className="float-left w-40 h-40 object-cover aspect-square rounded-full mr-8 mb-4 shadow-lg border-2 border-basa-gold max-sm:float-none max-sm:mx-auto max-sm:mb-6" 
+              />
               <p>
-                BASA was born from a simple observation: traditional business networking in San Antonio 
-                was fragmented, transactional, and often failed to deliver meaningful results. In 2020, 
-                a group of local business leaders recognized that the city's growing economy needed a 
-                more sophisticated approach to business connections—one that prioritized quality over 
-                quantity, relationships over transactions, and community impact over individual gain.
+                BASA was founded by Jennifer Bonomo in April 2020, during one of the most challenging periods 
+                for businesses worldwide. As a respected leader in San Antonio's marketing community, Jennifer 
+                brought unmatched experience from her work with top radio stations including Cox Media and 
+                iHeart Media, as well as direct mail marketing with ValPak and other print publications.
               </p>
 
               <p>
-                What began as a small gathering of 12 business owners has evolved into San Antonio's 
-                premier business networking organization, serving over 150 active members across 
-                diverse industries. Our growth wasn't accidental; it was the result of a deliberate 
-                approach that combines proven networking principles with innovative technology and 
-                a deep commitment to the San Antonio business community.
+                Jennifer's strongest value comes from her extensive experience planning and promoting events. 
+                Having been personally affected by the COVID-19 pandemic, she recognized the urgent need to 
+                support local businesses through this unprecedented crisis. Her motivation for founding BASA 
+                arose from a genuine desire to help local businesses endure and recover from the pandemic's 
+                devastating impact.
               </p>
 
               <p>
-                Unlike traditional networking groups that focus solely on lead generation, BASA 
-                operates on the principle that sustainable business growth comes from building 
-                authentic relationships, sharing knowledge, and creating opportunities for 
-                collaborative success. We've found that when businesses genuinely support each 
-                other, everyone benefits—from individual entrepreneurs to the broader San Antonio 
-                economy.
+                What began as a mission to connect like-minded professionals and help them prepare for 
+                reopening has evolved into San Antonio's premier business networking organization. Jennifer's 
+                vision of creating meaningful connections that go beyond traditional networking has resulted 
+                in a community where businesses genuinely support each other, driving growth for individual 
+                entrepreneurs and the broader San Antonio economy.
+              </p>
+
+              <p>
+                Beyond BASA, Jennifer is passionate about partnering with nonprofit organizations, 
+                particularly those supporting the military and elderly communities. When not working to 
+                strengthen San Antonio's business community, she enjoys traveling, sports, and relaxing 
+                on the beach.
               </p>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* What Sets BASA Apart - Traditional 3-Column Grid */}
+      {/* Leadership Team Section */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <motion.div
@@ -500,13 +518,96 @@ export default function AboutPage() {
             className="text-center mb-12"
           >
             <Badge variant="secondary" className="bg-basa-teal/10 text-basa-navy border-basa-teal/20 mb-4">
+              <Users2 className="w-4 h-4 mr-2" />
+              Leadership
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
+              Meet Our Leadership Team
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Experienced professionals dedicated to building San Antonio's premier business network.
+            </p>
+          </motion.div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {[
+              {
+                name: "Jennifer Bonomo",
+                title: "Founder",
+                tagline: "Visionary leader and BASA's original connector",
+                image: "/images/profile/Jen-Bio.jpg"
+              },
+              {
+                name: "Ernie Mores",
+                title: "Business Director",
+                tagline: "Driving business growth and partnerships",
+                image: "/images/profile/ernie-bio.jpg"
+              },
+              {
+                name: "Manny Moreno",
+                title: "Technical Lead",
+                tagline: "Empowering BASA with technology and innovation",
+                image: "/images/profile/Manny-Bio.jpg"
+              }
+            ].map((leader, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                whileHover={{ y: -8 }}
+                className="group"
+              >
+                <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+                  <CardContent className="p-8 text-center">
+                    <div className="w-20 h-20 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                      <img src={leader.image} alt={leader.name + ' profile photo'} className="w-20 h-20 rounded-full object-cover border-2 border-basa-gold shadow" />
+                    </div>
+                    <h3 className="text-xl font-bold text-basa-navy mb-2">{leader.name}</h3>
+                    <p className="text-basa-teal font-medium mb-2">{leader.title}</p>
+                    <p className="text-sm text-gray-600">{leader.tagline}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* What Sets BASA Apart - Traditional 3-Column Grid */}
+      <section className="relative py-16 bg-gray-50 overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/images/backgrounds/basa-approach-bg.jpg')"
+          }}
+        />
+        {/* Overlay for readability */}
+        <div className="absolute inset-0 bg-white/40"></div>
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <Badge variant="secondary" className="bg-basa-gold text-basa-navy border-basa-gold mb-4">
               <Star className="w-4 h-4 mr-2" />
               Our Approach
             </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
+            <h2
+              className="text-3xl md:text-4xl font-bold text-white mb-6"
+              style={{ textShadow: '0 4px 24px rgba(0,0,0,0.85), 0 1.5px 0 #000' }}
+            >
               What Sets BASA Apart
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p
+              className="text-xl text-white max-w-3xl mx-auto"
+              style={{ textShadow: '0 3px 16px rgba(0,0,0,0.85), 0 1px 0 #000' }}
+            >
               We've redefined business networking by focusing on quality, purpose, and local impact.
             </p>
           </motion.div>
@@ -582,7 +683,7 @@ export default function AboutPage() {
       </section>
 
       {/* Member Testimonials - Traditional Layout */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-basa-teal/10">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
@@ -612,91 +713,24 @@ export default function AboutPage() {
       </section>
 
       {/* Success Stories - Traditional Layout */}
+      {/*
       {successStories.map((story, index) => (
         <SuccessStory key={index} story={story} index={index} />
       ))}
-
-      {/* Leadership Team Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <Badge variant="secondary" className="bg-basa-teal/10 text-basa-navy border-basa-teal/20 mb-4">
-              <Users2 className="w-4 h-4 mr-2" />
-              Leadership
-            </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
-              Meet Our Leadership Team
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Experienced professionals dedicated to building San Antonio's premier business network.
-            </p>
-          </motion.div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-            {[
-              {
-                name: "Maria Elena Rodriguez",
-                title: "Executive Director",
-                description: "Leading BASA's mission since 2020",
-                icon: Users,
-                color: "from-basa-navy to-basa-teal"
-              },
-              {
-                name: "David Chen",
-                title: "Director of Member Relations",
-                description: "Building meaningful connections since 2021",
-                icon: Handshake,
-                color: "from-basa-gold to-basa-teal"
-              },
-              {
-                name: "Sarah Johnson",
-                title: "Director of Community Impact",
-                description: "Driving social responsibility since 2022",
-                icon: Heart,
-                color: "from-basa-teal to-basa-navy"
-              },
-              {
-                name: "Michael Thompson",
-                title: "Technology Director",
-                description: "Enabling digital connections since 2021",
-                icon: Globe,
-                color: "from-basa-navy to-basa-gold"
-              }
-            ].map((leader, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -8 }}
-                className="group"
-              >
-                <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
-                  <CardContent className="p-8 text-center">
-                    <div className={`w-20 h-20 bg-gradient-to-br ${leader.color} rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                      <leader.icon className="w-10 h-10 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold text-basa-navy mb-2">{leader.name}</h3>
-                    <p className="text-basa-teal font-medium mb-2">{leader.title}</p>
-                    <p className="text-sm text-gray-600">{leader.description}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      */}
 
       {/* Call-to-Action Section - Traditional Layout */}
-      <section className="py-16 bg-gradient-to-r from-blue-900 to-blue-700 text-white">
-        <div className="container mx-auto px-4 text-center">
+      <section className="relative py-16 text-white overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/images/backgrounds/basa-connect-bg.jpg')"
+          }}
+        />
+        {/* Overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/70 to-blue-700/70"></div>
+        <div className="container mx-auto px-4 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -704,21 +738,27 @@ export default function AboutPage() {
             viewport={{ once: true }}
             className="max-w-4xl mx-auto"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+            <h2
+              className="text-3xl md:text-4xl font-bold mb-6 text-basa-gold"
+              style={{ textShadow: '0 4px 24px rgba(0,0,0,0.85), 0 1.5px 0 #000' }}
+            >
               Ready to Join San Antonio's Most Connected Business Network?
             </h2>
-            <p className="text-xl mb-12 text-blue-100 leading-relaxed">
+            <p
+              className="text-xl mb-12 text-blue-100 leading-relaxed"
+              style={{ textShadow: '0 3px 16px rgba(0,0,0,0.85), 0 1px 0 #000' }}
+            >
               Connect with 150+ business leaders who've discovered the power of meaningful 
               relationships and collaborative growth.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="basa-btn-primary text-lg px-8 py-4">
+              <Button asChild size="lg" className="bg-basa-gold text-basa-navy hover:bg-basa-gold/90 focus:bg-basa-gold/80 text-lg px-8 py-4 border-2 border-basa-gold shadow-2xl">
                 <Link href="/membership/join" className="flex items-center">
                   Apply for Membership
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10 text-lg px-8 py-4">
+              <Button asChild variant="outline" size="lg" className="border-white text-basa-navy hover:bg-white/10 text-lg px-8 py-4 shadow-2xl">
                 <Link href="/events">Attend an Event</Link>
               </Button>
             </div>
