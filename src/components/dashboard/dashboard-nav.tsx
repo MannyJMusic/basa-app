@@ -55,10 +55,10 @@ export default function DashboardNav() {
       return navigation.filter(item => !item.requiresMember)
     }
 
-    // If user is a guest, show Profile, Account, Resources, and Events
+    // If user is a guest, show Profile, Account, Resources, Events, and Directory
     if (session.user.role === "GUEST") {
       console.log("DashboardNav - User is guest, showing limited navigation")
-      return navigation.filter(item => !item.requiresMember || item.name === "Events")
+      return navigation.filter(item => !item.requiresMember || item.name === "Events" || item.name === "Directory")
     }
 
     // For active members, show all navigation items

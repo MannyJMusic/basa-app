@@ -102,9 +102,15 @@ export function EventCard({
           </div>
           <div className="flex items-center justify-between mt-3">
             <div className="text-sm">
-              <span className="font-semibold text-green-600">
-                {isGuest ? `$${event.price}` : (event.memberPrice ? `$${event.memberPrice}` : `$${event.price}`)}
-              </span>
+              {isGuest
+                ? `$${event.price}`
+                : event.memberPrice && event.price
+                  ? (<>
+                      <span className="font-semibold text-green-600">${event.memberPrice}</span>
+                      <span className="text-gray-500 ml-1">/ ${event.price} non-member</span>
+                    </>)
+                  : `$${event.price}`
+              }
             </div>
             <Button asChild size="sm">
               <Link href={`/events/${event.slug}/register`}>
@@ -157,7 +163,15 @@ export function EventCard({
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Non-Members:</span>
                   <span className="font-semibold">
-                    {isGuest ? `$${event.price}` : (event.memberPrice ? `$${event.memberPrice}` : `$${event.price}`)}
+                    {isGuest
+                      ? `$${event.price}`
+                      : event.memberPrice && event.price
+                        ? (<>
+                            <span className="font-semibold text-green-600">${event.memberPrice}</span>
+                            <span className="text-gray-500 ml-1">/ ${event.price} non-member</span>
+                          </>)
+                        : `$${event.price}`
+                    }
                   </span>
                 </div>
               </div>
@@ -239,9 +253,15 @@ export function EventCard({
           )}
           <div className="flex items-center justify-between pt-2">
             <div className="text-sm">
-              <span className="font-semibold text-green-600">
-                {isGuest ? `$${event.price}` : (event.memberPrice ? `$${event.memberPrice}` : `$${event.price}`)}
-              </span>
+              {isGuest
+                ? `$${event.price}`
+                : event.memberPrice && event.price
+                  ? (<>
+                      <span className="font-semibold text-green-600">${event.memberPrice}</span>
+                      <span className="text-gray-500 ml-1">/ ${event.price} non-member</span>
+                    </>)
+                  : `$${event.price}`
+              }
             </div>
             <Button asChild size="sm">
               <Link href={`/events/${event.slug}/register`}>
