@@ -1,0 +1,195 @@
+{% capture order_text_link %}<a href="{{ order_status_url }}" class="text-accent hover-underline" style="text-decoration: none; color: {{ shop.email_accent_color }};">&#8470; {{ order_name }}</a>{% endcapture %}
+{% if fulfillment.item_count == item_count %}
+{% capture shipment_name %}Your order {{ order_text_link }} is{% endcapture %}
+{% elsif fulfillment.item_count > 1 %}
+{% if fulfillment_status == 'fulfilled' %}
+{% capture shipment_name %}The last items in your order {{ order_text_link }} are{% endcapture %}
+{% else %}
+{% capture shipment_name %}Some items in your order {{ order_text_link }} are{% endcapture %}
+{% endif %}
+{% else %}
+{% if fulfillment_status == 'fulfilled' %}
+{% capture shipment_name %}The last item in your order {{ order_text_link }} is{% endcapture %}
+{% else %}
+{% capture shipment_name %}One item in your order {{ order_text_link }} is{% endcapture %}
+{% endif %}
+{% endif %}
+{% capture title %} Hi {{ customer.first_name }} 🚚 {% endcapture %}
+{% capture body %}
+{{ shipment_name }} out for delivery. To see the delivery status, track your shipment: <a href="{{ fulfillment.tracking_url }}" class="text-accent hover-underline" style="text-decoration: none; color: {{ shop.email_accent_color }};">{{ fulfillment.tracking_number }}</a>
+{% endcapture %}
+{% capture eta %} Estimated delivery date: <strong>{{ fulfillment.estimated_delivery_at | date: "%B %-d, %Y" }}</strong> {% endcapture %}
+{% capture button_label %} Track your shipment {% endcapture %}
+<!DOCTYPE html>
+<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Shipment for order {{ order_name }} is out for delivery</title>
+
+  <!--[if mso]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <style>
+    table {border-collapse: collapse;}
+    td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: "Segoe UI", Arial, sans-serif; mso-line-height-rule: exactly;}
+  </style>
+  <![endif]-->
+  <style>
+.hover-underline:hover {
+  text-decoration: underline !important;
+}
+@media screen {
+  img {
+    max-width: 100%;
+  }
+  .all-font-sans {
+    font-family: -apple-system, "Segoe UI", sans-serif !important;
+  }
+}
+@media (max-width: 640px) {
+  u ~ div .wrapper {
+    min-width: 100vw;
+  }
+  .sm-block {
+    display: block !important;
+  }
+  .sm-py-16 {
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+  }
+  .sm-px-16 {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .sm-py-24 {
+    padding-top: 24px !important;
+    padding-bottom: 24px !important;
+  }
+  .sm-w-auto {
+    width: auto !important;
+  }
+  .sm-w-full {
+    width: 100% !important;
+  }
+}
+.text-accent:hover {
+  color: {{ shop.email_accent_color | color_darken: 30 }};
+}
+.bg-accent:hover {
+  background-color: {{ shop.email_accent_color | color_darken: 30 }};
+}
+</style>
+</head>
+<body lang="en" style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #ffffff;">
+<div style="display: none; line-height: 0; font-size: 0;">Shipment for order {{ order_name }} is out for delivery&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;
+  &#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;
+  &#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;&zwnj;&#160;</div>
+<table class="wrapper all-font-sans" style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+  <tr>
+    <td align="center" style bgcolor="#ffffff">
+      <table class="sm-w-full" style="width: 640px;" cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+          <td align="left" class="sm-px-16 sm-py-24" style="padding-left: 40px; padding-right: 40px; padding-top: 48px; padding-bottom: 48px;" bgcolor="#ffffff">
+            <div style="margin-bottom: 24px;">
+              {%- if shop.email_logo_url %}
+              <a href="{{ shop.url }}" style="color: #0047c3; text-decoration: none;">
+                <img src="{{ shop.email_logo_url }}" alt="{{ shop.name }}" width="{{ shop.email_logo_width }}" style="line-height: 100%; vertical-align: middle; border: 0;">
+              </a>
+              {%- else %}
+              <a href="{{ shop.url }}" class="text-accent hover-underline" style="text-decoration: none; color: {{ shop.email_accent_color }};">{{ shop.name }}</a>
+              {%- endif %}
+            </div>
+            <p style="line-height: 28px; margin: 0; color: #4a5566; font-size: 21px;">{{ title | strip }}</p>
+            <p style="line-height: 28px; margin: 0; color: #4a5566; font-size: 21px;">{{ body | strip }}</p>
+            {% if fulfillment.estimated_delivery_at %}
+            <p style="line-height: 24px; margin: 0; margin-top: 8px; color: #637389; font-size: 16px;">{{ eta | strip }}</p>
+            {% endif %}
+            <div style="line-height: 32px;">&nbsp;</div>
+            <p style="line-height: 22px; margin-top: 0; margin-bottom: 16px; color: #8492a6; font-size: 16px;">Items in this shipment:</p>
+            {% for line in fulfillment.fulfillment_line_items %}
+            {% if line.line_item.product.title %}
+            {% assign line_title = line.line_item.product.title %}
+            {% else %}
+            {% assign line_title = line.line_item.title %}
+            {% endif %}
+            {% if line.quantity < line.line_item.quantity %}
+            {% capture line_display %} {{ line.quantity }} of {{ line.line_item.quantity }} {% endcapture %}
+            {% else %}
+            {% assign line_display = line.line_item.quantity  %}
+            {% endif %}
+            <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+              <tr>
+                <td style="vertical-align: top; width: 72px;" valign="top">
+                  {% if line.line_item.image %}
+                  <img src="{{ line.line_item | img_url: '96x144' }}" alt="{{ line_title }}" width="48" style="line-height: 100%; vertical-align: middle; border: 0;">
+                  {% else %}
+                  <img src="https://via.placeholder.com/48x72/f8f8fa/?text=+" alt="{{ line_title }}" width="48" style="line-height: 100%; vertical-align: middle; border: 0;">
+                  {% endif %}
+                </td>
+                <td class="sm-w-auto" style="text-align: left; vertical-align: top; width: 400px;" align="left" valign="top">
+                  <p style="font-weight: 700; margin-top: 0; margin-bottom: 8px; color: #4a5566; font-size: 16px;">{{ line_title }}</p>
+                  {% if line.line_item.product.description %}
+                  <p style="line-height: 22px; margin-top: 0; margin-bottom: 8px; color: #4a5566; font-size: 16px;">{{ line.line_item.product.description }}</p>
+                  {% endif %}
+                  <p style="line-height: 12px; margin: 0; color: #8492a6; font-size: 16px;">Qty. {{ line_display }}</p>
+                  {% if line.line_item.discount_allocations %}
+                  {% for discount_allocation in line.line_item.discount_allocations %}
+                  {% if discount_allocation.discount_application.target_selection != 'all' %}
+                  <p style="line-height: 12px; margin: 0; margin-top: 8px; color: #8492a6; font-size: 16px;">{{ discount_allocation.discount_application.title | title }} (-{{ discount_allocation.amount | money }})</p>
+                  {% endif %}
+                  {% endfor %}
+                  {% endif %}
+                </td>
+              </tr>
+            </table>
+            {% if forloop.last == false %}
+            <div style="line-height: 24px;">&nbsp;</div>
+            {% endif %}
+            {% endfor %}
+            <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+              <tr>
+                <td style="padding-top: 12px; padding-bottom: 24px;">
+                  <div style="background-color: #e1e1ea; height: 2px; line-height: 2px;">&nbsp;</div>
+                </td>
+              </tr>
+            </table>
+            <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+              <tr>
+                <td align="right">
+                  <table class="sm-w-full" cellpadding="0" cellspacing="0" role="presentation">
+                    <tr>
+                      <td align="center" class="bg-accent" style="mso-padding-alt: 16px 32px; border-radius: 4px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, .1), 0 1px 2px 0 rgba(0, 0, 0, .06); color: #ffffff;" bgcolor="{{ shop.email_accent_color }}">
+                        <a href="{{ fulfillment.tracking_url }}" class="sm-block sm-py-16" style="text-decoration: none; display: inline-block; font-weight: 700; line-height: 16px; padding-top: 16px; padding-bottom: 16px; padding-left: 32px; padding-right: 32px; color: #ffffff; font-size: 14px;">{{ button_label | strip }}</a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            <div style="text-align: left;">
+              <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td style="padding-bottom: 16px; padding-top: 64px;">
+                    <div style="background-color: #e1e1ea; height: 1px; line-height: 1px;">&nbsp;</div>
+                  </td>
+                </tr>
+              </table>
+              <p style="line-height: 16px; margin-top: 0; margin-bottom: 16px; color: #8492a6; font-size: 12px;">
+                If you have any questions, reply to this email or contact us at <a href="mailto:{{ shop.email }}" class="text-accent hover-underline" style="text-decoration: none; color: {{ shop.email_accent_color }}; display: inline-block;">{{ shop.email }}</a>.
+              </p>
+              <p style="line-height: 16px; margin: 0; color: #8492a6; font-size: 12px;">&copy; {{ 'now' | date: "%Y" }} {{ shop.name }}. All rights reserved.</p>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

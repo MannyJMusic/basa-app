@@ -42,6 +42,7 @@ import {
   Lock
 } from "lucide-react"
 import { StripeForm } from "@/components/payments/stripe-form"
+import { TestDataPopulator } from "@/components/ui/test-data-populator"
 
 // Load Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -367,7 +368,7 @@ export default function JoinPage() {
     setPaymentSuccess(true)
     // Redirect to success page after a short delay
     setTimeout(() => {
-      window.location.href = `/payment/success?payment_intent=${paymentIntentId}`
+      window.location.href = `/payment/success?type=membership&paymentId=${paymentIntentId}`
     }, 2000)
   }
 
@@ -789,6 +790,8 @@ export default function JoinPage() {
                               First Name *
                             </label>
                             <Input 
+                              name="firstName"
+                              autoComplete="given-name"
                               placeholder="John" 
                               value={contactInfo.firstName} 
                               onChange={(e) => setContactInfo({ ...contactInfo, firstName: e.target.value })}
@@ -800,6 +803,8 @@ export default function JoinPage() {
                               Last Name *
                             </label>
                             <Input 
+                              name="lastName"
+                              autoComplete="family-name"
                               placeholder="Doe" 
                               value={contactInfo.lastName} 
                               onChange={(e) => setContactInfo({ ...contactInfo, lastName: e.target.value })}
@@ -811,6 +816,8 @@ export default function JoinPage() {
                               Job Title *
                             </label>
                             <Input 
+                              name="jobTitle"
+                              autoComplete="organization-title"
                               placeholder="CEO, Owner, Manager, etc." 
                               value={contactInfo.jobTitle} 
                               onChange={(e) => setContactInfo({ ...contactInfo, jobTitle: e.target.value })}
@@ -822,7 +829,9 @@ export default function JoinPage() {
                               Email Address *
                             </label>
                             <Input 
+                              name="email"
                               type="email" 
+                              autoComplete="email"
                               placeholder="john@yourbusiness.com" 
                               value={contactInfo.email} 
                               onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
@@ -844,6 +853,9 @@ export default function JoinPage() {
                               Phone Number *
                             </label>
                             <Input 
+                              name="phone"
+                              type="tel"
+                              autoComplete="tel"
                               placeholder="(210) 555-0123" 
                               value={contactInfo.phone} 
                               onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
@@ -854,7 +866,14 @@ export default function JoinPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                               LinkedIn Profile
                             </label>
-                            <Input placeholder="https://linkedin.com/in/johndoe" value={contactInfo.linkedin} onChange={(e) => setContactInfo({ ...contactInfo, linkedin: e.target.value })} />
+                            <Input 
+                              name="linkedin"
+                              type="url"
+                              autoComplete="url"
+                              placeholder="https://linkedin.com/in/johndoe" 
+                              value={contactInfo.linkedin} 
+                              onChange={(e) => setContactInfo({ ...contactInfo, linkedin: e.target.value })} 
+                            />
                           </div>
                         </div>
                       </CardContent>
@@ -877,6 +896,8 @@ export default function JoinPage() {
                               Business Name *
                             </label>
                             <Input 
+                              name="businessName"
+                              autoComplete="organization"
                               placeholder="Your Business Name" 
                               value={businessInfo.businessName} 
                               onChange={(e) => setBusinessInfo({ ...businessInfo, businessName: e.target.value })}
@@ -910,6 +931,8 @@ export default function JoinPage() {
                               Business Address *
                             </label>
                             <Input 
+                              name="businessAddress"
+                              autoComplete="street-address"
                               placeholder="Street Address" 
                               value={businessInfo.businessAddress} 
                               onChange={(e) => setBusinessInfo({ ...businessInfo, businessAddress: e.target.value })}
@@ -921,6 +944,8 @@ export default function JoinPage() {
                               City *
                             </label>
                             <Input 
+                              name="city"
+                              autoComplete="address-level2"
                               placeholder="San Antonio" 
                               value={businessInfo.city} 
                               onChange={(e) => setBusinessInfo({ ...businessInfo, city: e.target.value })}
@@ -932,6 +957,8 @@ export default function JoinPage() {
                               State *
                             </label>
                             <Input 
+                              name="state"
+                              autoComplete="address-level1"
                               placeholder="TX" 
                               value={businessInfo.state} 
                               onChange={(e) => setBusinessInfo({ ...businessInfo, state: e.target.value })}
@@ -943,6 +970,8 @@ export default function JoinPage() {
                               ZIP Code *
                             </label>
                             <Input 
+                              name="zipCode"
+                              autoComplete="postal-code"
                               placeholder="78205" 
                               value={businessInfo.zipCode} 
                               onChange={(e) => setBusinessInfo({ ...businessInfo, zipCode: e.target.value })}
@@ -954,6 +983,9 @@ export default function JoinPage() {
                               Business Phone *
                             </label>
                             <Input 
+                              name="businessPhone"
+                              type="tel"
+                              autoComplete="tel"
                               placeholder="(210) 555-0123" 
                               value={businessInfo.businessPhone} 
                               onChange={(e) => setBusinessInfo({ ...businessInfo, businessPhone: e.target.value })}
@@ -964,7 +996,14 @@ export default function JoinPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                               Website
                             </label>
-                            <Input placeholder="https://yourbusiness.com" value={businessInfo.website} onChange={(e) => setBusinessInfo({ ...businessInfo, website: e.target.value })} />
+                            <Input 
+                              name="website"
+                              type="url"
+                              autoComplete="url"
+                              placeholder="https://yourbusiness.com" 
+                              value={businessInfo.website} 
+                              onChange={(e) => setBusinessInfo({ ...businessInfo, website: e.target.value })} 
+                            />
                           </div>
                           <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1238,7 +1277,7 @@ export default function JoinPage() {
 
               {/* Right Column - Sticky Order Summary */}
               <div className="xl:col-span-1">
-                <div className="sticky top-8">
+                <div className="sticky top-8 space-y-6">
                   <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-blue-50">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-xl flex items-center">
@@ -1309,16 +1348,6 @@ export default function JoinPage() {
                             </div>
                           )}
 
-                          <div className="bg-green-50 p-3 rounded-lg">
-                            <h4 className="font-semibold text-green-900 mb-1 text-sm flex items-center">
-                              <Zap className="w-4 h-4 mr-1" />
-                              Welcome Bonus
-                            </h4>
-                            <p className="text-xs text-green-800">
-                              Get your first month FREE when you join today!
-                            </p>
-                          </div>
-
                           <div className="bg-blue-50 p-3 rounded-lg">
                             <h4 className="font-semibold text-blue-900 mb-1 text-sm flex items-center">
                               <Shield className="w-4 h-4 mr-1" />
@@ -1361,6 +1390,33 @@ export default function JoinPage() {
                       )}
                     </CardContent>
                   </Card>
+
+                  {/* Test Data Populator - Only show in development */}
+                  <TestDataPopulator
+                    onPopulateContact={(data) => {
+                      setContactInfo({
+                        firstName: data.firstName,
+                        lastName: data.lastName,
+                        email: data.email,
+                        phone: data.phone,
+                        jobTitle: data.jobTitle,
+                        linkedin: data.linkedin
+                      })
+                    }}
+                    onPopulateBusiness={(data) => {
+                      setBusinessInfo({
+                        businessName: data.businessName,
+                        industry: data.industry,
+                        businessAddress: data.businessAddress,
+                        city: data.city,
+                        state: data.state,
+                        zipCode: data.zipCode,
+                        businessPhone: data.businessPhone,
+                        website: data.website,
+                        businessDescription: data.businessDescription
+                      })
+                    }}
+                  />
                 </div>
               </div>
             </div>

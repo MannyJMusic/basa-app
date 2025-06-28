@@ -1,0 +1,196 @@
+{% capture title %} {{ service_name }}, please fulfill the following order ({{ name }}) for {{ shop_name }}. If you have any questions, please contact us. {% endcapture %}
+{% capture total_items_text %} Total number of items: {{ fulfillment.item_count }} {% endcapture %}
+{% capture unique_items_text %} Unique items: {{ fulfillment.fulfillment_line_items.size }} {% endcapture %}
+<!DOCTYPE html>
+<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+
+  <!--[if mso]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <style>
+    table {border-collapse: collapse;}
+    td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: "Segoe UI", Arial, sans-serif; mso-line-height-rule: exactly;}
+  </style>
+  <![endif]-->
+  <style>
+.hover-underline:hover {
+  text-decoration: underline !important;
+}
+@media screen {
+  img {
+    max-width: 100%;
+  }
+  .all-font-sans {
+    font-family: -apple-system, "Segoe UI", sans-serif !important;
+  }
+}
+@media (max-width: 640px) {
+  u ~ div .wrapper {
+    min-width: 100vw;
+  }
+  .sm-inline-block {
+    display: inline-block !important;
+  }
+  .sm-px-0 {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .sm-px-16 {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .sm-py-24 {
+    padding-top: 24px !important;
+    padding-bottom: 24px !important;
+  }
+  .sm-w-full {
+    width: 100% !important;
+  }
+}
+.text-accent:hover {
+  color: {{ shop.email_accent_color | color_darken: 30 }};
+}
+</style>
+</head>
+<body lang="en" style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #ffffff;">
+<table class="wrapper all-font-sans" style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+  <tr>
+    <td align="center" style bgcolor="#ffffff">
+      <table class="sm-w-full" style="width: 640px;" cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+          <td align="left" class="sm-px-16 sm-py-24" style="padding-left: 40px; padding-right: 40px; padding-top: 48px; padding-bottom: 48px;" bgcolor="#ffffff">
+            <div style="margin-bottom: 24px;">
+              {%- if shop.email_logo_url %}
+              <a href="{{ shop.url }}" style="color: #0047c3; text-decoration: none;">
+                <img src="{{ shop.email_logo_url }}" alt="{{ shop.name }}" width="{{ shop.email_logo_width }}" style="line-height: 100%; vertical-align: middle; border: 0;">
+              </a>
+              {%- else %}
+              <a href="{{ shop.url }}" class="text-accent hover-underline" style="text-decoration: none; color: {{ shop.email_accent_color }};">{{ shop.name }}</a>
+              {%- endif %}
+            </div>
+            <p style="line-height: 28px; margin: 0; margin-bottom: 16px; color: #4a5566; font-size: 21px;">{{ title | strip }}</p>
+            <p style="line-height: 28px; margin: 0; color: #4a5566; font-size: 21px;">{{ total_items_text | strip }}</p>
+            <p style="line-height: 28px; margin: 0; color: #4a5566; font-size: 21px;">{{ unique_items_text | strip }}</p>
+            <div style="line-height: 32px;">&nbsp;</div>
+            <p style="line-height: 22px; margin: 0; color: #8492a6; font-size: 16px;">Items to fulfill:</p>
+            {% for line in fulfillment.fulfillment_line_items %}
+            <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+              <tr>
+                <td style="padding-top: 24px; text-align: left;" align="left">
+                  <p style="font-weight: 700; line-height: 22px; margin: 0; margin-bottom: 8px; color: #4a5566; font-size: 16px;">{{ line.line_item.title }}</p>
+                  <table cellpadding="0" cellspacing="0" role="presentation">
+                    <tr>
+                      {% if line.line_item.sku != blank %}
+                      <td class="sm-inline-block" style="padding-right: 16px;">
+                        <p style="line-height: 24px; margin: 0; color: #8492a6; font-size: 16px;">SKU: {{ line.line_item.sku }}</p>
+                      </td>
+                      {% endif %}
+                      <td class="sm-inline-block" style="padding-right: 16px;">
+                        <p style="line-height: 24px; margin: 0; color: #8492a6; font-size: 16px;">Quantity: {{ line.quantity }}</p>
+                      </td>
+                      {% if line.line_item.grams != blank %}
+                      <td class="sm-inline-block">
+                        <p style="line-height: 24px; margin: 0; color: #8492a6; font-size: 16px;">Grams: {{ line.line_item.grams }}</p>
+                      </td>
+                      {% endif %}
+                    </tr>
+                  </table>
+                  {% if line.line_item.vendor != blank %}
+                  <p style="line-height: 24px; margin: 0; color: #8492a6; font-size: 16px;">Vendor: {{ line.line_item.vendor }}</p>
+                  {% endif %}
+                </td>
+              </tr>
+            </table>
+            {% endfor %}
+            <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+              <tr>
+                <td style="padding-top: 12px; padding-bottom: 64px;">
+                  <div style="background-color: #e1e1ea; height: 2px; line-height: 2px;">&nbsp;</div>
+                </td>
+              </tr>
+            </table>
+            <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+              <tr>
+                <td>
+                  <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                    <tr>
+                      {% if shipping_address %}
+                      <td class="sm-inline-block sm-w-full sm-px-0" style="padding-right: 8px; vertical-align: top; width: 50%;" valign="top">
+                        <h4 style="line-height: 22px; margin: 0; margin-bottom: 8px; color: #8492a6; font-size: 16px;">Shipping address</h4>
+                        <div style="line-height: 22px; margin: 0; color: #8492a6; font-size: 16px;">
+                          <p style="line-height: 22px; margin: 0; margin-bottom: 4px; color: #8492a6; font-size: 16px;">
+                            {{ shipping_address.name }}{% if shipping_address.company %} {{ shipping_address.company }}{% endif %}
+                          </p>
+                          <p style="line-height: 22px; margin: 0; margin-bottom: 4px; color: #8492a6; font-size: 16px;">{{ shipping_address.address1 }}</p>
+                          <p style="line-height: 22px; margin: 0; margin-bottom: 4px; color: #8492a6; font-size: 16px;">{{ shipping_address.address2 }}</p>
+                          <p style="line-height: 22px; margin: 0; margin-bottom: 4px; color: #8492a6; font-size: 16px;">{{ shipping_address.city }}, {{ shipping_address.province }}</p>
+                          <p style="line-height: 22px; margin: 0; margin-bottom: 4px; color: #8492a6; font-size: 16px;">{{ shipping_address.zip }}</p>
+                          <p style="line-height: 22px; margin: 0; margin-bottom: 4px; color: #8492a6; font-size: 16px;">{{ shipping_address.country }}</p>
+                          {% if shipping_address.phone %}
+                          <p style="line-height: 22px; margin: 0; color: #8492a6; font-size: 16px;">
+                            Phone: {{ shipping_address.phone }}
+                          </p>
+                          {% endif %}
+                        </div>
+                      </td>
+                      {% endif %}
+                      <td class="sm-inline-block sm-w-full sm-px-0" style="padding-left: 8px; vertical-align: top; width: 50%;" valign="top">
+                        <h4 style="line-height: 22px; margin: 0; margin-bottom: 8px; color: #8492a6; font-size: 16px;">Shipping method</h4>
+                        <div style="line-height: 22px; margin: 0; color: #8492a6; font-size: 16px;">{% if shipping_method %}{{ shipping_method.title }}{% else %}None{% endif %}</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colspan="2" style="height: 32px;"></td>
+                    </tr>
+                    <tr>
+                      <td class="sm-inline-block sm-w-full sm-px-0" style="padding-right: 8px; vertical-align: top; width: 50%;" valign="top">
+                        <h4 style="line-height: 22px; margin: 0; margin-bottom: 8px; color: #8492a6; font-size: 16px;">Tracking number</h4>
+                        <p style="line-height: 22px; margin: 0; color: #8492a6; font-size: 16px;">
+                          {% if fulfillment.tracking_number %}
+                          <a href="{{ fulfillment.tracking_url }}" class="text-accent hover-underline" style="text-decoration: none; color: {{ shop.email_accent_color }};">{{ fulfillment.tracking_number }}</a>
+                          {% else %}
+                          None
+                          {% endif %}</p>
+                      </td>
+                      <td class="sm-inline-block sm-w-full sm-px-0" style="padding-left: 8px; vertical-align: top; width: 50%;" valign="top">
+                        <h4 style="line-height: 22px; margin: 0; margin-bottom: 8px; color: #8492a6; font-size: 16px;">Customer email</h4>
+                        <p style="line-height: 22px; margin: 0; font-size: 16px;">
+                          <a href="mailto:{{ email }}" class="text-accent hover-underline" style="text-decoration: none; color: {{ shop.email_accent_color }};">{{ email }}</a>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            <div style="line-height: 32px;">&nbsp;</div>
+            <p style="line-height: 24px; margin: 0; color: #8492a6; font-size: 16px;">Thank you, <br>{{ shop_name }}</p>
+            <div style="text-align: left;">
+              <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td style="padding-bottom: 16px; padding-top: 64px;">
+                    <div style="background-color: #e1e1ea; height: 1px; line-height: 1px;">&nbsp;</div>
+                  </td>
+                </tr>
+              </table>
+              <p style="line-height: 16px; margin-top: 0; margin-bottom: 16px; color: #8492a6; font-size: 12px;">
+                If you have any questions, reply to this email or contact us at <a href="mailto:{{ shop.email }}" class="text-accent hover-underline" style="text-decoration: none; color: {{ shop.email_accent_color }}; display: inline-block;">{{ shop.email }}</a>.
+              </p>
+              <p style="line-height: 16px; margin: 0; color: #8492a6; font-size: 12px;">&copy; {{ 'now' | date: "%Y" }} {{ shop.name }}. All rights reserved.</p>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

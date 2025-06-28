@@ -15,6 +15,7 @@ interface StripeFormProps {
   onSuccess: (paymentIntentId: string) => void
   onError: (error: string) => void
   loading?: boolean
+  type?: string
 }
 
 export function StripeForm({
@@ -23,7 +24,8 @@ export function StripeForm({
   description,
   onSuccess,
   onError,
-  loading = false
+  loading = false,
+  type
 }: StripeFormProps) {
   const stripe = useStripe()
   const elements = useElements()
@@ -54,6 +56,9 @@ export function StripeForm({
     } else if (paymentIntent && paymentIntent.status === 'succeeded') {
       setMessage('Payment successful!')
       onSuccess(paymentIntent.id)
+      if (type) {
+        window.location.href = `/payment/success?type=${type}&paymentId=${paymentIntent.id}`
+      }
     }
 
     setIsProcessing(false)
