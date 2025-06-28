@@ -26,12 +26,14 @@ import {
 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2 } from "lucide-react"
+import { GuestOverlay } from "@/components/ui/guest-overlay"
 
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [isNewUser, setIsNewUser] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
+  const isGuest = session?.user?.role === "GUEST"
 
   useEffect(() => {
     if (status === "loading") return
@@ -41,20 +43,21 @@ export default function DashboardPage() {
       return
     }
 
-    // Check if user was created recently (within last 24 hours)
-    const checkNewUser = async () => {
+    // Check if this is the first login after email verification
+    const checkFirstLoginAfterVerification = async () => {
       try {
         const response = await fetch('/api/profile')
         const userData = await response.json()
         
-        if (userData.createdAt) {
-          const createdAt = new Date(userData.createdAt)
-          const now = new Date()
-          const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60)
+        if (userData.emailVerified && userData.accountStatus === 'ACTIVE') {
+          // Check if we've shown the welcome message before for this user
+          const hasShownWelcome = localStorage.getItem(`welcome-shown-${userData.id}`)
           
-          if (hoursSinceCreation < 24) {
+          if (!hasShownWelcome) {
             setIsNewUser(true)
             setShowWelcome(true)
+            // Mark that we've shown the welcome message for this user
+            localStorage.setItem(`welcome-shown-${userData.id}`, 'true')
           }
         }
       } catch (error) {
@@ -62,7 +65,7 @@ export default function DashboardPage() {
       }
     }
 
-    checkNewUser()
+    checkFirstLoginAfterVerification()
   }, [session, status, router])
 
   if (status === "loading") {
@@ -74,14 +77,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="relative min-h-screen">
       {/* Welcome Message for New Users */}
       {showWelcome && isNewUser && (
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
             <strong>Welcome to BASA, {session.user?.firstName || 'Member'}!</strong> 
-            Your account has been successfully created. We're excited to have you join the San Antonio business community. 
+            Your email has been successfully verified and your account is now active. We're excited to have you join the San Antonio business community. 
             Take a moment to explore your dashboard and complete your profile.
           </AlertDescription>
         </Alert>
@@ -267,6 +270,8 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {isGuest && <GuestOverlay />}
     </div>
   )
 } 

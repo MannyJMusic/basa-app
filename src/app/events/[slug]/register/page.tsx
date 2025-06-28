@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useEvents } from '@/hooks/use-events'
+import { useSession } from 'next-auth/react'
 
 // Load Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -57,6 +58,14 @@ export default function EventRegistrationPage() {
   const [attendees, setAttendees] = useState<AttendeeInfo[]>([
     { name: '', email: '', company: '', phone: '' }
   ])
+  const { data: session } = useSession();
+
+  // Determine if user is guest
+  const isGuest = session?.user?.role === 'GUEST';
+
+  useEffect(() => {
+    if (isGuest) setIsMember(false);
+  }, [isGuest]);
 
   useEffect(() => {
     async function loadEvent() {
@@ -200,6 +209,11 @@ export default function EventRegistrationPage() {
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
+            {isGuest && (
+              <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded mb-6">
+                <strong>Note:</strong> Join as a member to unlock exclusive discounts and benefits!
+              </div>
+            )}
             {/* Header */}
             <div className="text-center mb-8">
               <Link href={`/events/${eventSlug}`} className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-4">
