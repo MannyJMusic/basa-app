@@ -1,0 +1,28 @@
+/*! purgecss start ignore */
+@screen all {
+  img {
+    @apply max-w-full;
+  }
+}
+
+@screen sm {
+  u ~ div .wrapper {
+    @apply min-w-screen;
+  }
+}
+
+body {
+  @apply m-0 p-0 w-full;
+  word-break: break-word;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  @apply leading-full align-middle;
+  border: 0;
+}
+
+a {
+  @apply text-brand-600 no-underline;
+}
+/*! purgecss end ignore */

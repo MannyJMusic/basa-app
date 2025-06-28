@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>{{ page.title or 'Business Association of San Antonio' }}</title>
+
+  <!--[if mso]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <style>
+    table {border-collapse: collapse;}
+    td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: "Segoe UI", Arial, sans-serif; mso-line-height-rule: exactly;}
+  </style>
+  <![endif]-->
+
+  {% if css %}<style>{{ css }}</style>{% endif %}
+
+  <style>
+    /* BASA Email Styles */
+    .basa-gradient-primary {
+      background: linear-gradient(135deg, #1B365D 0%, #15294d 100%);
+    }
+    .basa-gradient-secondary {
+      background: linear-gradient(135deg, #FFD700 0%, #FFC300 100%);
+    }
+    .basa-gradient-accent {
+      background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%);
+    }
+    .basa-gradient-header {
+      background: linear-gradient(135deg, #1B365D 0%, #2C5282 50%, #1B365D 100%);
+    }
+    .basa-text-navy {
+      color: #1B365D;
+    }
+    .basa-text-gold {
+      color: #FFD700;
+    }
+    .basa-text-teal {
+      color: #17A2B8;
+    }
+    .basa-text-white {
+      color: #ffffff;
+    }
+    .basa-bg-navy {
+      background-color: #1B365D;
+    }
+    .basa-bg-gold {
+      background-color: #FFD700;
+    }
+    .basa-bg-teal {
+      background-color: #17A2B8;
+    }
+    .basa-bg-warm {
+      background-color: #fefbf7;
+    }
+    .basa-bg-light-navy {
+      background-color: #f8fafc;
+    }
+    .basa-border-navy {
+      border-color: #1B365D;
+    }
+    .basa-border-gold {
+      border-color: #FFD700;
+    }
+    .basa-border-teal {
+      border-color: #17A2B8;
+    }
+
+    /* Logo container styles */
+    .basa-logo-container {
+      background: linear-gradient(135deg, #1B365D 0%, #2C5282 100%);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+      box-shadow: 0 4px 20px rgba(27, 54, 93, 0.15);
+    }
+
+    /* Responsive styles */
+    @media screen {
+      img {
+        max-width: 100%;
+      }
+      .basa-font-sans {
+        font-family: -apple-system, "Segoe UI", sans-serif !important;
+      }
+    }
+
+    @media (max-width: 640px) {
+      u ~ div .wrapper {
+        min-width: 100vw;
+      }
+      .sm-block {
+        display: block !important;
+      }
+      .sm-h-16 {
+        height: 16px !important;
+      }
+      .sm-h-24 {
+        height: 24px !important;
+      }
+      .sm-h-32 {
+        height: 32px !important;
+      }
+      .sm-py-16 {
+        padding-top: 16px !important;
+        padding-bottom: 16px !important;
+      }
+      .sm-px-16 {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+      }
+      .sm-py-24 {
+        padding-top: 24px !important;
+        padding-bottom: 24px !important;
+      }
+      .sm-text-14 {
+        font-size: 14px !important;
+      }
+      .sm-w-full {
+        width: 100% !important;
+      }
+      .basa-logo-container {
+        padding: 16px !important;
+        margin-bottom: 24px !important;
+      }
+    }
+
+    /* Hover effects */
+    .basa-hover-underline:hover {
+      text-decoration: underline !important;
+    }
+    .basa-hover-gold:hover {
+      color: #FFC300 !important;
+    }
+    .basa-hover-teal:hover {
+      color: #1391a5 !important;
+    }
+    .basa-hover-navy:hover {
+      color: #15294d !important;
+    }
+
+    /* Button styles */
+    .basa-btn-primary {
+      background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%);
+      color: #ffffff;
+      padding: 16px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-block;
+      box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
+    }
+    .basa-btn-secondary {
+      background: linear-gradient(135deg, #FFD700 0%, #FFC300 100%);
+      color: #1B365D;
+      padding: 16px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-block;
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+    }
+    .basa-btn-outline {
+      background: #ffffff;
+      color: #1B365D;
+      padding: 14px 30px;
+      border: 2px solid #1B365D;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-block;
+    }
+  </style>
+
+  {% block head %}{% endblock %}
+</head>
+<body class="basa-font-sans" lang="en" style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #ffffff;">
+
+  {% if page.preheader %}
+    <div style="display: none; line-height: 0; font-size: 0;">{{ page.preheader }}</div>
+  {% endif %}
+
+  <table class="wrapper" style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+    <tr>
+      <td align="center" style="background-color: #ffffff;">
+        <table class="sm-w-full" style="width: 640px;" cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td class="sm-px-16 sm-py-24" style="padding-left: 40px; padding-right: 40px; padding-top: 48px; padding-bottom: 48px;" bgcolor="#ffffff">
+
+              <!-- BASA Header with Logo -->
+              <div class="basa-logo-container" style="text-align: center;">
+                <a href="{{ page.siteUrl or 'https://businessassociationsa.com' }}" style="text-decoration: none;">
+                  <img src="{{ page.logoUrl or 'https://businessassociationsa.com/images/logos/BASA%20-%20LOG%20-SIDE2%20-%20WHITE%20-PROOF.png' }}"
+                       alt="Business Association of San Antonio"
+                       width="220"
+                       style="line-height: 100%; vertical-align: middle; border: 0; filter: brightness(1.1) contrast(1.1);">
+                </a>
+                <p style="margin: 12px 0 0 0; font-size: 14px; color: #ffffff; opacity: 0.9; font-weight: 500;">
+                  Connecting, growing, and giving back to the San Antonio business community
+                </p>
+              </div>
+
+              {% block template %}{% endblock %}
+
+              <!-- BASA Footer -->
+              <div style="text-align: left; margin-top: 48px;">
+                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                  <tr>
+                    <td style="padding-bottom: 16px; padding-top: 32px;">
+                      <div style="background: linear-gradient(90deg, #1B365D 0%, #17A2B8 50%, #FFD700 100%); height: 2px; line-height: 1px; border-radius: 1px;">&nbsp;</div>
+                    </td>
+                  </tr>
+                </table>
+
+                <div style="background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); border-radius: 8px; padding: 24px; margin-top: 16px;">
+                  <p style="line-height: 16px; margin: 0; margin-bottom: 8px; color: #1B365D; font-size: 14px; font-weight: 600;">
+                    Business Association of San Antonio
+                  </p>
+                  <p style="line-height: 16px; margin: 0; margin-bottom: 8px; color: #64748b; font-size: 12px;">
+                    Connecting, growing, and giving back to the San Antonio business community
+                  </p>
+                  <p style="line-height: 16px; margin: 0; margin-bottom: 16px; color: #64748b; font-size: 12px;">
+                    If you have any questions, reply to this email or contact us at
+                    <a href="mailto:info@businessassociationsa.com" class="basa-text-teal basa-hover-underline" style="text-decoration: none;">info@businessassociationsa.com</a>
+                  </p>
+                  <p style="line-height: 16px; margin: 0; color: #64748b; font-size: 12px;">
+                    &copy; {{ 'now' | date: "%Y" }} Business Association of San Antonio. All rights reserved.
+                  </p>
+                </div>
+              </div>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
