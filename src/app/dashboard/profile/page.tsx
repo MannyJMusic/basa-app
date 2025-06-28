@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/components/ui/use-toast"
 import { useProfile, UpdateProfileData } from "@/hooks/use-profile"
+import { useSession } from "next-auth/react"
 import { 
   User, 
   Building2, 
@@ -39,150 +40,67 @@ import {
 
 export default function DashboardProfilePage() {
   const { toast } = useToast()
-  const { profile, loading, error, saving, updateProfile, getProfileCompletion, getNetworkingStats } = useProfile()
-  const [isEditing, setIsEditing] = useState(false)
+  const { profile, loading, error, saving, updateProfile, getProfileCompletion, getProfileCompletionDetails, getNetworkingStats } = useProfile()
+  const { data: session } = useSession()
   const [formData, setFormData] = useState<UpdateProfileData>({})
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  // Initialize form data when profile loads
-  useEffect(() => {
-    if (profile) {
-      setFormData({
-        firstName: profile.firstName || "",
-        lastName: profile.lastName || "",
-        email: profile.email || "",
-        businessName: profile.member?.businessName || "",
-        businessType: profile.member?.businessType || "",
-        industry: profile.member?.industry || [],
-        businessEmail: profile.member?.businessEmail || "",
-        businessPhone: profile.member?.businessPhone || "",
-        businessAddress: profile.member?.businessAddress || "",
-        city: profile.member?.city || "",
-        state: profile.member?.state || "",
-        zipCode: profile.member?.zipCode || "",
-        website: profile.member?.website || "",
-        description: profile.member?.description || "",
-        tagline: profile.member?.tagline || "",
-        specialties: profile.member?.specialties || [],
-        certifications: profile.member?.certifications || [],
-        linkedin: profile.member?.linkedin || "",
-        facebook: profile.member?.facebook || "",
-        instagram: profile.member?.instagram || "",
-        twitter: profile.member?.twitter || "",
-        youtube: profile.member?.youtube || "",
-        showInDirectory: profile.member?.showInDirectory ?? true,
-        allowContact: profile.member?.allowContact ?? true,
-        showAddress: profile.member?.showAddress ?? false,
-      })
-    }
-  }, [profile])
+  // Determine if user is guest
+  const isGuest = session?.user?.role === "GUEST" || profile?.role === "GUEST"
 
+  // Handler functions
   const handleInputChange = (field: keyof UpdateProfileData, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
-
-  const handleArrayChange = (field: keyof UpdateProfileData, value: string, action: 'add' | 'remove') => {
-    setFormData(prev => {
-      const currentArray = (prev[field] as string[]) || []
-      if (action === 'add') {
-        return {
-          ...prev,
-          [field]: [...currentArray, value]
-        }
-      } else {
-        return {
-          ...prev,
-          [field]: currentArray.filter(item => item !== value)
-        }
-      }
-    })
+    setFormData(prev => ({ ...prev, [field]: value }))
+    setHasUnsavedChanges(true)
   }
 
   const handleSave = async () => {
-    try {
-      const result = await updateProfile(formData)
-      if (result) {
-        toast({
-          title: "Profile Updated",
-          description: "Your profile has been successfully updated.",
-        })
-        setIsEditing(false)
-      }
-    } catch (error) {
+    if (!profile) return
+    
+    const result = await updateProfile(formData)
+    if (result) {
       toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
       })
+      setHasUnsavedChanges(false)
     }
   }
 
   const handleCancel = () => {
-    // Reset form data to original profile data
-    if (profile) {
-      setFormData({
-        firstName: profile.firstName || "",
-        lastName: profile.lastName || "",
-        email: profile.email || "",
-        businessName: profile.member?.businessName || "",
-        businessType: profile.member?.businessType || "",
-        industry: profile.member?.industry || [],
-        businessEmail: profile.member?.businessEmail || "",
-        businessPhone: profile.member?.businessPhone || "",
-        businessAddress: profile.member?.businessAddress || "",
-        city: profile.member?.city || "",
-        state: profile.member?.state || "",
-        zipCode: profile.member?.zipCode || "",
-        website: profile.member?.website || "",
-        description: profile.member?.description || "",
-        tagline: profile.member?.tagline || "",
-        specialties: profile.member?.specialties || [],
-        certifications: profile.member?.certifications || [],
-        linkedin: profile.member?.linkedin || "",
-        facebook: profile.member?.facebook || "",
-        instagram: profile.member?.instagram || "",
-        twitter: profile.member?.twitter || "",
-        youtube: profile.member?.youtube || "",
-        showInDirectory: profile.member?.showInDirectory ?? true,
-        allowContact: profile.member?.allowContact ?? true,
-        showAddress: profile.member?.showAddress ?? false,
-      })
-    }
-    setIsEditing(false)
+    setFormData({})
+    setHasUnsavedChanges(false)
   }
 
+  // Show loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Error Loading Profile</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()}>
-            Try Again
-          </Button>
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
         </div>
       </div>
     )
   }
 
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <strong>Error loading profile:</strong> {error}
+        </div>
+      </div>
+    )
+  }
+
+  // Show empty state if no profile data
   if (!profile) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
-          <p className="text-gray-600">Unable to load your profile information.</p>
+      <div className="space-y-6">
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+          <strong>No profile data available.</strong> Please try refreshing the page.
         </div>
       </div>
     )
@@ -190,6 +108,7 @@ export default function DashboardProfilePage() {
 
   const networkingStats = getNetworkingStats()
   const completionPercentage = getProfileCompletion()
+  const completionDetails = getProfileCompletionDetails()
 
   return (
     <div className="space-y-6">
@@ -198,12 +117,18 @@ export default function DashboardProfilePage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
           <p className="text-gray-600 mt-2">Manage your professional profile and networking presence</p>
+          {hasUnsavedChanges && (
+            <p className="text-sm text-orange-600 mt-1 flex items-center">
+              <AlertCircle className="w-4 h-4 mr-1" />
+              You have unsaved changes
+            </p>
+          )}
         </div>
         <div className="flex space-x-2">
-          {isEditing ? (
+          {hasUnsavedChanges && (
             <>
               <Button variant="outline" onClick={handleCancel}>
-                Cancel
+                Cancel Changes
               </Button>
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? (
@@ -219,11 +144,6 @@ export default function DashboardProfilePage() {
                 )}
               </Button>
             </>
-          ) : (
-            <Button onClick={() => setIsEditing(true)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Profile
-            </Button>
           )}
         </div>
       </div>
@@ -252,125 +172,85 @@ export default function DashboardProfilePage() {
                 </Avatar>
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold">
-                    {isEditing ? (
-                      <Input
-                        value={formData.firstName || ""}
-                        onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        placeholder="First Name"
-                        className="text-2xl font-bold h-8"
-                      />
-                    ) : (
-                      `${profile.firstName || 'First'} ${profile.lastName || 'Last'}`
-                    )}
+                    <Input
+                      value={`${formData.firstName || profile.firstName || ""} ${formData.lastName || profile.lastName || ""}`.trim()}
+                      onChange={(e) => {
+                        const fullName = e.target.value
+                        const nameParts = fullName.split(' ')
+                        const firstName = nameParts[0] || ""
+                        const lastName = nameParts.slice(1).join(' ') || ""
+                        handleInputChange('firstName', firstName)
+                        handleInputChange('lastName', lastName)
+                      }}
+                      placeholder="First Last"
+                      className="text-2xl font-bold h-8 border-0 p-0 bg-transparent focus:ring-0 focus:border-b-2 focus:border-blue-500"
+                    />
                   </h2>
                   <p className="text-gray-600">
-                    {isEditing ? (
-                      <Input
-                        value={formData.businessName || ""}
-                        onChange={(e) => handleInputChange('businessName', e.target.value)}
-                        placeholder="Business Name"
-                        className="text-gray-600 h-6"
-                      />
-                    ) : (
-                      profile.member?.businessName || "Business Owner"
-                    )}
+                    <Input
+                      value={formData.businessName || profile.member?.businessName || ""}
+                      onChange={(e) => handleInputChange('businessName', e.target.value)}
+                      placeholder="Business Name"
+                      className="text-gray-600 h-6 border-0 p-0 bg-transparent focus:ring-0 focus:border-b-2 focus:border-blue-500"
+                    />
                   </p>
-                  <p className="text-sm text-gray-500">
-                    Member since {new Date(profile.createdAt).toLocaleDateString()}
-                  </p>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
-                      {profile.member?.membershipTier || "BASIC"} Member
-                    </Badge>
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                      {profile.member?.membershipStatus === "ACTIVE" ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="company">Company</Label>
-                  {isEditing ? (
-                    <Input
-                      id="company"
-                      value={formData.businessName || ""}
-                      onChange={(e) => handleInputChange('businessName', e.target.value)}
-                      placeholder="Enter company name"
-                    />
-                  ) : (
-                    <Input id="company" value={profile.member?.businessName || ""} readOnly />
-                  )}
-                </div>
-                <div>
                   <Label htmlFor="businessType">Business Type</Label>
-                  {isEditing ? (
-                    <Select value={formData.businessType || ""} onValueChange={(value) => handleInputChange('businessType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select business type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="corporation">Corporation</SelectItem>
-                        <SelectItem value="llc">LLC</SelectItem>
-                        <SelectItem value="partnership">Partnership</SelectItem>
-                        <SelectItem value="sole-proprietorship">Sole Proprietorship</SelectItem>
-                        <SelectItem value="nonprofit">Non-Profit</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input id="businessType" value={profile.member?.businessType || ""} readOnly />
-                  )}
+                  <Select value={formData.businessType || profile.member?.businessType || ""} onValueChange={(value) => handleInputChange('businessType', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select industry type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Technology">Technology</SelectItem>
+                      <SelectItem value="Consulting">Consulting</SelectItem>
+                      <SelectItem value="Marketing">Marketing</SelectItem>
+                      <SelectItem value="Construction">Construction</SelectItem>
+                      <SelectItem value="Real Estate">Real Estate</SelectItem>
+                      <SelectItem value="Accounting">Accounting</SelectItem>
+                      <SelectItem value="Design">Design</SelectItem>
+                      <SelectItem value="Healthcare">Healthcare</SelectItem>
+                      <SelectItem value="Education">Education</SelectItem>
+                      <SelectItem value="Legal">Legal</SelectItem>
+                      <SelectItem value="Financial Services">Financial Services</SelectItem>
+                      <SelectItem value="Insurance">Insurance</SelectItem>
+                      <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                      <SelectItem value="Retail">Retail</SelectItem>
+                      <SelectItem value="Hospitality">Hospitality</SelectItem>
+                      <SelectItem value="Transportation">Transportation</SelectItem>
+                      <SelectItem value="Non-Profit">Non-Profit</SelectItem>
+                      <SelectItem value="Government">Government</SelectItem>
+                      <SelectItem value="Media">Media</SelectItem>
+                      <SelectItem value="Food & Beverage">Food & Beverage</SelectItem>
+                      <SelectItem value="Fitness & Wellness">Fitness & Wellness</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="email">Email Address</Label>
-                  {isEditing ? (
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email || ""}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      placeholder="Enter email address"
-                    />
-                  ) : (
-                    <Input id="email" type="email" value={profile.email || ""} readOnly />
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone Number</Label>
-                  {isEditing ? (
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.businessPhone || ""}
-                      onChange={(e) => handleInputChange('businessPhone', e.target.value)}
-                      placeholder="Enter phone number"
-                    />
-                  ) : (
-                    <Input id="phone" type="tel" value={profile.member?.businessPhone || ""} readOnly />
-                  )}
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email || profile.email || ""}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="Enter email address"
+                  />
                 </div>
               </div>
               
               <div>
                 <Label htmlFor="bio">Professional Bio</Label>
-                {isEditing ? (
-                  <Textarea 
-                    id="bio" 
-                    value={formData.description || ""}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Tell us about your professional background and expertise..."
-                    rows={4}
-                  />
-                ) : (
-                  <Textarea 
-                    id="bio" 
-                    value={profile.member?.description || ""}
-                    rows={4}
-                    readOnly
-                  />
-                )}
+                <Textarea 
+                  id="bio" 
+                  value={formData.description || profile.member?.description || ""}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Tell us about your professional background and expertise..."
+                  rows={4}
+                />
               </div>
             </CardContent>
           </Card>
@@ -387,239 +267,51 @@ export default function DashboardProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="businessEmail">Business Email</Label>
-                  {isEditing ? (
-                    <Input
-                      id="businessEmail"
-                      type="email"
-                      value={formData.businessEmail || ""}
-                      onChange={(e) => handleInputChange('businessEmail', e.target.value)}
-                      placeholder="Enter business email"
-                    />
-                  ) : (
-                    <Input id="businessEmail" type="email" value={profile.member?.businessEmail || ""} readOnly />
-                  )}
+                  <Input
+                    id="businessEmail"
+                    type="email"
+                    value={formData.businessEmail || profile.member?.businessEmail || ""}
+                    onChange={(e) => handleInputChange('businessEmail', e.target.value)}
+                    placeholder="Enter business email"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="businessPhone">Business Phone</Label>
+                  <Input
+                    id="businessPhone"
+                    type="tel"
+                    value={formData.businessPhone || profile.member?.businessPhone || ""}
+                    onChange={(e) => handleInputChange('businessPhone', e.target.value)}
+                    placeholder="(555) 123-4567"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="website">Website</Label>
-                  {isEditing ? (
-                    <Input
-                      id="website"
-                      value={formData.website || ""}
-                      onChange={(e) => handleInputChange('website', e.target.value)}
-                      placeholder="https://yourwebsite.com"
-                    />
-                  ) : (
-                    <Input id="website" value={profile.member?.website || ""} readOnly />
-                  )}
+                  <Input
+                    id="website"
+                    value={formData.website || profile.member?.website || ""}
+                    onChange={(e) => handleInputChange('website', e.target.value)}
+                    placeholder="https://yourwebsite.com"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="linkedin">LinkedIn</Label>
-                  {isEditing ? (
-                    <Input
-                      id="linkedin"
-                      value={formData.linkedin || ""}
-                      onChange={(e) => handleInputChange('linkedin', e.target.value)}
-                      placeholder="https://linkedin.com/in/yourprofile"
-                    />
-                  ) : (
-                    <Input id="linkedin" value={profile.member?.linkedin || ""} readOnly />
-                  )}
+                  <Input
+                    id="linkedin"
+                    value={formData.linkedin || profile.member?.linkedin || ""}
+                    onChange={(e) => handleInputChange('linkedin', e.target.value)}
+                    placeholder="https://linkedin.com/in/yourprofile"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="address">Business Address</Label>
-                  {isEditing ? (
-                    <Input
-                      id="address"
-                      value={formData.businessAddress || ""}
-                      onChange={(e) => handleInputChange('businessAddress', e.target.value)}
-                      placeholder="Enter business address"
-                    />
-                  ) : (
-                    <Input id="address" value={profile.member?.businessAddress || ""} readOnly />
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Services & Expertise */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Target className="w-5 h-5 text-purple-600" />
-                <span>Services & Expertise</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <Label>Services Offered</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {(formData.specialties || []).map((specialty, index) => (
-                      <Badge key={index} variant="secondary" className="flex items-center space-x-1">
-                        {specialty}
-                        {isEditing && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-4 w-4 p-0"
-                            onClick={() => handleArrayChange('specialties', specialty, 'remove')}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        )}
-                      </Badge>
-                    ))}
-                    {isEditing && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6"
-                        onClick={() => {
-                          const newSpecialty = prompt("Enter a new service:")
-                          if (newSpecialty) {
-                            handleArrayChange('specialties', newSpecialty, 'add')
-                          }
-                        }}
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Service
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                
-                <div>
-                  <Label>Areas of Expertise</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {(formData.certifications || []).map((certification, index) => (
-                      <Badge key={index} variant="secondary" className="flex items-center space-x-1">
-                        {certification}
-                        {isEditing && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-4 w-4 p-0"
-                            onClick={() => handleArrayChange('certifications', certification, 'remove')}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        )}
-                      </Badge>
-                    ))}
-                    {isEditing && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6"
-                        onClick={() => {
-                          const newCertification = prompt("Enter a new certification:")
-                          if (newCertification) {
-                            handleArrayChange('certifications', newCertification, 'add')
-                          }
-                        }}
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Expertise
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                
-                <div>
-                  <Label>Industries Served</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {(formData.industry || []).map((industry, index) => (
-                      <Badge key={index} variant="secondary" className="flex items-center space-x-1">
-                        {industry}
-                        {isEditing && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-4 w-4 p-0"
-                            onClick={() => handleArrayChange('industry', industry, 'remove')}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        )}
-                      </Badge>
-                    ))}
-                    {isEditing && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6"
-                        onClick={() => {
-                          const newIndustry = prompt("Enter a new industry:")
-                          if (newIndustry) {
-                            handleArrayChange('industry', newIndustry, 'add')
-                          }
-                        }}
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Industry
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Privacy Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Privacy Settings</CardTitle>
-              <CardDescription>Control how your information appears to other members</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Show in Directory</Label>
-                  <p className="text-sm text-gray-500">Allow other members to find you in the member directory</p>
-                </div>
-                {isEditing ? (
-                  <Switch
-                    checked={formData.showInDirectory ?? true}
-                    onCheckedChange={(checked) => handleInputChange('showInDirectory', checked)}
+                  <Input
+                    id="address"
+                    value={formData.businessAddress || profile.member?.businessAddress || ""}
+                    onChange={(e) => handleInputChange('businessAddress', e.target.value)}
+                    placeholder="Enter business address"
                   />
-                ) : (
-                  <Badge variant={profile.member?.showInDirectory ? "default" : "secondary"}>
-                    {profile.member?.showInDirectory ? "Visible" : "Hidden"}
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Allow Contact</Label>
-                  <p className="text-sm text-gray-500">Allow other members to contact you directly</p>
                 </div>
-                {isEditing ? (
-                  <Switch
-                    checked={formData.allowContact ?? true}
-                    onCheckedChange={(checked) => handleInputChange('allowContact', checked)}
-                  />
-                ) : (
-                  <Badge variant={profile.member?.allowContact ? "default" : "secondary"}>
-                    {profile.member?.allowContact ? "Allowed" : "Blocked"}
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Show Address</Label>
-                  <p className="text-sm text-gray-500">Display your business address to other members</p>
-                </div>
-                {isEditing ? (
-                  <Switch
-                    checked={formData.showAddress ?? false}
-                    onCheckedChange={(checked) => handleInputChange('showAddress', checked)}
-                  />
-                ) : (
-                  <Badge variant={profile.member?.showAddress ? "default" : "secondary"}>
-                    {profile.member?.showAddress ? "Visible" : "Hidden"}
-                  </Badge>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -673,28 +365,74 @@ export default function DashboardProfilePage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Basic Information</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  {completionDetails.basicInfo ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Contact Information</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  {completionDetails.contactInfo ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Services & Expertise</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  {completionDetails.servicesExpertise ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Professional Experience</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-sm">Business Details</span>
+                  {completionDetails.businessDetails ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Education</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-sm">Social Media</span>
+                  {completionDetails.socialMedia ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+                  )}
                 </div>
               </div>
-              <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                <p className="text-sm font-medium text-green-800">Profile Complete!</p>
-                <p className="text-xs text-green-600">Your profile is {completionPercentage}% complete</p>
+              <div className={`mt-4 p-3 rounded-lg ${
+                completionDetails.overall === 100 
+                  ? 'bg-green-50' 
+                  : completionDetails.overall >= 80 
+                  ? 'bg-yellow-50' 
+                  : 'bg-red-50'
+              }`}>
+                <p className={`text-sm font-medium ${
+                  completionDetails.overall === 100 
+                    ? 'text-green-800' 
+                    : completionDetails.overall >= 80 
+                    ? 'text-yellow-800' 
+                    : 'text-red-800'
+                }`}>
+                  {completionDetails.overall === 100 
+                    ? 'Profile Complete!' 
+                    : completionDetails.overall >= 80 
+                    ? 'Almost Complete!' 
+                    : 'Profile Incomplete'}
+                </p>
+                <p className={`text-xs ${
+                  completionDetails.overall === 100 
+                    ? 'text-green-600' 
+                    : completionDetails.overall >= 80 
+                    ? 'text-yellow-600' 
+                    : 'text-red-600'
+                }`}>
+                  Your profile is {completionDetails.overall}% complete
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -721,6 +459,50 @@ export default function DashboardProfilePage() {
           </Card>
         </div>
       </div>
+      {/* Privacy Settings - only for non-guests */}
+      {!isGuest && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Privacy Settings</CardTitle>
+            <CardDescription>Control how your information appears to other members</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Show in Directory</Label>
+                <p className="text-sm text-gray-500">Allow other members to find you in the member directory</p>
+              </div>
+              <Switch
+                checked={isGuest ? false : (formData.showInDirectory ?? profile.member?.showInDirectory ?? true)}
+                onCheckedChange={(checked) => handleInputChange('showInDirectory', checked)}
+                disabled={isGuest}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Allow Contact</Label>
+                <p className="text-sm text-gray-500">Allow other members to contact you directly</p>
+              </div>
+              <Switch
+                checked={isGuest ? false : (formData.allowContact ?? profile.member?.allowContact ?? true)}
+                onCheckedChange={(checked) => handleInputChange('allowContact', checked)}
+                disabled={isGuest}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Show Address</Label>
+                <p className="text-sm text-gray-500">Display your business address to other members</p>
+              </div>
+              <Switch
+                checked={isGuest ? false : (formData.showAddress ?? profile.member?.showAddress ?? false)}
+                onCheckedChange={(checked) => handleInputChange('showAddress', checked)}
+                disabled={isGuest}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 } 

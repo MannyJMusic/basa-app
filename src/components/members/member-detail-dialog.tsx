@@ -317,13 +317,40 @@ export function MemberDetailDialog({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="businessType">Business Type</Label>
-                    <Input
-                      id="businessType"
+                    <Label htmlFor="businessType">Industry Type</Label>
+                    <Select
                       value={formData.businessType}
-                      onChange={(e) => setFormData(prev => ({ ...prev, businessType: e.target.value }))}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, businessType: value }))}
                       disabled={!isEditing || isLoading}
-                    />
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select industry type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Technology">Technology</SelectItem>
+                        <SelectItem value="Consulting">Consulting</SelectItem>
+                        <SelectItem value="Marketing">Marketing</SelectItem>
+                        <SelectItem value="Construction">Construction</SelectItem>
+                        <SelectItem value="Real Estate">Real Estate</SelectItem>
+                        <SelectItem value="Accounting">Accounting</SelectItem>
+                        <SelectItem value="Design">Design</SelectItem>
+                        <SelectItem value="Healthcare">Healthcare</SelectItem>
+                        <SelectItem value="Education">Education</SelectItem>
+                        <SelectItem value="Legal">Legal</SelectItem>
+                        <SelectItem value="Financial Services">Financial Services</SelectItem>
+                        <SelectItem value="Insurance">Insurance</SelectItem>
+                        <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                        <SelectItem value="Retail">Retail</SelectItem>
+                        <SelectItem value="Hospitality">Hospitality</SelectItem>
+                        <SelectItem value="Transportation">Transportation</SelectItem>
+                        <SelectItem value="Non-Profit">Non-Profit</SelectItem>
+                        <SelectItem value="Government">Government</SelectItem>
+                        <SelectItem value="Media">Media</SelectItem>
+                        <SelectItem value="Food & Beverage">Food & Beverage</SelectItem>
+                        <SelectItem value="Fitness & Wellness">Fitness & Wellness</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label htmlFor="industry">Industry (comma-separated)</Label>

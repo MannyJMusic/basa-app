@@ -83,6 +83,7 @@ export interface UpdateProfileData {
   industry?: string[]
   businessEmail?: string
   businessPhone?: string
+  personalPhone?: string
   businessAddress?: string
   city?: string
   state?: string
@@ -208,6 +209,74 @@ export function useProfile() {
     return Math.round((completedFields / fields.length) * 100)
   }, [profile])
 
+  // Get detailed profile completion status for each section
+  const getProfileCompletionDetails = useCallback(() => {
+    if (!profile) {
+      return {
+        basicInfo: false,
+        contactInfo: false,
+        servicesExpertise: false,
+        businessDetails: false,
+        socialMedia: false,
+        overall: 0
+      }
+    }
+
+    // Basic Information (name, email, business name, business type)
+    const basicInfoComplete = !!(
+      profile.firstName?.trim() &&
+      profile.lastName?.trim() &&
+      profile.email?.trim() &&
+      profile.member?.businessName?.trim() &&
+      profile.member?.businessType?.trim()
+    )
+
+    // Contact Information (business email, phone, address, website)
+    const contactInfoComplete = !!(
+      profile.member?.businessEmail?.trim() &&
+      profile.member?.businessPhone?.trim() &&
+      profile.member?.businessAddress?.trim() &&
+      profile.member?.website?.trim()
+    )
+
+    // Services & Expertise (description, specialties, certifications)
+    const servicesExpertiseComplete = !!(
+      profile.member?.description?.trim() &&
+      profile.member?.specialties?.length > 0 &&
+      profile.member?.certifications?.length > 0
+    )
+
+    // Business Details (industry, location details)
+    const businessDetailsComplete = !!(
+      profile.member?.industry?.length > 0 &&
+      profile.member?.city?.trim() &&
+      profile.member?.state?.trim()
+    )
+
+    // Social Media (at least one social media link)
+    const socialMediaComplete = !!(
+      profile.member?.linkedin?.trim() ||
+      profile.member?.facebook?.trim() ||
+      profile.member?.instagram?.trim() ||
+      profile.member?.twitter?.trim() ||
+      profile.member?.youtube?.trim()
+    )
+
+    // Calculate overall completion percentage
+    const sections = [basicInfoComplete, contactInfoComplete, servicesExpertiseComplete, businessDetailsComplete, socialMediaComplete]
+    const completedSections = sections.filter(Boolean).length
+    const overall = Math.round((completedSections / sections.length) * 100)
+
+    return {
+      basicInfo: basicInfoComplete,
+      contactInfo: contactInfoComplete,
+      servicesExpertise: servicesExpertiseComplete,
+      businessDetails: businessDetailsComplete,
+      socialMedia: socialMediaComplete,
+      overall
+    }
+  }, [profile])
+
   // Get networking stats
   const getNetworkingStats = useCallback(() => {
     if (!profile?.member) {
@@ -240,6 +309,7 @@ export function useProfile() {
     fetchProfile,
     updateProfile,
     getProfileCompletion,
+    getProfileCompletionDetails,
     getNetworkingStats,
   }
 } 

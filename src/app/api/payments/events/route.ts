@@ -29,22 +29,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const isGuest = session?.user?.role === 'GUEST'
+    const isMember = ticketType === 'member'
+
     // Calculate total amount
     let basePrice: number | undefined
-    const price = event.price ? (typeof event.price === 'object' && 'toNumber' in event.price ? event.price.toNumber() : event.price) : undefined
-    const memberPrice = event.memberPrice ? (typeof event.memberPrice === 'object' && 'toNumber' in event.memberPrice ? event.memberPrice.toNumber() : event.memberPrice) : undefined
-    if (ticketType === 'member') {
-      basePrice = memberPrice ?? price
-    } else {
-      basePrice = price
-    }
-    if (typeof basePrice !== 'number') {
+    const priceToCharge = isGuest ? event.price : (isMember ? event.memberPrice : event.price)
+    if (typeof priceToCharge !== 'number') {
       return NextResponse.json(
         { error: 'Ticket price not available for this event.' },
         { status: 400 }
       )
     }
-    const totalAmount = basePrice * quantity
+    const totalAmount = priceToCharge * quantity
 
     // Create payment intent
     const paymentIntent = await stripe.paymentIntents.create({

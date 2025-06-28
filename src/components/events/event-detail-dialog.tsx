@@ -562,11 +562,6 @@ export function EventDetailDialog({
                         <DollarSign className="w-4 h-4 text-gray-500 mr-2" />
                         <span>
                           {event.price ? `$${event.price}` : 'Free'}
-                          {event.memberPrice && event.memberPrice !== event.price && (
-                            <span className="text-gray-400 ml-1">
-                              (Members: ${event.memberPrice})
-                            </span>
-                          )}
                         </span>
                       </div>
                     </div>

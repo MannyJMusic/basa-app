@@ -14,6 +14,7 @@ import {
   Share2
 } from 'lucide-react'
 import { Event } from '@/lib/types'
+import { useSession } from 'next-auth/react'
 
 interface EventCardProps {
   event: Event
@@ -30,6 +31,9 @@ export function EventCard({
   onFavorite,
   onShare 
 }: EventCardProps) {
+  const { data: session } = useSession();
+  const isGuest = session?.user?.role === 'GUEST';
+
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
       weekday: 'short',
@@ -98,9 +102,15 @@ export function EventCard({
           </div>
           <div className="flex items-center justify-between mt-3">
             <div className="text-sm">
-              <span className="font-semibold text-green-600">
-                ${event.memberPrice || event.price}
-              </span>
+              {isGuest
+                ? `$${event.price}`
+                : event.memberPrice && event.price
+                  ? (<>
+                      <span className="font-semibold text-green-600">${event.memberPrice}</span>
+                      <span className="text-gray-500 ml-1">/ ${event.price} non-member</span>
+                    </>)
+                  : `$${event.price}`
+              }
             </div>
             <Button asChild size="sm">
               <Link href={`/events/${event.slug}/register`}>
@@ -151,12 +161,18 @@ export function EventCard({
               <h4 className="font-semibold text-green-900 mb-2">Pricing</h4>
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">BASA Members:</span>
-                  <span className="font-semibold text-green-700">${event.memberPrice} (Save 50%)</span>
-                </div>
-                <div className="flex justify-between items-center">
                   <span className="text-sm">Non-Members:</span>
-                  <span className="font-semibold">${event.price}</span>
+                  <span className="font-semibold">
+                    {isGuest
+                      ? `$${event.price}`
+                      : event.memberPrice && event.price
+                        ? (<>
+                            <span className="font-semibold text-green-600">${event.memberPrice}</span>
+                            <span className="text-gray-500 ml-1">/ ${event.price} non-member</span>
+                          </>)
+                        : `$${event.price}`
+                    }
+                  </span>
                 </div>
               </div>
             </div>
@@ -237,14 +253,15 @@ export function EventCard({
           )}
           <div className="flex items-center justify-between pt-2">
             <div className="text-sm">
-              <span className="font-semibold text-green-600">
-                ${event.memberPrice || event.price}
-              </span>
-              {event.memberPrice && event.price && (
-                <span className="text-gray-500 ml-1">
-                  / ${event.price} non-member
-                </span>
-              )}
+              {isGuest
+                ? `$${event.price}`
+                : event.memberPrice && event.price
+                  ? (<>
+                      <span className="font-semibold text-green-600">${event.memberPrice}</span>
+                      <span className="text-gray-500 ml-1">/ ${event.price} non-member</span>
+                    </>)
+                  : `$${event.price}`
+              }
             </div>
             <Button asChild size="sm">
               <Link href={`/events/${event.slug}/register`}>

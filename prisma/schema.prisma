@@ -47,11 +47,15 @@ model User {
   resetToken    String?
   resetTokenExpiry DateTime?
   newsletterSubscribed Boolean @default(false)
-  role          String    @default("MEMBER")
+  role          String    @default("GUEST")
   isActive      Boolean   @default(true)
   lastLogin     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  accountStatus AccountStatus @default(PENDING_VERIFICATION)
+  verificationToken String? @unique
+  verificationTokenExpiry DateTime?
+  membershipPaymentConfirmed Boolean @default(false)
 
   accounts      Account[]
   sessions      Session[]
@@ -419,4 +423,11 @@ enum TestimonialStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+enum AccountStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  INACTIVE
 } 
