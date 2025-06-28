@@ -248,7 +248,7 @@ export function useProfile() {
 
     // Business Details (industry, location details)
     const businessDetailsComplete = !!(
-      profile.member?.industry?.length > 0 &&
+      profile.member?.industry && profile.member.industry.length > 0 &&
       profile.member?.city?.trim() &&
       profile.member?.state?.trim()
     )

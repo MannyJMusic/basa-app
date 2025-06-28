@@ -188,13 +188,13 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
     // Email verification logic
-    let verificationToken = null
-    let verificationTokenExpiry = null
-    let accountStatus = "PENDING_VERIFICATION"
+    let dbVerificationToken: string | null = null
+    let dbVerificationTokenExpiry: Date | null = null
+    let dbAccountStatus: "PENDING_VERIFICATION" | "ACTIVE" = "PENDING_VERIFICATION"
     let isActive = false
     if (validatedData.membershipPaymentConfirmed) {
-      verificationToken = generateVerificationToken()
-      verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      dbVerificationToken = generateVerificationToken()
+      dbVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
     }
 
     // Create user and member in a transaction
@@ -208,11 +208,15 @@ export async function POST(request: NextRequest) {
           hashedPassword,
           role: validatedData.role,
           isActive,
-          accountStatus,
-          verificationToken,
-          verificationTokenExpiry,
-          membershipPaymentConfirmed: validatedData.membershipPaymentConfirmed || false,
+          verificationToken: dbVerificationToken,
+          verificationTokenExpiry: dbVerificationTokenExpiry,
         },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          verificationToken: true,
+        }
       })
 
       // Create member
@@ -267,10 +271,12 @@ export async function POST(request: NextRequest) {
       return { user, member }
     })
 
+    const { email, firstName, verificationToken } = result.user;
+
     // Send verification email if payment is confirmed
-    if (validatedData.membershipPaymentConfirmed && result.user.verificationToken) {
+    if (validatedData.membershipPaymentConfirmed && verificationToken && firstName && email) {
       try {
-        await sendEmailVerification(result.user.email, result.user.firstName, result.user.verificationToken)
+        await sendEmailVerification(email, firstName, verificationToken)
       } catch (emailError) {
         console.error("Failed to send verification email:", emailError)
       }
