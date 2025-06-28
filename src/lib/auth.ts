@@ -60,6 +60,7 @@ export const authConfig: NextAuthConfig = {
             lastName: user.lastName || '',
             role: user.role,
             isActive: user.isActive,
+            accountStatus: (user as any).accountStatus,
           }
         }
       })
@@ -74,6 +75,7 @@ export const authConfig: NextAuthConfig = {
           token.role = user.role
           token.isActive = user.isActive
           token.image = user.image
+          token.accountStatus = user.accountStatus
         }
         
         return token
@@ -88,6 +90,7 @@ export const authConfig: NextAuthConfig = {
             role: token.role as string,
             isActive: token.isActive as boolean,
             image: token.image as string,
+            accountStatus: token.accountStatus as string,
           }
         }
         

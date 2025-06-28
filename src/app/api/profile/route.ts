@@ -16,20 +16,33 @@ const profileUpdateSchema = z.object({
   industry: z.array(z.string()).optional(),
   businessEmail: z.string().email("Invalid business email").optional().or(z.literal("")),
   businessPhone: z.string().optional(),
+  personalPhone: z.string().optional(),
   businessAddress: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
   zipCode: z.string().optional(),
-  website: z.string().url("Invalid website URL").optional().or(z.literal("")),
+  website: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
+    message: "Invalid website URL"
+  }),
   description: z.string().optional(),
   tagline: z.string().optional(),
   specialties: z.array(z.string()).optional(),
   certifications: z.array(z.string()).optional(),
-  linkedin: z.string().url("Invalid LinkedIn URL").optional().or(z.literal("")),
-  facebook: z.string().url("Invalid Facebook URL").optional().or(z.literal("")),
-  instagram: z.string().url("Invalid Instagram URL").optional().or(z.literal("")),
-  twitter: z.string().url("Invalid Twitter URL").optional().or(z.literal("")),
-  youtube: z.string().url("Invalid YouTube URL").optional().or(z.literal("")),
+  linkedin: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
+    message: "Invalid LinkedIn URL"
+  }),
+  facebook: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
+    message: "Invalid Facebook URL"
+  }),
+  instagram: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
+    message: "Invalid Instagram URL"
+  }),
+  twitter: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
+    message: "Invalid Twitter URL"
+  }),
+  youtube: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
+    message: "Invalid YouTube URL"
+  }),
   showInDirectory: z.boolean().optional(),
   allowContact: z.boolean().optional(),
   showAddress: z.boolean().optional(),
@@ -137,6 +150,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
+    // For guests, return minimal user info if no member record
+    if (user.role === "GUEST" && !user.member) {
+      return NextResponse.json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        member: null
+      })
+    }
+
     return NextResponse.json(user)
   } catch (error) {
     console.error("Error fetching profile:", error)
@@ -193,6 +221,7 @@ export async function PUT(request: NextRequest) {
       if (validatedData.industry !== undefined) memberUpdateData.industry = validatedData.industry
       if (validatedData.businessEmail !== undefined) memberUpdateData.businessEmail = validatedData.businessEmail
       if (validatedData.businessPhone !== undefined) memberUpdateData.businessPhone = validatedData.businessPhone
+      if (validatedData.personalPhone !== undefined) memberUpdateData.businessPhone = validatedData.personalPhone
       if (validatedData.businessAddress !== undefined) memberUpdateData.businessAddress = validatedData.businessAddress
       if (validatedData.city !== undefined) memberUpdateData.city = validatedData.city
       if (validatedData.state !== undefined) memberUpdateData.state = validatedData.state
