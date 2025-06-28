@@ -32,7 +32,7 @@ async function sendEmail(to: string, subject: string, html: string, options: {
     }
 
     if (options.attachments) {
-      messageData.attachments = options.attachments
+      (messageData as any).attachments = options.attachments
     }
 
     const response = await mg.messages.create(DOMAIN, messageData)

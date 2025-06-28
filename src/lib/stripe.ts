@@ -16,16 +16,18 @@ export const getStripePublishableKey = () => {
   return process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 }
 
-// Membership tier prices (in cents)
+// Membership pricing structure (in cents)
 export const MEMBERSHIP_PRICES = {
-  // Chapter Memberships
-  'meeting-member': 14900, // $149/year
-  'associate-member': 24500, // $245/year
-  'trio-member': 29500, // $295/year
-  // Resource Memberships
-  'class-resource-member': 12000, // $120/year
+  'meeting-member': 0, // $0/year (included)
+  'associate-member': 15000, // $150/year
+  'trio-member': 30000, // $300/year
+  'class-resource-member': 0, // $0/year (included)
   'nag-resource-member': 0, // $0/year (included)
   'training-resource-member': 22500, // $225/year
+  // Add the tier keys that are being referenced
+  'essential': 0, // $0/year (included)
+  'professional': 15000, // $150/year
+  'corporate': 30000, // $300/year
 }
 
 // Event pricing structure

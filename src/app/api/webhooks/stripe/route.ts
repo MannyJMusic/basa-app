@@ -5,7 +5,8 @@ import { headers } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
-  const signature = headers().get('stripe-signature')
+  const headersList = await headers()
+  const signature = headersList.get('stripe-signature')
 
   if (!signature) {
     return NextResponse.json(
@@ -145,21 +146,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
         const membershipTier = tierMapping[item.tierId] || 'BASIC'
 
-        await prisma.membership.create({
+        // Update member record instead of creating separate membership
+        await prisma.member.update({
+          where: { userId },
           data: {
-            userId,
-            tier: membershipTier,
-            status: 'ACTIVE',
-            startDate: new Date(),
-            endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
-            autoRenew: false,
-            stripeSubscriptionId: null,
-            metadata: {
-              tierId: item.tierId,
-              quantity: item.quantity,
-              price: item.price,
-              paymentIntentId: paymentIntent.id
-            }
+            membershipTier: membershipTier,
+            membershipStatus: 'ACTIVE'
           }
         })
       }
@@ -243,7 +235,7 @@ async function handleSubscriptionCreated(subscription: any) {
       data: {
         member: {
           update: {
-            stripeSubscriptionId: subscription.id,
+            subscriptionId: subscription.id,
             membershipStatus: 'ACTIVE'
           }
         }
@@ -282,7 +274,7 @@ async function handleSubscriptionDeleted(subscription: any) {
       data: {
         member: {
           update: {
-            membershipStatus: 'CANCELLED'
+            membershipStatus: 'INACTIVE'
           }
         }
       }

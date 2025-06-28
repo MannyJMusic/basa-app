@@ -205,21 +205,12 @@ export async function POST(request: NextRequest) {
 
         const membershipTier = tierMapping[item.tierId] || 'BASIC'
 
-        // Create membership record
-        await prisma.membership.create({
+        // Update member record with tier information
+        await prisma.member.update({
+          where: { userId: session.user.id },
           data: {
-            userId: session.user.id,
-            tier: membershipTier,
-            status: 'ACTIVE',
-            startDate: new Date(),
-            endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
-            autoRenew,
-            stripeSubscriptionId: null, // Will be set if auto-renew is enabled
-            metadata: {
-              tierId: item.tierId,
-              quantity: item.quantity,
-              price: item.price
-            }
+            membershipTier: membershipTier,
+            membershipStatus: 'ACTIVE'
           }
         })
       }
@@ -228,7 +219,7 @@ export async function POST(request: NextRequest) {
       if (additionalMembers.length > 0) {
         for (const member of additionalMembers) {
           if (member.sendInvitation) {
-            // Create invitation record
+            // Create invitation record using MembershipInvitation model
             await prisma.membershipInvitation.create({
               data: {
                 email: member.email,
@@ -257,8 +248,8 @@ export async function POST(request: NextRequest) {
           entityType: 'PAYMENT',
           entityId: paymentIntent.id,
           newValues: {
-            cart,
-            additionalMembers,
+            cart: JSON.stringify(cart),
+            additionalMembers: JSON.stringify(additionalMembers),
             totalAmount,
             currency: 'usd',
             autoRenew
