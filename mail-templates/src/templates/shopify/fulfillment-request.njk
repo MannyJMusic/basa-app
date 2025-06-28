@@ -1,0 +1,144 @@
+---
+layout: src/layouts/shopify.njk
+---
+{% extends "src/layouts/shopify.njk" %}
+
+{% block shopifyhead %}
+  {% raw %}
+    {% capture title %} {{ service_name }}, please fulfill the following order ({{ name }}) for {{ shop_name }}. If you have any questions, please contact us. {% endcapture %}
+
+    {% capture total_items_text %} Total number of items: {{ fulfillment.item_count }} {% endcapture %}
+
+    {% capture unique_items_text %} Unique items: {{ fulfillment.fulfillment_line_items.size }} {% endcapture %}
+  {% endraw %}
+{% endblock %}
+
+{% block template %}
+
+<table class="wrapper w-full all-font-sans">
+  <tr>
+    <td align="center" class="bg-white">
+      <table class="w-640 sm-w-full">
+        <tr>
+          <td align="left" class="bg-white px-40 py-48 sm-px-16 sm-py-24">
+
+            {% include "src/partials/shopify/header.njk" %}
+
+            {% raw %}
+            <p class="text-gray-900 text-21 leading-28 mb-16 m-0">{{ title | strip }}</p>
+            <p class="text-gray-900 text-21 leading-28 m-0">{{ total_items_text | strip }}</p>
+            <p class="text-gray-900 text-21 leading-28 m-0">{{ unique_items_text | strip }}</p>
+
+            <div class="leading-32">&nbsp;</div>
+
+            <p class="text-gray-500 text-16 leading-22 m-0">Items to fulfill:</p>
+
+            {% for line in fulfillment.fulfillment_line_items %}
+
+            <table class="w-full">
+              <tr>
+                <td class="pt-24 text-left">
+                  <p class="text-gray-900 text-16 leading-22 font-bold m-0 mb-8">{{ line.line_item.title }}</p>
+                  <table>
+                    <tr>
+                      {% if line.line_item.sku != blank %}
+                      <td class="pr-16 sm-inline-block">
+                        <p class="text-16 text-gray-500 leading-24 m-0">SKU: {{ line.line_item.sku }}</p>
+                      </td>
+                      {% endif %}
+                      <td class="pr-16 sm-inline-block">
+                        <p class="text-16 text-gray-500 leading-24 m-0">Quantity: {{ line.quantity }}</p>
+                      </td>
+                      {% if line.line_item.grams != blank %}
+                      <td class="sm-inline-block">
+                        <p class="text-16 text-gray-500 leading-24 m-0">Grams: {{ line.line_item.grams }}</p>
+                      </td>
+                      {% endif %}
+                    </tr>
+                  </table>
+                  {% if line.line_item.vendor != blank %}
+                  <p class="text-16 text-gray-500 leading-24 m-0">Vendor: {{ line.line_item.vendor }}</p>
+                  {% endif %}
+                </td>
+              </tr>
+            </table>
+            {% endfor %}
+            <table class="w-full">
+              <tr>
+                <td class="pt-12 pb-64">
+                  <div class="bg-gray-ui-200 h-2 leading-2">&nbsp;</div>
+                </td>
+              </tr>
+            </table>
+
+            <table class="w-full">
+              <tr>
+                <td>
+                  <table class="w-full">
+                    <tr>
+                      {% if shipping_address %}
+                      <td class="w-1-2 sm-inline-block sm-w-full pr-8 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Shipping address</h4>
+                        <div class="text-gray-500 text-16 leading-22 m-0">
+                          <p class="text-gray-500 text-16 leading-22 m-0 mb-4">
+                            {{ shipping_address.name }}{% if shipping_address.company %} {{ shipping_address.company }}{% endif %}
+                          </p>
+                          <p class="text-gray-500 text-16 leading-22 m-0 mb-4">{{ shipping_address.address1 }}</p>
+                          <p class="text-gray-500 text-16 leading-22 m-0 mb-4">{{ shipping_address.address2 }}</p>
+                          <p class="text-gray-500 text-16 leading-22 m-0 mb-4">{{ shipping_address.city }}, {{ shipping_address.province }}</p>
+                          <p class="text-gray-500 text-16 leading-22 m-0 mb-4">{{ shipping_address.zip }}</p>
+                          <p class="text-gray-500 text-16 leading-22 m-0 mb-4">{{ shipping_address.country }}</p>
+                          {% if shipping_address.phone %}
+                            <p class="text-gray-500 text-16 leading-22 m-0">
+                              Phone: {{ shipping_address.phone }}
+                            </p>
+                          {% endif %}
+                        </div>
+                      </td>
+                      {% endif %}
+                      <td class="w-1-2 sm-inline-block sm-w-full pl-8 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Shipping method</h4>
+                        <div class="text-gray-500 text-16 leading-22 m-0">{% if shipping_method %}{{ shipping_method.title }}{% else %}None{% endif %}</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colspan="2" class="h-32"></td>
+                    </tr>
+                    <tr>
+                      <td class="w-1-2 sm-inline-block sm-w-full pr-8 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Tracking number</h4>
+                        <p class="text-gray-500 text-16 leading-22 m-0">
+                          {% if fulfillment.tracking_number %}
+                            <a href="{{ fulfillment.tracking_url }}" class="text-accent hover-underline">{{ fulfillment.tracking_number }}</a>
+                          {% else %}
+                            None
+                          {% endif %}</p>
+                      </td>
+                      <td class="w-1-2 sm-inline-block sm-w-full pl-8 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Customer email</h4>
+                        <p class="text-16 leading-22 m-0">
+                          <a href="mailto:{{ email }}" class="text-accent hover-underline">{{ email }}</a>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <div class="leading-32">&nbsp;</div>
+
+            <p class="text-gray-500 text-16 leading-24 m-0">Thank you, <br>{{ shop_name }}</p>
+            {% endraw %}
+
+            {% include "src/partials/shopify/footer.njk" %}
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% endblock %}
+

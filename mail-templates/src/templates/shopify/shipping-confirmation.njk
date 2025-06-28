@@ -1,0 +1,199 @@
+---
+layout: src/layouts/shopify.njk
+title: Shipping confirmation for order {{ order_name }}
+preheader: Shipping confirmation for order {{ order_name }}
+---
+{% extends "src/layouts/shopify.njk" %}
+
+{% block shopifyhead %}
+  {% raw %}
+    {% capture order_text_link %}<a href="{{ order_status_url }}" class="hover-underline hover-text-brand-700">&#8470; {{ order_name }}</a>{% endcapture %}
+
+    {% if fulfillment.item_count == item_count %}
+      {% capture shipment_name %}Your order {{ order_text_link }} is{% endcapture %}
+    {% elsif fulfillment.item_count > 1 %}
+      {% if fulfillment_status == 'fulfilled' %}
+        {% capture shipment_name %}The last items in your order {{ order_text_link }} are{% endcapture %}
+      {% else %}
+        {% capture shipment_name %}Some items in your order {{ order_text_link }} are{% endcapture %}
+      {% endif %}
+    {% else %}
+      {% if fulfillment_status == 'fulfilled' %}
+        {% capture shipment_name %}The last item in your order {{ order_text_link }} is{% endcapture %}
+      {% else %}
+        {% capture shipment_name %}One item in your order {{ order_text_link }} is{% endcapture %}
+      {% endif %}
+    {% endif %}
+
+    {% capture title %} Hi {{ customer.first_name }} 🚚 {% endcapture %}
+
+    {% capture body %}
+      {{ shipment_name }} on the way to you. To see the delivery status, track your shipment: <a href="{{ fulfillment.tracking_url }}" class="hover-underline hover-text-brand-700">{{ fulfillment.tracking_number }}</a>
+    {% endcapture %}
+
+    {% capture eta %} Estimated delivery date: <strong>{{ fulfillment.estimated_delivery_at | date: "%B %-d, %Y" }}</strong> {% endcapture %}
+
+    {% capture button_label %} Track your shipment {% endcapture %}
+  {% endraw %}
+{% endblock %}
+
+{% block template %}
+
+<table class="wrapper w-full all-font-sans">
+  <tr>
+    <td align="center" class="bg-white">
+      <table class="w-640 sm-w-full">
+        <tr>
+          <td align="left" class="bg-white px-40 py-48 sm-px-16 sm-py-24">
+
+            {% include "src/partials/shopify/header.njk" %}
+
+            {% raw %}
+            <p class="text-21 text-gray-900 m-0 leading-28">{{ title | strip }}</p>
+            <p class="text-21 text-gray-900 m-0 leading-28">{{ body | strip }}</p>
+            {% if fulfillment.estimated_delivery_at %}
+            <p class="text-16 text-gray-700 m-0 mt-8 leading-24">{{ eta | strip }}</p>
+            {% endif %}
+
+            <div class="leading-32 sm-h-32">&nbsp;</div>
+
+            <p class="text-16 text-gray-500 mt-0 mb-16 leading-22">Items in this shipment:</p>
+
+            {% for line in fulfillment.fulfillment_line_items %}
+
+            {% if line.line_item.product.title %}
+              {% assign line_title = line.line_item.product.title %}
+            {% else %}
+              {% assign line_title = line.line_item.title %}
+            {% endif %}
+
+            {% if line.quantity < line.line_item.quantity %}
+              {% capture line_display %} {{ line.quantity }} of {{ line.line_item.quantity }} {% endcapture %}
+            {% else %}
+              {% assign line_display = line.line_item.quantity  %}
+            {% endif %}
+
+            <table class="w-full">
+              <tr>
+                <td class="align-top w-72">
+                  {% if line.line_item.image %}
+                  <img src="{{ line.line_item | img_url: '96x144' }}" alt="{{ line_title }}" width="48">
+                  {% else %}
+                  <img src="https://via.placeholder.com/48x72/f8f8fa/?text=+" alt="{{ line_title }}" width="48">
+                  {% endif %}
+                </td>
+                <td class="align-top text-left w-400 sm-w-auto">
+                  <p class="text-gray-900 text-16 font-bold mt-0 mb-8">{{ line_title }}</p>
+                  {% if line.line_item.product.description %}
+                  <p class="text-gray-900 text-16 leading-22 mt-0 mb-8">{{ line.line_item.product.description }}</p>
+                  {% endif %}
+                  <p class="text-16 text-gray-500 leading-12 m-0">Qty. {{ line_display }}</p>
+                  {% if line.line_item.discount_allocations %}
+                    {% for discount_allocation in line.line_item.discount_allocations %}
+                      {% if discount_allocation.discount_application.target_selection != 'all' %}
+                      <p class="text-16 text-gray-500 leading-12 m-0 mt-8">{{ discount_allocation.discount_application.title | title }} (-{{ discount_allocation.amount | money }})</p>
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                </td>
+              </tr>
+            </table>
+            {% if forloop.last == false %}
+            <div class="leading-24">&nbsp;</div>
+            {% endif %}
+            {% endfor %}
+            <table class="w-full">
+              <tr>
+                <td class="pt-12 pb-24">
+                  <div class="bg-gray-ui-200 h-2 leading-2">&nbsp;</div>
+                </td>
+              </tr>
+            </table>
+
+            <table class="w-full">
+              <tr>
+                <td align="right">
+                  <table class="sm-w-full">
+                    <tr>
+                      <td align="center" class="bg-accent text-white rounded shadow" style="mso-padding-alt: 16px 32px;">
+                        <a href="{{ fulfillment.tracking_url }}" class="inline-block sm-block text-white font-bold text-14 leading-16 sm-py-16 py-16 px-32">{{ button_label | strip }}</a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <div class="leading-64 sm-h-64">&nbsp;</div>
+
+            <table class="w-full">
+              <tr>
+                <td>
+                  <h2 class="text-gray-900 text-28 leading-30 font-normal m-0 mb-32">Customer information</h2>
+                  <table class="w-full">
+                    <tr>
+                      {% if requires_shipping and shipping_address %}
+                      <td class="w-1-2 sm-inline-block sm-w-full pr-8 pb-32 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Shipping address</h4>
+                        <div class="text-gray-500 text-16 leading-22 m-0">{{ shipping_address | format_address }}</div>
+                      </td>
+                      {% endif %}
+                      {% if billing_address %}
+                      <td class="w-1-2 sm-inline-block sm-w-full pl-8 pb-32 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Billing address</h4>
+                        <div class="text-gray-500 text-16 leading-22 m-0">{{ billing_address | format_address }}</div>
+                      </td>
+                      {% endif %}
+                    </tr>
+                    <tr>
+                      {% if requires_shipping and shipping_address %}
+                      <td class="w-1-2 sm-inline-block sm-w-full pr-8 pb-32 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Shipping method</h4>
+                        <p class="text-gray-500 text-16 leading-22 m-0">{{ shipping_method.title }}<br>{{ shipping_method.price | money }}</p>
+                      </td>
+                      {% endif %}
+                      {% assign transaction_count = transactions | size %}
+                      {% if transaction_count > 0 %}
+                      <td class="w-1-2 sm-inline-block sm-w-full pl-8 pb-32 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Payment method</h4>
+                        {%- for transaction in transactions -%}
+                          {%- if transaction.status == "success" or transaction.status == "pending" -%}
+                            {%- if transaction.kind == "authorization" or transaction.kind == "sale" -%}
+                              {%- if transaction.payment_details.credit_card_company -%}
+                                {%- capture credit_card_url -%}notifications/{{ transaction.payment_details.credit_card_company | downcase | replace: " ", "_" }}.png{%- endcapture -%}
+                                <table>
+                                  <tr>
+                                    <td>
+                                      <img src="{{ credit_card_url | shopify_asset_url }}" alt="{{ transaction.payment_details.credit_card_company }}" width="40" class="align-bottom">
+                                    </td>
+                                    <td class="pl-8">
+                                      <p class="text-gray-500 text-16 leading-22 m-0">************{{ transaction.payment_details.credit_card_last_four_digits }}</p>
+                                    </td>
+                                  </tr>
+                                </table>
+                              {%- else -%}
+                                <p class="text-16 leading-22 text-gray-900 m-0">{{ transaction.gateway | replace: "_", " " | capitalize }} — <strong>{{ transaction.amount | money }}</strong></p>
+                              {%- endif -%}
+                            {% endif %}
+                          {% endif %}
+                        {% endfor %}
+                      </td>
+                      {% endif %}
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            {% endraw %}
+
+            {% include "src/partials/shopify/footer.njk" %}
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% endblock %}
+

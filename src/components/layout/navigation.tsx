@@ -38,8 +38,6 @@ export default function Navigation() {
     { href: "/about", label: "About", icon: Building2 },
     { href: "/events", label: "Events", icon: Calendar },
     { href: "/membership", label: "Membership", icon: Users },
-    { href: "/resources", label: "Resources", icon: FileText },
-    { href: "/blog", label: "Blog", icon: FileText },
     { href: "/contact", label: "Contact", icon: MessageSquare },
   ]
 

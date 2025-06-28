@@ -1,0 +1,279 @@
+---
+layout: src/layouts/shopify.njk
+title: Payment needed to update order
+preheader: Payment needed to update order
+---
+{% extends "src/layouts/shopify.njk" %}
+
+{% block shopifyhead %}
+  {% raw %}
+    {% capture title %} Hi {{ customer.first_name }} 🔄 {% endcapture %}
+
+    {% capture body %}
+      additional payment of {{ order.total_outstanding | money }} is needed to update your order  {% if checkout_payment_collection_url %}<a href="{{ checkout_payment_collection_url }}" class="text-accent hover-underline">&#8470;: {{ order_name }}</a>{% else %}&#8470;: {{ order_name }}{% endif %}
+    {% endcapture %}
+
+    {% capture button_label %} Pay now {% endcapture %}
+  {% endraw %}
+{% endblock %}
+
+{% block template %}
+
+<table class="wrapper w-full all-font-sans">
+  <tr>
+    <td align="center" class="bg-white">
+      <table class="w-640 sm-w-full">
+        <tr>
+          <td align="left" class="bg-white px-40 py-48 sm-px-16 sm-py-24">
+
+            {% include "src/partials/shopify/header.njk" %}
+
+            {% raw %}
+            <p class="text-21 text-gray-900 m-0 leading-28">{{ title | strip }}</p>
+            <p class="text-21 text-gray-900 m-0 leading-28">{{ body | strip }}</p>
+
+            <div class="leading-32 sm-h-32">&nbsp;</div>
+
+            <p class="text-16 text-gray-500 mt-0 mb-16 leading-22">Updated order:</p>
+
+            {% for line in subtotal_line_items %}
+
+            {% if line.product.title %}
+              {% assign line_title = line.product.title %}
+            {% else %}
+              {% assign line_title = line.title %}
+            {% endif %}
+
+            {% if line.quantity < line.quantity %}
+              {% capture line_display %} {{ line.quantity }} of {{ line.quantity }} {% endcapture %}
+            {% else %}
+              {% assign line_display = line.quantity  %}
+            {% endif %}
+
+            <table class="w-full">
+              <tr>
+                <td class="align-top w-72">
+                  {% if line.image %}
+                  <img src="{{ line | img_url: '96x144' }}" alt="{{ line_title }}" width="48">
+                  {% else %}
+                  <img src="https://via.placeholder.com/48x72/f8f8fa/?text=+" alt="{{ line_title }}" width="48">
+                  {% endif %}
+                </td>
+                <td class="align-top text-left w-400 sm-w-auto">
+                  <p class="text-gray-900 text-16 font-bold mt-0 mb-8">{{ line_title }}</p>
+                  {% if line.product.description %}
+                  <p class="text-gray-900 text-16 leading-22 mt-0 mb-8">{{ line.product.description }}</p>
+                  {% endif %}
+                  <p class="text-gray-500 text-16 leading-22 m-0">Qty. {{ line_display }}</p>
+                  {% if line.discount_allocations %}
+                    {% for discount_allocation in line.discount_allocations %}
+                      {% if discount_allocation.discount_application.target_selection != 'all' %}
+                      <p class="text-gray-500 text-16 leading-22 m-0 mt-8">{{ discount_allocation.discount_application.title | title }} (-{{ discount_allocation.amount | money }})</p>
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                </td>
+                <td class="align-top text-right w-88">
+                  {% if line.original_line_price != line.final_line_price %}
+                  <p class="text-16 leading-22 font-normal text-gray-700 m-0 mb-8">
+                    <strike>{{ line.original_line_price | money }}</strike>
+                  </p>
+                  {% endif %}
+                  <p class="text-16 leading-22 font-bold text-gray-900 m-0">
+                    {% if line.final_line_price > 0 %}
+                      {{ line.final_line_price | money }}
+                    {% else %}
+                      Free
+                    {% endif %}
+                  </p>
+                </td>
+              </tr>
+            </table>
+            {% if forloop.last == false %}
+            <div class="leading-24">&nbsp;</div>
+            {% endif %}
+            {% endfor %}
+            <table class="w-full">
+              <tr>
+                <td class="py-12">
+                  <div class="bg-gray-ui-200 h-2 leading-2">&nbsp;</div>
+                </td>
+              </tr>
+            </table>
+
+            <div class="text-right sm-text-left">
+              <table class="sm-w-full">
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-72">Subtotal</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ subtotal_price | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-72">Shipping</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ shipping_price | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-72">Updated total</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ total_price | money }}</td>
+                </tr>
+                 <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-72">Already paid</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ net_payment | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-72">Amount to pay</td>
+                  <td class="text-gray-900 text-21 font-bold leading-28 text-right w-200">{{ total_outstanding | money_with_currency }}</td>
+                </tr>
+              </table>
+            </div>
+
+            {% assign transaction_size = 0 %}
+            {% for transaction in transactions %}
+              {% unless transaction.kind == "capture" or transaction.kind == "void" %}
+                {% assign transaction_size = transaction_size | plus: 1 %}
+              {% endunless %}
+            {% endfor %}
+
+            {% if transaction_size > 1 %}
+            <div class="leading-24 sm-h-24">&nbsp;</div>
+
+            <table class="w-full">
+              {% for transaction in transactions %}
+              {% if transaction.status == "success" and transaction.kind == "authorization" or transaction.kind == "sale" %}
+                {% if transaction.payment_details.credit_card_company %}
+                  {% capture transaction_name %}{{ transaction.payment_details.credit_card_company }} (ending in {{ transaction.payment_details.credit_card_last_four_digits }}){% endcapture %}
+                {% else %}
+                  {% capture transaction_name %}{{ transaction.gateway | replace: "_", " " | capitalize }}{% endcapture %}
+              {% endif %}
+              <tr>
+                <td class="w-1-2">
+                  <p class="text-16 text-gray-900 leading-22 m-0">{{ transaction_name }}</p>
+                </td>
+                <td class="w-1-2 text-16 text-gray-900 font-bold text-right align-top">{{ transaction.amount | money }}</td>
+              </tr>
+              {% endif %}
+
+              {% if transaction.kind == 'refund' %}
+              {% if transaction.payment_details.credit_card_company %}
+                {% assign refund_method_title = transaction.payment_details.credit_card_company %}
+              {% else %}
+                {% assign refund_method_title = transaction.gateway %}
+              {% endif %}
+              <tr>
+                <td colspan="2" class="h-8"></td>
+              </tr>
+              <tr>
+                <td class="w-1-2">
+                  <p class="text-16 text-gray-900 leading-22 m-0">Refund</p>
+                  <p class="text-14 text-gray-700 leading-22 m-0">{{ refund_method_title | capitalize }}</p>
+                </td>
+                <td class="w-1-2 text-16 text-gray-900 font-bold text-right align-top">- {{ transaction.amount | money }}</td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </table>
+
+            {% endif %}
+
+            <div class="leading-24 sm-h-24">&nbsp;</div>
+
+            <table class="w-full">
+               <tr>
+                <td align="right">
+                  <table class="sm-w-full w-1-2">
+                    <tr>
+                      <td align="center" class="bg-accent text-white rounded shadow" style="mso-padding-alt: 16px 32px;">
+                        <a href="{{ checkout_payment_collection_url }}" class="block text-white font-bold text-14 leading-16 sm-py-16 py-16 px-32">
+                          {{ button_label | strip }}
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <div class="leading-64 sm-h-64">&nbsp;</div>
+
+            <table class="w-full">
+              <tr>
+                <td>
+                  <h2 class="text-gray-900 text-28 leading-30 font-normal m-0 mb-32">Customer information</h2>
+                  <table class="w-full">
+                    <tr>
+                      {% if requires_shipping and shipping_address %}
+                      <td class="w-1-2 sm-inline-block sm-w-full pr-8 pb-32 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Shipping address</h4>
+                        <div class="text-gray-500 text-16 leading-22 m-0">{{ shipping_address | format_address }}</div>
+                      </td>
+                      {% endif %}
+                      {% if billing_address %}
+                      <td class="w-1-2 sm-inline-block sm-w-full pl-8 pb-32 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Billing address</h4>
+                        <div class="text-gray-500 text-16 leading-22 m-0">{{ billing_address | format_address }}</div>
+                      </td>
+                      {% endif %}
+                    </tr>
+                    <tr>
+                      {% if requires_shipping and shipping_address %}
+                      <td class="w-1-2 sm-inline-block sm-w-full pr-8 pb-32 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Shipping method</h4>
+                        <p class="text-gray-500 text-16 leading-22 m-0">{{ shipping_method.title }}<br>{{ shipping_method.price | money }}</p>
+                      </td>
+                      {% endif %}
+                      {% assign transaction_count = transactions | size %}
+                      {% if transaction_count > 0 %}
+                      <td class="w-1-2 sm-inline-block sm-w-full pl-8 pb-32 sm-px-0 align-top">
+                        <h4 class="text-gray-500 text-16 leading-22 m-0 mb-8">Payment method</h4>
+                        {%- for transaction in transactions -%}
+                          {%- if transaction.status == "success" or transaction.status == "pending" -%}
+                            {%- if transaction.kind == "authorization" or transaction.kind == "sale" -%}
+                              {%- if transaction.payment_details.credit_card_company -%}
+                                {%- capture credit_card_url -%}notifications/{{ transaction.payment_details.credit_card_company | downcase | replace: " ", "_" }}.png{%- endcapture -%}
+                                <table>
+                                  <tr>
+                                    <td>
+                                      <img src="{{ credit_card_url | shopify_asset_url }}" alt="{{ transaction.payment_details.credit_card_company }}" width="40" class="align-bottom">
+                                    </td>
+                                    <td class="pl-8">
+                                      <p class="text-gray-500 text-16 leading-22 m-0">************{{ transaction.payment_details.credit_card_last_four_digits }} — {{ transaction.amount | money }}</p>
+                                    </td>
+                                  </tr>
+                                </table>
+                              {%- else -%}
+                                <p class="text-16 leading-22 text-gray-900 m-0">{{ transaction.gateway | replace: "_", " " | capitalize }} — {{ transaction.amount | money }}</p>
+                              {%- endif -%}
+                            {% endif %}
+                          {% endif %}
+                        {% endfor %}
+                      </td>
+                      {% endif %}
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            {% endraw %}
+
+            {% include "src/partials/shopify/footer.njk" %}
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% endblock %}
+
