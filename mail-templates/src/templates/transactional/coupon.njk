@@ -1,0 +1,65 @@
+---
+title: Your coupon is here!
+preheader: Your coupon is here!
+---
+{% extends "src/layouts/default.njk" %}
+{% block template %}
+
+<table class="wrapper w-full all-font-sans">
+  <tr>
+    <td align="center" class="bg-white">
+      <table class="w-640 sm-w-full">
+        <tr>
+          <td class="bg-white px-40 py-48 sm-px-16 sm-py-24 text-center">
+            <div class="mb-24">
+              <a href="http://craftingemails.com" class="no-underline">
+                <img src="logo.png" alt="craftingemails" width="143">
+              </a>
+            </div>
+            <p class="text-21 text-gray-900 m-0 leading-28">Hi Candy 👋</p>
+            <p class="text-21 text-gray-900 m-0 leading-28">Good news for your wallet</p>
+            <div class="leading-16 sm-h-16">&nbsp;</div>
+            <table class="w-full">
+              <tr>
+                <td align="left" class="bg-gray-ui-50 p-24 pl-0 sm-p-24">
+                  <table class="w-full">
+                    <tr>
+                      <td align="center" class="sm-w-full sm-table-footer-group sm-border-0 w-200" style="border-right: 1px dashed #8492A6;">
+                        <p class="sm-hidden text-16 leading-22 text-gray-500 m-0">Coupon:</p>
+                        <table>
+                          <tr>
+                            <td class="text-50 leading-48 text-gray-900">50%</td>
+                            <td class="text-21 leading-28 text-gray-900 align-top">off</td>
+                          </tr>
+                        </table>
+                        <div class="leading-12 sm-h-16">&nbsp;</div>
+                        <table class="sm-w-full w-146">
+                          <tr>
+                            <td align="center" class="bg-brand-500 hover-bg-brand-600 text-white rounded shadow" style="mso-padding-alt: 4px 0 8px;">
+                              <a href="http://craftingemails.com" class="block text-white no-underline font-bold sm-text-14 text-12 leading-32">Redeem coupon</a>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                      <td class="sm-w-full sm-table-header-group pl-24 sm-p-0 w-336">
+                        <p class="text-gray-500 text-21 leading-28 sm-text-center m-0 sm-mb-16">Enter the code <a href="http://craftingemails.com" class="text-brand-500 hover-text-brand-700 hover-underline inline-block">blkfridy-2019v3</a> when you spend $120 to enjoy the discount on your next purchase.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            <div class="leading-16 sm-h-16">&nbsp;</div>
+            <p class="text-gray-500 text-12 leading-16 text-left sm-text-center m-0">* To use before December 30, 2020</p>
+
+            {% include "src/partials/footer.njk" %}
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% endblock %}
+

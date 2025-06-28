@@ -1,0 +1,50 @@
+{% block shopifyhead %}{% endblock %}
+<!DOCTYPE {{ page.doctype or 'html' }}>
+<html {% if page.htmlClass %}class="{{ page.htmlClass }}"{% endif %} xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="{{ page.charset or 'utf-8' }}">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  {% if page.title %}<title>{{ page.title }}</title>{% endif %}
+  <!--[if mso]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <style>
+    table {border-collapse: collapse;}
+    td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: "Segoe UI", Arial, sans-serif; mso-line-height-rule: exactly;}
+  </style>
+  <![endif]-->
+  {% if css %}
+    <style>
+      {{ css }}
+      {% raw %}
+        .text-accent {
+          color: {{ shop.email_accent_color }};
+        }
+        .text-accent:hover {
+          color: {{ shop.email_accent_color | color_darken: 30 }};
+        }
+        .bg-accent {
+          background-color: {{ shop.email_accent_color }};
+        }
+        .bg-accent:hover {
+          background-color: {{ shop.email_accent_color | color_darken: 30 }};
+        }
+      {% endraw %}
+    </style>
+  {% endif %}
+  {% block head %}{% endblock %}
+</head>
+<body class="bg-white {% if page.bodyClass %}{{ page.bodyClass }}{% endif %}" lang="{{ page.language or 'en' }}">
+{% if page.preheader %}
+  {% include "src/partials/preheader.njk" %}
+{% endif %}
+
+{% block template %}{% endblock %}
+</body>
+</html>
+

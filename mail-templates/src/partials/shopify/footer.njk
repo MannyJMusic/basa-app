@@ -1,0 +1,15 @@
+{% raw %}
+<div class="text-left">
+  <table class="w-full">
+    <tr>
+      <td class="pt-64 pb-16">
+        <div class="bg-gray-ui-200 h-px leading-px">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+  <p class="text-gray-500 text-12 leading-16 mb-16 mt-0">
+    If you have any questions, reply to this email or contact us at <a href="mailto:{{ shop.email }}" class="text-accent hover-underline inline-block">{{ shop.email }}</a>.
+  </p>
+  <p class="text-gray-500 text-12 leading-16 m-0">&copy; {{ 'now' | date: "%Y" }} {{ shop.name }}. All rights reserved.</p>
+</div>
+{% endraw %}
