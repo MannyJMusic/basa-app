@@ -335,8 +335,4 @@ export async function DELETE(
       { status: 500 }
     )
   }
-}
-
-const session = await auth();
-const isGuest = session?.user?.role === 'GUEST';
-const priceToCharge = isGuest ? event.price : (isMember ? event.memberPrice : event.price); 
+} 
