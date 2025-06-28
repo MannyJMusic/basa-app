@@ -20,6 +20,7 @@ declare module "next-auth" {
       role: string
       isActive: boolean
       image?: string
+      accountStatus?: string
     } & DefaultSession["user"]
   }
 
@@ -30,6 +31,7 @@ declare module "next-auth" {
     role: string
     isActive: boolean
     image?: string
+    accountStatus?: string
   }
 }
 
@@ -41,6 +43,7 @@ declare module "next-auth/jwt" {
     role: string
     isActive: boolean
     image?: string
+    accountStatus?: string
   }
 }
 

@@ -23,6 +23,10 @@ async function main() {
           hashedPassword: await bcrypt.hash(password, 10),
           role: 'ADMIN',
           isActive: true,
+          accountStatus: 'ACTIVE',
+          verificationToken: null,
+          verificationTokenExpiry: null,
+          membershipPaymentConfirmed: true,
         },
       })
       console.log(`Created admin: ${email}`)
@@ -33,6 +37,29 @@ async function main() {
 
   await createAdmin('ADMIN1')
   await createAdmin('ADMIN2')
+
+  // Create test guest user
+  const guestEmail = 'guest@test.com'
+  const existingGuest = await prisma.user.findUnique({ where: { email: guestEmail } })
+  if (!existingGuest) {
+    await prisma.user.create({
+      data: {
+        firstName: 'Test',
+        lastName: 'Guest',
+        email: guestEmail,
+        hashedPassword: await bcrypt.hash('password123', 10),
+        role: 'GUEST',
+        isActive: true,
+        accountStatus: 'ACTIVE',
+        verificationToken: null,
+        verificationTokenExpiry: null,
+        membershipPaymentConfirmed: false,
+      },
+    })
+    console.log('Created test guest user: guest@test.com (password: password123)')
+  } else {
+    console.log('Test guest user already exists: guest@test.com')
+  }
 
   // Initialize default settings if none exist
   const existingSettings = await prisma.settings.findFirst()
@@ -328,6 +355,10 @@ async function main() {
           hashedPassword: await bcrypt.hash(memberData.password, 10),
           role: 'MEMBER',
           isActive: true,
+          accountStatus: 'ACTIVE',
+          verificationToken: null,
+          verificationTokenExpiry: null,
+          membershipPaymentConfirmed: true,
         },
       })
 
