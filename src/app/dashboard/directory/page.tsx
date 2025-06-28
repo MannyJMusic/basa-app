@@ -71,6 +71,7 @@ export default function DirectoryPage() {
   // Filter members based on search
   const filteredMembers = members.filter(member => {
     if (!member.showInDirectory) return false
+    if (member.user.role === "GUEST") return false
     
     const searchLower = searchTerm.toLowerCase()
     const matchesSearch = !searchTerm || 
@@ -254,38 +255,6 @@ export default function DirectoryPage() {
                     More Filters
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Connections */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Handshake className="w-5 h-5 text-green-600" />
-                <span>Recent Connections</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {members.slice(0, 3).map((member, index) => (
-                  <div key={member.id} className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <Users className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">
-                        {member.user.firstName} {member.user.lastName}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Connected {index + 1} {index === 0 ? 'day' : 'days'} ago
-                      </p>
-                    </div>
-                    <Button size="sm" variant="outline">
-                      <MessageSquare className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
               </div>
             </CardContent>
           </Card>
