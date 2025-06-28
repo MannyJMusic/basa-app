@@ -2,7 +2,7 @@ import formData from 'form-data'
 import Mailgun from 'mailgun.js'
 import fs from 'fs'
 import path from 'path'
-import { render } from 'nunjucks'
+import * as nunjucks from 'nunjucks'
 
 // Initialize Mailgun
 const mailgun = new Mailgun(formData)
@@ -27,7 +27,7 @@ const loadTemplate = (templateName: string): string => {
 }
 
 // Configure Nunjucks for template rendering
-const nunjucksEnv = new render.Environment()
+const nunjucksEnv = new nunjucks.Environment()
 nunjucksEnv.addFilter('date', (date: Date, format: string) => {
   if (!date) return ''
   const d = new Date(date)
@@ -59,7 +59,7 @@ async function sendEmail(to: string, subject: string, html: string, options: {
     }
 
     if (options.attachments) {
-      messageData.attachments = options.attachments
+      (messageData as any).attachments = options.attachments
     }
 
     const response = await mg.messages.create(DOMAIN, messageData)

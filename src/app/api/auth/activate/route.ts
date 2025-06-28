@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,7 +18,7 @@ export async function GET(request: NextRequest) {
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
-        membership: true
+        member: true
       }
     })
 
@@ -44,23 +43,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Update the user to mark email as verified and set member status
+    // Update the user to mark email as verified
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
         emailVerified: new Date(),
-        // Set member status based on their membership
-        memberStatus: user.membership ? 'ACTIVE' : 'PENDING',
-        // If they have a membership, activate it
-        membership: user.membership ? {
-          update: {
-            status: 'ACTIVE',
-            activatedAt: new Date()
-          }
-        } : undefined
+        accountStatus: 'ACTIVE'
       },
       include: {
-        membership: true
+        member: true
       }
     })
 
@@ -69,7 +60,9 @@ export async function GET(request: NextRequest) {
       data: {
         action: 'ACCOUNT_ACTIVATED',
         userId: user.id,
-        details: {
+        entityType: 'USER',
+        entityId: user.id,
+        newValues: {
           email: user.email,
           activationMethod: 'email_link',
           timestamp: new Date().toISOString()
@@ -93,7 +86,7 @@ export async function GET(request: NextRequest) {
 // Handle POST requests for manual activation (if needed)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.email) {
       return NextResponse.json(
@@ -105,7 +98,7 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: {
-        membership: true
+        member: true
       }
     })
 
@@ -128,16 +121,10 @@ export async function POST(request: NextRequest) {
       where: { id: user.id },
       data: {
         emailVerified: new Date(),
-        memberStatus: user.membership ? 'ACTIVE' : 'PENDING',
-        membership: user.membership ? {
-          update: {
-            status: 'ACTIVE',
-            activatedAt: new Date()
-          }
-        } : undefined
+        accountStatus: 'ACTIVE'
       },
       include: {
-        membership: true
+        member: true
       }
     })
 
@@ -146,7 +133,9 @@ export async function POST(request: NextRequest) {
       data: {
         action: 'ACCOUNT_ACTIVATED',
         userId: user.id,
-        details: {
+        entityType: 'USER',
+        entityId: user.id,
+        newValues: {
           email: user.email,
           activationMethod: 'manual',
           timestamp: new Date().toISOString()
@@ -161,7 +150,7 @@ export async function POST(request: NextRequest) {
         id: updatedUser.id,
         email: updatedUser.email,
         emailVerified: updatedUser.emailVerified,
-        memberStatus: updatedUser.memberStatus
+        accountStatus: updatedUser.accountStatus
       }
     })
 

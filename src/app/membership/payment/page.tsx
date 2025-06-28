@@ -488,6 +488,9 @@ export default function MembershipPaymentPage() {
         <div className="max-w-2xl mx-auto">
           <Elements stripe={stripePromise} options={{ clientSecret }}>
             <StripeForm
+              clientSecret={clientSecret}
+              amount={checkoutData.total * 100} // Convert to cents
+              description="BASA Membership Payment"
               onSuccess={handlePaymentSuccess}
               onError={handlePaymentError}
               type="membership"
