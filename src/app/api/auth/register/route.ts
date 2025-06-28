@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { registerSchema } from "@/lib/validations"
 import { hashPassword } from "@/lib/utils"
 import { prisma } from "@/lib/db"
-import { sendWelcomeEmail, sendEmailVerification } from "@/lib/email"
+import { sendWelcomeEmail } from "@/lib/basa-emails"
 import { generateVerificationToken } from "@/lib/utils"
 
 export async function POST(request: NextRequest) {
@@ -61,11 +61,16 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Send verification email
+    // Send welcome email with activation link
     try {
-      await sendEmailVerification(email, firstName, verificationToken)
+      const activationUrl = `${process.env.NEXTAUTH_URL}/api/auth/activate?token=${verificationToken}&email=${encodeURIComponent(email)}`
+      
+      await sendWelcomeEmail(email, firstName, activationUrl, {
+        siteUrl: process.env.NEXTAUTH_URL,
+        logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
+      })
     } catch (emailError) {
-      console.error("Failed to send verification email:", emailError)
+      console.error("Failed to send welcome email:", emailError)
       // Don't fail the registration if email fails
     }
 
@@ -84,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { 
-        message: "User registered successfully. Please check your email to verify your account.",
+        message: "User registered successfully. Please check your email to activate your account.",
         user: {
           id: user.id,
           email: user.email,
