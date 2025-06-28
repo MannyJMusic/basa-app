@@ -313,6 +313,8 @@ export default function EventRegistrationPage() {
                             <Label htmlFor={`name-${index}`}>Full Name *</Label>
                             <Input
                               id={`name-${index}`}
+                              name={`name-${index}`}
+                              autoComplete={index === 0 ? "name" : `name-${index}`}
                               value={attendee.name}
                               onChange={(e) => updateAttendee(index, 'name', e.target.value)}
                               placeholder="Enter full name"
@@ -323,7 +325,9 @@ export default function EventRegistrationPage() {
                             <Label htmlFor={`email-${index}`}>Email Address *</Label>
                             <Input
                               id={`email-${index}`}
+                              name={`email-${index}`}
                               type="email"
+                              autoComplete={index === 0 ? "email" : `email-${index}`}
                               value={attendee.email}
                               onChange={(e) => updateAttendee(index, 'email', e.target.value)}
                               placeholder="Enter email address"
@@ -334,6 +338,8 @@ export default function EventRegistrationPage() {
                             <Label htmlFor={`company-${index}`}>Company</Label>
                             <Input
                               id={`company-${index}`}
+                              name={`company-${index}`}
+                              autoComplete={index === 0 ? "organization" : `organization-${index}`}
                               value={attendee.company}
                               onChange={(e) => updateAttendee(index, 'company', e.target.value)}
                               placeholder="Enter company name"
@@ -343,6 +349,9 @@ export default function EventRegistrationPage() {
                             <Label htmlFor={`phone-${index}`}>Phone</Label>
                             <Input
                               id={`phone-${index}`}
+                              name={`phone-${index}`}
+                              type="tel"
+                              autoComplete={index === 0 ? "tel" : `tel-${index}`}
                               value={attendee.phone}
                               onChange={(e) => updateAttendee(index, 'phone', e.target.value)}
                               placeholder="Enter phone number"
@@ -505,6 +514,7 @@ export default function EventRegistrationPage() {
               onSuccess={handlePaymentSuccess}
               onError={handlePaymentError}
               loading={loading}
+              type="event"
             />
           </Elements>
         </div>

@@ -1,0 +1,391 @@
+---
+layout: src/layouts/shopify.njk
+title: Exchange receipt from {{ shop.name }}
+preheader: Exchange receipt from {{ shop.name }}
+---
+{% extends "src/layouts/shopify.njk" %}
+
+{% block template %}
+
+<table class="wrapper w-full all-font-sans">
+  <tr>
+    <td align="center" class="bg-white">
+      <table class="w-640 sm-w-full">
+        <tr>
+          <td align="left" class="bg-white px-40 py-48 sm-px-16 sm-py-24">
+
+            {% include "src/partials/shopify/header.njk" %}
+
+            {% raw %}
+            {% if exchange_type == "balance_owed_to_customer" %}
+            <p class="text-21 text-gray-900 m-0 leading-28">
+              Total amount refunded: {{ exchange_balance | money }}
+            </p>
+            <div class="leading-32 sm-h-32">&nbsp;</div>
+            {% endif %}
+
+            <p class="text-gray-500 text-16 leading-22 m-0 mb-16">Original order #{{ parent_order.order_number }} summary on {{ parent_order_processed_at }}</p>
+
+            {% for line in parent_order.line_items %}
+
+            {% if line.product.title %}
+              {% assign line_title = line.product.title %}
+            {% else %}
+              {% assign line_title = line.title %}
+            {% endif %}
+
+            {% if line.quantity < line.quantity %}
+              {% capture line_display %} {{ line.quantity }} of {{ line.quantity }} {% endcapture %}
+            {% else %}
+              {% assign line_display = line.quantity  %}
+            {% endif %}
+
+            <table class="w-full">
+              <tr>
+                <td class="align-top w-72">
+                  {% if line.image %}
+                  <img src="{{ line | img_url: '96x144' }}" alt="{{ line_title }}" width="48">
+                  {% else %}
+                  <img src="https://via.placeholder.com/48x72/f8f8fa/?text=+" alt="{{ line_title }}" width="48">
+                  {% endif %}
+                </td>
+                <td class="align-top text-left w-400 sm-w-auto">
+                  <p class="text-gray-900 text-16 font-bold mt-0 mb-8">{{ line_title }}</p>
+                  {% if line.product.description %}
+                  <p class="text-gray-900 text-16 leading-22 mt-0 mb-8">{{ line.product.description }}</p>
+                  {% endif %}
+                  <p class="text-16 text-gray-500 leading-12 m-0">Qty. {{ line_display }}</p>
+                  {% if line.discount_allocations %}
+                    {% for discount_allocation in line.discount_allocations %}
+                      {% if discount_allocation.discount_application.target_selection != 'all' %}
+                      <p class="text-16 text-gray-500 leading-12 m-0 mt-8">{{ discount_allocation.discount_application.title | title }} (-{{ discount_allocation.amount | money }})</p>
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                </td>
+                <td class="align-top text-right w-88">
+                  {% if line.original_line_price != line.final_line_price %}
+                  <p class="text-16 leading-22 font-normal text-gray-700 m-0 mb-8">
+                    <strike>{{ line.original_line_price | money }}</strike>
+                  </p>
+                  {% endif %}
+                  <p class="text-16 leading-22 font-bold text-gray-900 m-0">
+                    {% if line.final_line_price > 0 %}
+                      {{ line.final_line_price | money }}
+                    {% else %}
+                      Free
+                    {% endif %}
+                  </p>
+                </td>
+              </tr>
+            </table>
+            {% if forloop.last == false %}
+            <div class="leading-24 sm-h-24">&nbsp;</div>
+            {% endif %}
+            {% endfor %}
+            <table class="w-full">
+              <tr>
+                <td class="py-12">
+                  <div class="bg-gray-ui-200 h-2 leading-2">&nbsp;</div>
+                </td>
+              </tr>
+            </table>
+
+            {% assign discounts = parent_order.discounts %}
+            {% assign discounts_savings = parent_order.discounts_savings %}
+            {% assign subtotal_price = parent_order.subtotal_price %}
+            {% assign shipping_price = parent_order.shipping_price %}
+            {% assign tax_price = parent_order.tax_price %}
+            {% assign total_price = parent_order.total_price %}
+
+            {% assign transactions = parent_transactions %}
+
+            <div class="text-right sm-text-left">
+              <table class="sm-w-full">
+                {% if discounts %}
+                  {% capture discount_title %}
+                    {% if discounts.first.code %}
+                      Discount ({{ discounts.first.code }})
+                    {% else %}
+                      Discount
+                    {% endif %}
+                  {% endcapture %}
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-118">{{ discount_title }}</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ discounts_savings | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-118">Subtotal</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ subtotal_price | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-118">Shipping</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ shipping_price | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-118">Taxes</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ tax_price | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                {% if total_tip and total_tip > 0 %}
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-118">Tip</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ total_tip | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-118">Total</td>
+                  <td class="text-gray-900 text-21 font-bold leading-28 text-right w-200">{{ total_price | money_with_currency }}</td>
+                </tr>
+                {% for transaction in transactions %}
+                  {% if transaction.payment_details.credit_card_company %}
+                    {% capture transaction_name %}{{ transaction.payment_details.credit_card_company }} (ending in {{ transaction.payment_details.credit_card_last_four_digits }}){% endcapture %}
+                  {% else %}
+                    {% capture transaction_name %}{{ transaction.gateway | replace: "_", " " | capitalize }}{% endcapture %}
+                  {% endif %}
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-118">{{transaction_name}}</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ transaction.amount | money }}</td>
+                </tr>
+                {% endfor %}
+              </table>
+            </div>
+
+            <table class="w-full">
+              <tr>
+                <td class="py-64">
+                  <div class="bg-gray-ui-200 h-px leading-px">&nbsp;</div>
+                </td>
+              </tr>
+            </table>
+
+            <p class="text-gray-500 text-16 leading-22 m-0 mb-16">Exchange order #{{ child_order.order_number }} summary on {{ child_order_processed_at }}</p>
+
+            {% for line in child_order.line_items %}
+
+            {% if line.product.title %}
+              {% assign line_title = line.product.title %}
+            {% else %}
+              {% assign line_title = line.title %}
+            {% endif %}
+
+            {% if line.quantity < line.quantity %}
+              {% capture line_display %} {{ line.quantity }} of {{ line.quantity }} {% endcapture %}
+            {% else %}
+              {% assign line_display = line.quantity  %}
+            {% endif %}
+
+            <table class="w-full">
+              <tr>
+                <td class="align-top w-72">
+                  {% if line.image %}
+                  <img src="{{ line | img_url: '96x144' }}" alt="{{ line_title }}" width="48">
+                  {% else %}
+                  <img src="https://via.placeholder.com/48x72/f8f8fa/?text=+" alt="{{ line_title }}" width="48">
+                  {% endif %}
+                </td>
+                <td class="align-top text-left w-400 sm-w-auto">
+                  <p class="text-gray-900 text-16 font-bold mt-0 mb-8">{{ line_title }}</p>
+                  {% if line.product.description %}
+                  <p class="text-gray-900 text-16 leading-22 mt-0 mb-8">{{ line.product.description }}</p>
+                  {% endif %}
+                  <p class="text-16 text-gray-500 leading-12 m-0">Qty. {{ line_display }}</p>
+                  {% if line.discount_allocations %}
+                    {% for discount_allocation in line.discount_allocations %}
+                      {% if discount_allocation.discount_application.target_selection != 'all' %}
+                      <p class="text-14 text-gray-500 leading-12 m-0 mt-8">{{ discount_allocation.discount_application.title | title }} (-{{ discount_allocation.amount | money }})</p>
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                </td>
+                <td class="align-top text-right w-88">
+                    {% if line.original_line_price != line.final_line_price %}
+                  <p class="text-16 leading-22 font-normal text-gray-700 m-0 mb-8">
+                    <strike>{{ line.original_line_price | money }}</strike>
+                  </p>
+                  {% endif %}
+                  <p class="text-16 leading-22 font-bold text-gray-900 m-0">
+                    {% if line.final_line_price > 0 %}
+                      {{ line.final_line_price | money }}
+                    {% else %}
+                      Free
+                    {% endif %}
+                  </p>
+                </td>
+              </tr>
+            </table>
+            {% if forloop.last == false %}
+            <div class="leading-24">&nbsp;</div>
+            {% endif %}
+            {% endfor %}
+            <table class="w-full">
+              <tr>
+                <td class="py-12">
+                  <div class="bg-gray-ui-200 h-2 leading-2">&nbsp;</div>
+                </td>
+              </tr>
+            </table>
+
+            {% assign discounts = child_order.discounts %}
+            {% assign discounts_savings = child_order.discounts_savings %}
+            {% assign subtotal_price = child_order.subtotal_price %}
+            {% assign shipping_price = child_order.shipping_price %}
+            {% assign tax_price = child_order.tax_price %}
+            {% assign total_price = child_order.total_price %}
+
+            {% assign transactions = child_transactions %}
+
+            <div class="text-right sm-text-left">
+              <table class="sm-w-full">
+                {% if discounts %}
+                  {% capture discount_title %}
+                    {% if discounts.first.code %}
+                      Discount ({{ discounts.first.code }})
+                    {% else %}
+                      Discount
+                    {% endif %}
+                  {% endcapture %}
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-50">{{ discount_title }}</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ discounts_savings | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-50">Subtotal</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ subtotal_price | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-50">Shipping</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ shipping_price | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-50">Taxes</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ tax_price | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                {% if total_tip and total_tip > 0 %}
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-50">Tip</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ total_tip | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-50">Total</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">{{ total_price | money_with_currency }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-50">Refund from Order #{{ parent_order.order_number }}</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">- {{ refund_amount | money }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="h-12"></td>
+                </tr>
+                {% if exchange_type == "balance_owed_to_customer" %}
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-50">Refund amount after exchange</td>
+                  <td class="text-gray-900 text-21 leading-28 text-right w-200">- {{ exchange_balance | money }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td class="text-gray-500 text-12 leading-16 w-50">Total amount paid</td>
+                  <td class="text-gray-900 text-21 leading-28 font-bold text-right w-200">{{ exchange_balance | money }}</td>
+                </tr>
+                {% endif %}
+              </table>
+            </div>
+
+            {% assign transaction_size = 0 %}
+            {% for transaction in transactions %}
+              {% unless transaction.kind == "capture" or transaction.kind == "void" %}
+                {% assign transaction_size = transaction_size | plus: 1 %}
+              {% endunless %}
+            {% endfor %}
+
+            {% if transaction_size > 1 %}
+            <div class="leading-24 sm-h-24">&nbsp;</div>
+
+            <table class="w-full">
+              {% for transaction in transactions %}
+              {% if transaction.status == "success" and transaction.kind == "authorization" or transaction.kind == "sale" %}
+                {% if transaction.payment_details.credit_card_company %}
+                  {% capture transaction_name %}{{ transaction.payment_details.credit_card_company }} (ending in {{ transaction.payment_details.credit_card_last_four_digits }}){% endcapture %}
+                {% else %}
+                  {% capture transaction_name %}{{ transaction.gateway | replace: "_", " " | capitalize }}{% endcapture %}
+              {% endif %}
+              <tr>
+                <td class="w-1-2">
+                  <p class="text-16 text-gray-900 leading-22 m-0">{{ transaction_name }}</p>
+                </td>
+                <td class="w-1-2 text-16 text-gray-900 font-bold text-right align-top">{{ transaction.amount | money }}</td>
+              </tr>
+              {% endif %}
+
+              {% if transaction.kind == 'refund' %}
+              {% if transaction.payment_details.credit_card_company %}
+                {% assign refund_method_title = transaction.payment_details.credit_card_company %}
+              {% else %}
+                {% assign refund_method_title = transaction.gateway %}
+              {% endif %}
+              <tr>
+                <td colspan="2" class="h-8"></td>
+              </tr>
+              <tr>
+                <td class="w-1-2">
+                  <p class="text-gray-500 text-12 leading-16 m-0">Refund</p>
+                  <p class="text-gray-900 text-21 leading-28 m-0">{{ refund_method_title | capitalize }}</p>
+                </td>
+                <td class="text-gray-900 text-16 leading-22 font-bold text-right align-bottom w-1-2">- {{ transaction.amount | money }}</td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </table>
+            {% endif %}
+
+            {% endraw %}
+
+            {% include "src/partials/shopify/footer.njk" %}
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% endblock %}
+

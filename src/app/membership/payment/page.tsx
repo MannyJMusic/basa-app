@@ -279,6 +279,8 @@ export default function MembershipPaymentPage() {
                         <Label htmlFor="name">Full Name *</Label>
                         <Input
                           id="name"
+                          name="name"
+                          autoComplete="name"
                           value={customerInfo.name}
                           onChange={(e) => handleCustomerInfoChange('name', e.target.value)}
                           placeholder="Enter your full name"
@@ -289,7 +291,9 @@ export default function MembershipPaymentPage() {
                         <Label htmlFor="email">Email Address *</Label>
                         <Input
                           id="email"
+                          name="email"
                           type="email"
+                          autoComplete="email"
                           value={customerInfo.email}
                           onChange={(e) => handleCustomerInfoChange('email', e.target.value)}
                           placeholder="Enter your email"
@@ -302,6 +306,8 @@ export default function MembershipPaymentPage() {
                         <Label htmlFor="company">Company Name</Label>
                         <Input
                           id="company"
+                          name="company"
+                          autoComplete="organization"
                           value={customerInfo.company}
                           onChange={(e) => handleCustomerInfoChange('company', e.target.value)}
                           placeholder="Enter company name"
@@ -311,6 +317,9 @@ export default function MembershipPaymentPage() {
                         <Label htmlFor="phone">Phone Number</Label>
                         <Input
                           id="phone"
+                          name="phone"
+                          type="tel"
+                          autoComplete="tel"
                           value={customerInfo.phone}
                           onChange={(e) => handleCustomerInfoChange('phone', e.target.value)}
                           placeholder="Enter phone number"
@@ -481,6 +490,7 @@ export default function MembershipPaymentPage() {
             <StripeForm
               onSuccess={handlePaymentSuccess}
               onError={handlePaymentError}
+              type="membership"
             />
           </Elements>
         </div>

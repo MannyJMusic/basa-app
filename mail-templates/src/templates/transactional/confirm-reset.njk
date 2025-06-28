@@ -1,0 +1,32 @@
+---
+title: You have successfully reset your password
+preheader: You have successfully reset your password
+---
+{% extends "src/layouts/default.njk" %}
+{% block template %}
+
+<table class="wrapper w-full all-font-sans">
+  <tr>
+    <td align="center" class="bg-white">
+      <table class="w-640 sm-w-full">
+        <tr>
+          <td class="bg-white px-40 py-48 sm-px-16 sm-py-24 text-left">
+            <div class="mb-24">
+              <a href="http://craftingemails.com" class="no-underline">
+                <img src="logo.png" alt="craftingemails" width="143">
+              </a>
+            </div>
+            <p class="text-21 text-gray-900 m-0 leading-28">Hi Candy 🔑</p>
+            <p class="text-21 text-gray-900 mt-0 mb-16 leading-28">This is a confirmation email that your password for your account choco_late has just been changed.</p>
+            <p class="text-gray-500 text-16 leading-22 m-0">If this is your account but you didn't request a password change, you can reset your password here. If you're having trouble, <a href="http://craftingemails.com" class="hover-text-brand-700 hover-underline">contact Support team</a>.</p>
+
+            {% include "src/partials/footer.njk" %}
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% endblock %}
