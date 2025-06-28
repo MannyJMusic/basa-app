@@ -12,9 +12,14 @@ export const getStripePublishableKey = () => {
 
 // Membership tier prices (in cents)
 export const MEMBERSHIP_PRICES = {
-  essential: 20000, // $200/year
-  professional: 40000, // $400/year
-  corporate: 75000, // $750/year
+  // Chapter Memberships
+  'meeting-member': 14900, // $149/year
+  'associate-member': 24500, // $245/year
+  'trio-member': 29500, // $295/year
+  // Resource Memberships
+  'class-resource-member': 12000, // $120/year
+  'nag-resource-member': 0, // $0/year (included)
+  'training-resource-member': 22500, // $225/year
 }
 
 // Event pricing structure
