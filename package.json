@@ -21,7 +21,8 @@
     "test:coverage": "jest --coverage",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "e2e": "cypress run"
+    "e2e": "cypress run",
+    "webhook:test": "node scripts/test-webhooks.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -1,7 +1,13 @@
 import Stripe from 'stripe'
 
-// Initialize Stripe with secret key
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+// Initialize Stripe with restricted key (preferred) or fallback to secret key
+const stripeKey = process.env.STRIPE_RESTRICTED_KEY || process.env.STRIPE_SECRET_KEY
+
+if (!stripeKey) {
+  throw new Error('Missing Stripe API key. Please set STRIPE_RESTRICTED_KEY or STRIPE_SECRET_KEY environment variable.')
+}
+
+export const stripe = new Stripe(stripeKey, {
   apiVersion: '2023-10-16',
 })
 

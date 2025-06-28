@@ -21,7 +21,7 @@ import {
   Send,
   Users
 } from 'lucide-react'
-import StripeForm from '@/components/payments/stripe-form'
+import { StripeForm } from '@/components/payments/stripe-form'
 
 // Load Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
