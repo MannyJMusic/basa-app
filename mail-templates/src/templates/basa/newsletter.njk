@@ -1,0 +1,208 @@
+---
+title: BASA Newsletter - {{ newsletter.title }}
+preheader: {{ newsletter.preheader }}
+layout: basa.njk
+---
+
+{% extends "src/layouts/basa.njk" %}
+
+{% block template %}
+<!-- Newsletter Header -->
+<div style="text-align: center; margin-bottom: 32px;">
+  <h1 style="font-size: 32px; font-weight: 700; line-height: 1.2; margin: 0; color: #1B365D;">
+    BASA Newsletter 📰
+  </h1>
+  <p style="font-size: 18px; line-height: 1.5; margin: 16px 0 0 0; color: #64748b;">
+    {{ newsletter.title }}
+  </p>
+  <p style="font-size: 14px; line-height: 1.5; margin: 8px 0 0 0; color: #94a3b8;">
+    {{ newsletter.date | date: "%B %d, %Y" }}
+  </p>
+</div>
+
+<!-- Featured Story -->
+{% if newsletter.featuredStory %}
+<div style="background: linear-gradient(135deg, #fefbf7 0%, #ffffff 100%); border-radius: 12px; padding: 32px; margin-bottom: 32px; border: 1px solid #e2e8f0;">
+  <div style="margin-bottom: 16px;">
+    <span style="background: linear-gradient(135deg, #FFD700 0%, #FFC300 100%); color: #1B365D; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+      FEATURED
+    </span>
+  </div>
+
+  <h2 style="font-size: 24px; font-weight: 600; line-height: 1.3; margin: 0 0 12px 0; color: #1B365D;">
+    {{ newsletter.featuredStory.title }}
+  </h2>
+
+  <p style="font-size: 16px; line-height: 1.6; margin: 0 0 16px 0; color: #64748b;">
+    {{ newsletter.featuredStory.excerpt }}
+  </p>
+
+  <a href="{{ newsletter.featuredStory.url }}"
+     class="basa-text-teal basa-hover-underline"
+     style="display: inline-block; font-weight: 600; font-size: 14px; text-decoration: none;">
+    Read More →
+  </a>
+</div>
+{% endif %}
+
+<!-- News & Updates -->
+<div style="margin-bottom: 32px;">
+  <h2 style="font-size: 24px; font-weight: 600; line-height: 1.3; margin: 0 0 24px 0; color: #1B365D;">
+    Latest News & Updates
+  </h2>
+
+  {% for article in newsletter.articles %}
+  <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid #e2e8f0;">
+    <h3 style="font-size: 18px; font-weight: 600; line-height: 1.4; margin: 0 0 8px 0; color: #1B365D;">
+      {{ article.title }}
+    </h3>
+    <p style="font-size: 14px; line-height: 1.6; margin: 0 0 12px 0; color: #64748b;">
+      {{ article.excerpt }}
+    </p>
+    <a href="{{ article.url }}"
+       class="basa-text-teal basa-hover-underline"
+       style="font-size: 14px; font-weight: 600; text-decoration: none;">
+      Read More →
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Upcoming Events -->
+{% if newsletter.upcomingEvents %}
+<div style="background: linear-gradient(135deg, #1B365D 0%, #15294d 100%); border-radius: 12px; padding: 32px; margin-bottom: 32px;">
+  <h2 style="font-size: 24px; font-weight: 600; line-height: 1.3; margin: 0 0 24px 0; color: #ffffff;">
+    🎉 Upcoming Events
+  </h2>
+
+  {% for event in newsletter.upcomingEvents %}
+  <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">
+    <h3 style="font-size: 16px; font-weight: 600; line-height: 1.4; margin: 0 0 8px 0; color: #ffffff;">
+      {{ event.title }}
+    </h3>
+    <p style="font-size: 14px; line-height: 1.5; margin: 0 0 8px 0; color: #cbd5e1;">
+      📅 {{ event.date | date: "%B %d, %Y" }} at {{ event.time }}<br>
+      📍 {{ event.location }}
+    </p>
+    <a href="{{ event.url }}"
+       style="display: inline-block; background: #FFD700; color: #1B365D; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none;">
+      RSVP Now
+    </a>
+  </div>
+  {% endfor %}
+
+  <div style="text-align: center; margin-top: 24px;">
+    <a href="{{ page.siteUrl or 'https://basa.org' }}/events"
+       style="display: inline-block; background: #ffffff; color: #1B365D; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
+      View All Events
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<!-- Member Spotlight -->
+{% if newsletter.memberSpotlight %}
+<div style="background: linear-gradient(135deg, #fefbf7 0%, #ffffff 100%); border-radius: 12px; padding: 32px; margin-bottom: 32px; border: 1px solid #e2e8f0;">
+  <h2 style="font-size: 24px; font-weight: 600; line-height: 1.3; margin: 0 0 24px 0; color: #1B365D;">
+    👥 Member Spotlight
+  </h2>
+
+  <div style="display: table; width: 100%;">
+    <div style="display: table-cell; vertical-align: top; padding-right: 16px; width: 80px;">
+      <img src="{{ newsletter.memberSpotlight.avatar }}"
+           alt="{{ newsletter.memberSpotlight.name }}"
+           width="80"
+           style="border-radius: 50%; border: 3px solid #FFD700;">
+    </div>
+    <div style="display: table-cell; vertical-align: top;">
+      <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 4px 0; color: #1B365D;">
+        {{ newsletter.memberSpotlight.name }}
+      </h3>
+      <p style="font-size: 14px; line-height: 1.5; margin: 0 0 8px 0; color: #64748b;">
+        {{ newsletter.memberSpotlight.title }} at {{ newsletter.memberSpotlight.company }}
+      </p>
+      <p style="font-size: 14px; line-height: 1.6; margin: 0; color: #64748b;">
+        {{ newsletter.memberSpotlight.bio }}
+      </p>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Community Updates -->
+{% if newsletter.communityUpdates %}
+<div style="margin-bottom: 32px;">
+  <h2 style="font-size: 24px; font-weight: 600; line-height: 1.3; margin: 0 0 24px 0; color: #1B365D;">
+    🌟 Community Updates
+  </h2>
+
+  <div style="display: table; width: 100%;">
+    <div style="display: table-row;">
+      <div style="display: table-cell; vertical-align: top; padding-right: 16px; width: 50%;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; height: 100%;">
+          <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0; color: #1B365D;">
+            New Members
+          </h3>
+          <p style="font-size: 14px; line-height: 1.5; margin: 0; color: #64748b;">
+            Welcome {{ newsletter.communityUpdates.newMembers }} new members this month!
+          </p>
+        </div>
+      </div>
+
+      <div style="display: table-cell; vertical-align: top; padding-left: 16px; width: 50%;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; height: 100%;">
+          <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0; color: #1B365D;">
+            Events Hosted
+          </h3>
+          <p style="font-size: 14px; line-height: 1.5; margin: 0; color: #64748b;">
+            {{ newsletter.communityUpdates.eventsHosted }} events hosted this quarter
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Call to Action -->
+<div style="text-align: center; margin-bottom: 32px;">
+  <div style="background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%); border-radius: 12px; padding: 32px;">
+    <h2 style="font-size: 24px; font-weight: 600; line-height: 1.3; margin: 0 0 16px 0; color: #ffffff;">
+      Get Involved!
+    </h2>
+    <p style="font-size: 16px; line-height: 1.5; margin: 0 0 24px 0; color: #ffffff;">
+      There are many ways to contribute to our community. Find your perfect opportunity!
+    </p>
+
+    <div style="display: inline-block; margin: 0 8px;">
+      <a href="{{ page.siteUrl or 'https://basa.org' }}/volunteer"
+         style="display: inline-block; background: #ffffff; color: #17A2B8; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
+        Volunteer
+      </a>
+    </div>
+
+    <div style="display: inline-block; margin: 0 8px;">
+      <a href="{{ page.siteUrl or 'https://basa.org' }}/mentor"
+         style="display: inline-block; background: #ffffff; color: #17A2B8; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
+        Become a Mentor
+      </a>
+    </div>
+
+    <div style="display: inline-block; margin: 0 8px;">
+      <a href="{{ page.siteUrl or 'https://basa.org' }}/donate"
+         style="display: inline-block; background: #FFD700; color: #1B365D; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
+        Donate
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Newsletter Preferences -->
+<div style="background: #f8fafc; border-radius: 12px; padding: 24px; text-align: center;">
+  <p style="font-size: 14px; line-height: 1.5; margin: 0; color: #64748b;">
+    You're receiving this email because you're a BASA member.
+    <a href="{{ unsubscribeUrl }}" class="basa-text-teal basa-hover-underline" style="text-decoration: none;">Unsubscribe</a> |
+    <a href="{{ preferencesUrl }}" class="basa-text-teal basa-hover-underline" style="text-decoration: none;">Update Preferences</a>
+  </p>
+</div>
+{% endblock %}
