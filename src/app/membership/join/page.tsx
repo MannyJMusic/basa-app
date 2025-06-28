@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements } from '@stripe/react-stripe-js'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -33,8 +35,19 @@ import {
   ChevronRight,
   Sparkles,
   Zap,
-  Heart
+  Heart,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Lock
 } from "lucide-react"
+import { StripeForm } from "@/components/payments/stripe-form"
+
+// Load Stripe
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+
+// Debug Stripe key
+console.log('Stripe key available:', !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
 
 // Chapter Membership Tiers
 const chapterTiers = [
@@ -212,6 +225,10 @@ export default function JoinPage() {
   const [showAdditionalMembers, setShowAdditionalMembers] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const [validationAttempted, setValidationAttempted] = useState(false)
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
   
   // Form state
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo>({
@@ -252,11 +269,17 @@ export default function JoinPage() {
            businessInfo.businessDescription.trim() !== ''
   }
 
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email.trim())
+  }
+
   const isContactInfoValid = () => {
     return contactInfo.firstName.trim() !== '' &&
            contactInfo.lastName.trim() !== '' &&
            contactInfo.jobTitle.trim() !== '' &&
            contactInfo.email.trim() !== '' &&
+           isValidEmail(contactInfo.email) &&
            contactInfo.phone.trim() !== ''
   }
 
@@ -278,8 +301,6 @@ export default function JoinPage() {
     if (canProceedToNextStep()) {
       if (currentStep < 3) {
         setCurrentStep(currentStep + 1)
-      } else {
-        handleCheckout()
       }
     }
   }
@@ -287,8 +308,71 @@ export default function JoinPage() {
   const handleCheckoutClick = () => {
     setValidationAttempted(true)
     if (canProceedToNextStep()) {
-      handleCheckout()
+      createPaymentIntent()
     }
+  }
+
+  const createPaymentIntent = async () => {
+    if (!canProceedToNextStep()) return
+
+    console.log('Creating payment intent...', {
+      cart,
+      contactInfo,
+      businessInfo,
+      subtotal
+    })
+
+    setPaymentLoading(true)
+    setPaymentError(null)
+
+    try {
+      const response = await fetch('/api/payments/membership', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cart,
+          additionalMembers,
+          customerInfo: {
+            name: `${contactInfo.firstName} ${contactInfo.lastName}`,
+            email: contactInfo.email,
+            company: businessInfo.businessName,
+            phone: contactInfo.phone
+          },
+          businessInfo,
+          contactInfo,
+          autoRenew: false,
+        }),
+      })
+
+      const data = await response.json()
+      console.log('Payment intent response:', data)
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create payment')
+      }
+
+      console.log('Setting client secret:', data.clientSecret ? 'secret received' : 'no secret')
+      setClientSecret(data.clientSecret)
+    } catch (err) {
+      console.error('Payment intent creation failed:', err)
+      setPaymentError(err instanceof Error ? err.message : 'Failed to create payment')
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
+  const handlePaymentSuccess = (paymentIntentId: string) => {
+    setPaymentSuccess(true)
+    // Redirect to success page after a short delay
+    setTimeout(() => {
+      window.location.href = `/payment/success?payment_intent=${paymentIntentId}`
+    }, 2000)
+  }
+
+  const handlePaymentError = (error: string) => {
+    setPaymentError(error)
   }
 
   // Test function to verify button clicks
@@ -386,6 +470,13 @@ export default function JoinPage() {
     window.location.href = `/membership/payment?${params.toString()}`
   }
 
+  // Automatically create payment intent when step 3 is reached
+  useEffect(() => {
+    if (currentStep === 3 && !clientSecret && !paymentLoading && !paymentError) {
+      createPaymentIntent()
+    }
+  }, [currentStep, clientSecret, paymentLoading, paymentError])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Compact Header */}
@@ -460,7 +551,7 @@ export default function JoinPage() {
                       }`}>
                         3
                       </div>
-                      <span className="ml-2 font-medium">Checkout</span>
+                      <span className="ml-2 font-medium">Payment</span>
                     </div>
                   </div>
                 </div>
@@ -684,6 +775,94 @@ export default function JoinPage() {
                     <Card className="border-0 shadow-lg">
                       <CardHeader className="pb-4">
                         <CardTitle className="text-xl flex items-center">
+                          <Users className="w-5 h-5 mr-2 text-blue-600" />
+                          Primary Contact Information
+                        </CardTitle>
+                        <CardDescription>
+                          This will be your main contact for BASA communications and networking
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              First Name *
+                            </label>
+                            <Input 
+                              placeholder="John" 
+                              value={contactInfo.firstName} 
+                              onChange={(e) => setContactInfo({ ...contactInfo, firstName: e.target.value })}
+                              className={validationAttempted && contactInfo.firstName.trim() === '' ? 'border-red-300 focus:border-red-500' : ''}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Last Name *
+                            </label>
+                            <Input 
+                              placeholder="Doe" 
+                              value={contactInfo.lastName} 
+                              onChange={(e) => setContactInfo({ ...contactInfo, lastName: e.target.value })}
+                              className={validationAttempted && contactInfo.lastName.trim() === '' ? 'border-red-300 focus:border-red-500' : ''}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Job Title *
+                            </label>
+                            <Input 
+                              placeholder="CEO, Owner, Manager, etc." 
+                              value={contactInfo.jobTitle} 
+                              onChange={(e) => setContactInfo({ ...contactInfo, jobTitle: e.target.value })}
+                              className={validationAttempted && contactInfo.jobTitle.trim() === '' ? 'border-red-300 focus:border-red-500' : ''}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Email Address *
+                            </label>
+                            <Input 
+                              type="email" 
+                              placeholder="john@yourbusiness.com" 
+                              value={contactInfo.email} 
+                              onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
+                              className={
+                                validationAttempted && (
+                                  contactInfo.email.trim() === '' || 
+                                  !isValidEmail(contactInfo.email)
+                                ) ? 'border-red-300 focus:border-red-500' : ''
+                              }
+                            />
+                            {validationAttempted && contactInfo.email.trim() !== '' && !isValidEmail(contactInfo.email) && (
+                              <p className="text-sm text-red-600 mt-1">
+                                Please enter a valid email address (e.g., john@example.com)
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Phone Number *
+                            </label>
+                            <Input 
+                              placeholder="(210) 555-0123" 
+                              value={contactInfo.phone} 
+                              onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
+                              className={validationAttempted && contactInfo.phone.trim() === '' ? 'border-red-300 focus:border-red-500' : ''}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              LinkedIn Profile
+                            </label>
+                            <Input placeholder="https://linkedin.com/in/johndoe" value={contactInfo.linkedin} onChange={(e) => setContactInfo({ ...contactInfo, linkedin: e.target.value })} />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-0 shadow-lg">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="text-xl flex items-center">
                           <Building2 className="w-5 h-5 mr-2 text-blue-600" />
                           Business Information
                         </CardTitle>
@@ -804,169 +983,226 @@ export default function JoinPage() {
                         </div>
                       </CardContent>
                     </Card>
-
-                    <Card className="border-0 shadow-lg">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="text-xl flex items-center">
-                          <Users className="w-5 h-5 mr-2 text-blue-600" />
-                          Primary Contact Information
-                        </CardTitle>
-                        <CardDescription>
-                          This will be your main contact for BASA communications and networking
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              First Name *
-                            </label>
-                            <Input 
-                              placeholder="John" 
-                              value={contactInfo.firstName} 
-                              onChange={(e) => setContactInfo({ ...contactInfo, firstName: e.target.value })}
-                              className={validationAttempted && contactInfo.firstName.trim() === '' ? 'border-red-300 focus:border-red-500' : ''}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Last Name *
-                            </label>
-                            <Input 
-                              placeholder="Doe" 
-                              value={contactInfo.lastName} 
-                              onChange={(e) => setContactInfo({ ...contactInfo, lastName: e.target.value })}
-                              className={validationAttempted && contactInfo.lastName.trim() === '' ? 'border-red-300 focus:border-red-500' : ''}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Job Title *
-                            </label>
-                            <Input 
-                              placeholder="CEO, Owner, Manager, etc." 
-                              value={contactInfo.jobTitle} 
-                              onChange={(e) => setContactInfo({ ...contactInfo, jobTitle: e.target.value })}
-                              className={validationAttempted && contactInfo.jobTitle.trim() === '' ? 'border-red-300 focus:border-red-500' : ''}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Email Address *
-                            </label>
-                            <Input 
-                              type="email" 
-                              placeholder="john@yourbusiness.com" 
-                              value={contactInfo.email} 
-                              onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
-                              className={validationAttempted && contactInfo.email.trim() === '' ? 'border-red-300 focus:border-red-500' : ''}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Phone Number *
-                            </label>
-                            <Input 
-                              placeholder="(210) 555-0123" 
-                              value={contactInfo.phone} 
-                              onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
-                              className={validationAttempted && contactInfo.phone.trim() === '' ? 'border-red-300 focus:border-red-500' : ''}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              LinkedIn Profile
-                            </label>
-                            <Input placeholder="https://linkedin.com/in/johndoe" value={contactInfo.linkedin} onChange={(e) => setContactInfo({ ...contactInfo, linkedin: e.target.value })} />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
                   </div>
                 )}
 
-                {/* Step 3: Additional Members */}
-                {currentStep === 3 && hasMultipleMemberships && (
-                  <Card className="border-0 shadow-lg">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-xl flex items-center">
-                        <UserPlus className="w-5 h-5 mr-2 text-blue-600" />
-                        Assign Additional Memberships
-                      </CardTitle>
-                      <CardDescription>
-                        Provide information for employees or friends who will use the additional memberships
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {additionalMembers.map((member, index) => (
-                          <div key={member.id} className="border border-gray-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-4">
-                              <h4 className="font-medium text-gray-900">Additional Member {index + 1}</h4>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeAdditionalMember(member.id)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Full Name *
-                                </label>
-                                <Input
-                                  placeholder="Enter full name"
-                                  value={member.name}
-                                  onChange={(e) => updateAdditionalMember(member.id, 'name', e.target.value)}
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Email Address *
-                                </label>
-                                <Input
-                                  type="email"
-                                  placeholder="Enter email address"
-                                  value={member.email}
-                                  onChange={(e) => updateAdditionalMember(member.id, 'email', e.target.value)}
-                                />
-                              </div>
-                            </div>
+                {/* Step 3: Payment */}
+                {currentStep === 3 && (
+                  <div className="space-y-6">
+                    {/* Payment Form */}
+                    <Card className="border-0 shadow-lg">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="text-xl flex items-center">
+                          <Lock className="w-5 h-5 mr-2 text-green-600" />
+                          Payment Information
+                        </CardTitle>
+                        <CardDescription>
+                          Enter your payment details to complete your membership purchase
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {paymentLoading && (
+                          <div className="text-center py-8">
+                            <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-blue-600" />
+                            <p className="text-gray-600">Preparing your payment...</p>
+                          </div>
+                        )}
 
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`send-invitation-${member.id}`}
-                                checked={member.sendInvitation}
-                                onCheckedChange={(checked) => 
-                                  updateAdditionalMember(member.id, 'sendInvitation', checked)
-                                }
-                              />
-                              <label 
-                                htmlFor={`send-invitation-${member.id}`}
-                                className="text-sm text-gray-700 flex items-center"
-                              >
-                                <Send className="w-4 h-4 mr-1" />
-                                Send invitation email to activate account
-                              </label>
+                        {paymentError && (
+                          <div className="bg-red-50 p-4 rounded-lg border border-red-200 mb-4">
+                            <div className="flex items-center">
+                              <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+                              <span className="text-red-800 font-medium">Payment Error</span>
+                            </div>
+                            <p className="text-red-700 mt-1">{paymentError}</p>
+                            <Button 
+                              onClick={createPaymentIntent}
+                              className="mt-3"
+                              variant="outline"
+                              size="sm"
+                            >
+                              Try Again
+                            </Button>
+                          </div>
+                        )}
+
+                        {paymentSuccess && (
+                          <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-4">
+                            <div className="flex items-center">
+                              <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                              <span className="text-green-800 font-medium">Payment Successful!</span>
+                            </div>
+                            <p className="text-green-700 mt-1">Redirecting to success page...</p>
+                          </div>
+                        )}
+
+                        {!clientSecret && !paymentLoading && !paymentError && !paymentSuccess && (
+                          <div className="text-center py-8">
+                            <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Ready to Complete Payment</h3>
+                            <p className="text-gray-600 mb-4">
+                              Click the "Ready to Pay" button in the sidebar to securely process your payment.
+                            </p>
+                            <div className="bg-blue-50 p-4 rounded-lg">
+                              <p className="text-sm text-blue-800">
+                                <strong>Total Amount:</strong> ${subtotal.toFixed(2)}
+                              </p>
+                              <p className="text-xs text-blue-700 mt-1">
+                                Your payment information will be securely processed by Stripe.
+                              </p>
+                            </div>
+                            {/* Debug info */}
+                            <div className="mt-4 p-2 bg-gray-100 rounded text-xs text-gray-600">
+                              Debug: clientSecret={clientSecret ? 'set' : 'not set'}, 
+                              loading={paymentLoading.toString()}, 
+                              error={paymentError || 'none'}
                             </div>
                           </div>
-                        ))}
+                        )}
 
-                        <Button
-                          variant="outline"
-                          onClick={addAdditionalMember}
-                          className="w-full"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Another Member
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        {clientSecret && !paymentLoading && !paymentError && !paymentSuccess && (
+                          <div>
+                            <div className="mb-4 p-2 bg-green-100 rounded text-xs text-green-700">
+                              Debug: Payment form should be visible - clientSecret is set
+                            </div>
+                            <Elements stripe={stripePromise} options={{ clientSecret }}>
+                              <StripeForm
+                                clientSecret={clientSecret}
+                                amount={subtotal * 100} // Convert to cents
+                                description={`BASA Membership - ${totalMemberships} membership${totalMemberships !== 1 ? 's' : ''}`}
+                                onSuccess={handlePaymentSuccess}
+                                onError={handlePaymentError}
+                                loading={paymentLoading}
+                              />
+                            </Elements>
+                          </div>
+                        )}
+
+                        {/* Fallback payment form for debugging */}
+                        {currentStep === 3 && !clientSecret && !paymentLoading && !paymentError && !paymentSuccess && (
+                          <div className="mt-4 p-4 border border-yellow-300 bg-yellow-50 rounded">
+                            <h4 className="font-semibold text-yellow-800 mb-2">Debug: Payment Form Not Showing</h4>
+                            <p className="text-sm text-yellow-700 mb-2">
+                              If you're seeing this message, there might be an issue with the payment form rendering.
+                            </p>
+                            <Button 
+                              onClick={handleCheckoutClick}
+                              className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                            >
+                              Try Creating Payment Intent Again
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Test payment form - always show on step 3 for debugging */}
+                        {currentStep === 3 && (
+                          <div className="mt-6 p-4 border border-blue-300 bg-blue-50 rounded">
+                            <h4 className="font-semibold text-blue-800 mb-2">Test Payment Form</h4>
+                            <p className="text-sm text-blue-700 mb-4">
+                              This is a test to verify Stripe components are working. 
+                              Client Secret: {clientSecret ? 'Available' : 'Not Available'}
+                            </p>
+                            <div className="space-y-2 text-xs text-blue-600">
+                              <div>Payment Loading: {paymentLoading.toString()}</div>
+                              <div>Payment Error: {paymentError || 'None'}</div>
+                              <div>Payment Success: {paymentSuccess.toString()}</div>
+                              <div>Can Proceed: {canProceedToNextStep().toString()}</div>
+                            </div>
+                            <Button 
+                              onClick={handleCheckoutClick}
+                              className="mt-3 bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              Create Payment Intent
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Additional Members Section - Only show if multiple memberships */}
+                    {hasMultipleMemberships && (
+                      <Card className="border-0 shadow-lg">
+                        <CardHeader className="pb-4">
+                          <CardTitle className="text-xl flex items-center">
+                            <UserPlus className="w-5 h-5 mr-2 text-blue-600" />
+                            Assign Additional Memberships
+                          </CardTitle>
+                          <CardDescription>
+                            Provide information for employees or friends who will use the additional memberships
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {additionalMembers.map((member, index) => (
+                              <div key={member.id} className="border border-gray-200 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-4">
+                                  <h4 className="font-medium text-gray-900">Additional Member {index + 1}</h4>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => removeAdditionalMember(member.id)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                      Full Name *
+                                    </label>
+                                    <Input
+                                      placeholder="Enter full name"
+                                      value={member.name}
+                                      onChange={(e) => updateAdditionalMember(member.id, 'name', e.target.value)}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                      Email Address *
+                                    </label>
+                                    <Input
+                                      type="email"
+                                      placeholder="Enter email address"
+                                      value={member.email}
+                                      onChange={(e) => updateAdditionalMember(member.id, 'email', e.target.value)}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`send-invitation-${member.id}`}
+                                    checked={member.sendInvitation}
+                                    onCheckedChange={(checked) => 
+                                      updateAdditionalMember(member.id, 'sendInvitation', checked)
+                                    }
+                                  />
+                                  <label 
+                                    htmlFor={`send-invitation-${member.id}`}
+                                    className="text-sm text-gray-700 flex items-center"
+                                  >
+                                    <Send className="w-4 h-4 mr-1" />
+                                    Send invitation email to activate account
+                                  </label>
+                                </div>
+                              </div>
+                            ))}
+
+                            <Button
+                              variant="outline"
+                              onClick={addAdditionalMember}
+                              className="w-full"
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add Another Member
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
                 )}
 
                 {/* Navigation Buttons */}
@@ -986,23 +1222,16 @@ export default function JoinPage() {
                         <span>Please fill out all required fields</span>
                       </div>
                     )}
-                    <Button
-                      onClick={handleNextStep}
-                      disabled={!canProceedToNextStep()}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      {currentStep === 3 ? (
-                        <>
-                          <CreditCard className="w-4 h-4 mr-2" />
-                          Proceed to Checkout
-                        </>
-                      ) : (
-                        <>
-                          Next
-                          <ChevronRight className="w-4 h-4 ml-2" />
-                        </>
-                      )}
-                    </Button>
+                    {currentStep < 3 && (
+                      <Button
+                        onClick={handleNextStep}
+                        disabled={!canProceedToNextStep()}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1100,14 +1329,18 @@ export default function JoinPage() {
                             </p>
                           </div>
 
-                          <Button 
-                            className="w-full bg-blue-600 hover:bg-blue-700"
-                            onClick={handleCheckoutClick}
-                            disabled={!canProceedToNextStep()}
-                          >
-                            <CreditCard className="w-4 h-4 mr-2" />
-                            {cart.length === 0 ? 'Select Memberships' : 'Proceed to Checkout'}
-                          </Button>
+                          {/* Step 3 Payment Notice */}
+                          {currentStep === 3 && (
+                            <div className="bg-blue-50 p-3 rounded-lg">
+                              <h4 className="font-semibold text-blue-900 mb-1 text-sm flex items-center">
+                                <CreditCard className="w-4 h-4 mr-1" />
+                                Payment Ready
+                              </h4>
+                              <p className="text-xs text-blue-800">
+                                Complete your payment using the secure form below.
+                              </p>
+                            </div>
+                          )}
 
                           {/* Validation Message */}
                           {cart.length > 0 && !canProceedToNextStep() && (
@@ -1116,7 +1349,7 @@ export default function JoinPage() {
                                 <span className="font-medium">⚠️ Complete Required Information</span>
                               </div>
                               <p className="text-xs text-red-700 mt-1">
-                                Please fill out all required business and contact information before proceeding to checkout.
+                                Please fill out all required business and contact information before proceeding to payment.
                               </p>
                             </div>
                           )}
