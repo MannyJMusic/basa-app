@@ -62,6 +62,7 @@ model User {
   member        Member?
   auditLogs     AuditLog[]
   blogPosts     BlogPost[]
+  membershipInvitations MembershipInvitation[]
 }
 
 model VerificationToken {
@@ -397,20 +398,40 @@ model Testimonial {
 }
 
 model Lead {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  phone     String?
-  company   String?
-  message   String?  @db.Text
-  source    String   @default("website")
-  memberId  String?
-  member    Member?  @relation(fields: [memberId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String?
+  company     String?
+  message     String?  @db.Text
+  source      String?
+  status      String   @default("NEW")
+  memberId    String?
+  member      Member?  @relation(fields: [memberId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
+  @@index([status])
   @@index([memberId])
-  @@index([source])
+}
+
+model MembershipInvitation {
+  id          String   @id @default(cuid())
+  email       String
+  name        String
+  tierId      String
+  invitedBy   String
+  inviter     User     @relation(fields: [invitedBy], references: [id])
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([invitedBy])
 }
 
 enum PostStatus {
@@ -430,4 +451,11 @@ enum AccountStatus {
   ACTIVE
   SUSPENDED
   INACTIVE
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  DECLINED
 } 

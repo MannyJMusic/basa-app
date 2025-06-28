@@ -1,0 +1,67 @@
+---
+title: Your identify has been confirmed
+preheader: Your identify has been confirmed
+---
+{% extends "src/layouts/default.njk" %}
+{% block template %}
+
+<table class="wrapper w-full all-font-sans">
+  <tr>
+    <td align="center" class="bg-white">
+      <table class="w-640 sm-w-full">
+        <tr>
+          <td class="bg-white px-40 py-48 sm-px-16 sm-py-24 text-center">
+            <div class="mb-24">
+              <a href="http://craftingemails.com" class="no-underline">
+                <img src="logo.png" alt="craftingemails" width="143">
+              </a>
+            </div>
+            <p class="text-21 text-gray-900 m-0 leading-28">Hi Candy 👌</p>
+            <p class="text-21 text-gray-900 mt-0 mb-16 leading-28">
+              Thank you for sending us your photo ID.
+              <br>
+              We've confirmed your identity.
+            </p>
+            <p class="text-16 font-bold text-gray-900 m-0 leading-22">Are you satisfied with your verification process?</p>
+            <div class="leading-16 sm-h-16">&nbsp;</div>
+            <table align="center" class="mx-auto">
+              <tr>
+                <td class="pr-12">
+                  <a href="http://craftingemails.com" class="bg-gray-ui-50 hover-bg-gray-ui-200 inline-block rounded-full p-4">
+                    <img src="emoji/tired-face.png" width="40" alt="1">
+                  </a>
+                </td>
+                <td class="pr-12">
+                  <a href="http://craftingemails.com" class="bg-gray-ui-50 hover-bg-gray-ui-200 inline-block rounded-full p-4">
+                    <img src="emoji/slightly-frowning-face.png" width="40" alt="2">
+                  </a>
+                </td>
+                <td class="pr-12">
+                  <a href="http://craftingemails.com" class="bg-gray-ui-50 hover-bg-gray-ui-200 inline-block rounded-full p-4">
+                    <img src="emoji/neutral-face.png" width="40" alt="3">
+                  </a>
+                </td>
+                <td class="pr-12">
+                  <a href="http://craftingemails.com" class="bg-gray-ui-50 hover-bg-gray-ui-200 inline-block rounded-full p-4">
+                    <img src="emoji/slightly-smiling-face.png" width="40" alt="4">
+                  </a>
+                </td>
+                <td>
+                  <a href="http://craftingemails.com" class="bg-gray-ui-50 hover-bg-gray-ui-200 inline-block rounded-full p-4">
+                    <img src="emoji/smiling-face-with-heart-shaped-eyes.png" width="40" alt="5">
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            {% include "src/partials/footer.njk" %}
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% endblock %}
+

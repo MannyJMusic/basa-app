@@ -1,0 +1,30 @@
+---
+layout: src/layouts/shopify.njk
+---
+{% extends "src/layouts/shopify.njk" %}
+
+{% block template %}
+
+<table class="wrapper w-full all-font-sans">
+  <tr>
+    <td align="center" class="bg-white">
+      <table class="w-640 sm-w-full">
+        <tr>
+          <td class="bg-white px-40 py-48 sm-px-16 sm-py-24 text-left">
+
+            {% include "src/partials/shopify/header.njk" %}
+
+            {% raw %}
+            <p class="text-16 text-gray-900 m-0 leading-22">{{ custom_message }}</p>
+            {% endraw %}
+
+            {% include "src/partials/shopify/footer.njk" %}
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% endblock %}

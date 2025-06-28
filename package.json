@@ -21,7 +21,11 @@
     "test:coverage": "jest --coverage",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "e2e": "cypress run"
+    "e2e": "cypress run",
+    "webhook:test": "node scripts/test-webhooks.js",
+    "email:test": "node scripts/test-basa-email.js",
+    "email:quick": "node scripts/quick-email-test.js",
+    "email:preview": "echo 'Visit http://localhost:3000/dev/email-preview'"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -63,6 +67,7 @@
     "next": "15.3.4",
     "next-auth": "5.0.0-beta.29",
     "node-fetch": "^3.3.2",
+    "nunjucks": "^3.2.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.49.3",
@@ -82,6 +87,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.11.16",
+    "@types/nunjucks": "^3.2.6",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
     "autoprefixer": "^10.4.17",

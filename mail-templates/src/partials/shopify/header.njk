@@ -1,0 +1,11 @@
+{% raw %}
+<div class="mb-24">
+  {%- if shop.email_logo_url %}
+  <a href="{{ shop.url }}">
+    <img src="{{ shop.email_logo_url }}" alt="{{ shop.name }}" width="{{ shop.email_logo_width }}">
+  </a>
+  {%- else %}
+  <a href="{{ shop.url }}" class="text-accent hover-underline">{{ shop.name }}</a>
+  {%- endif %}
+</div>
+{% endraw %}

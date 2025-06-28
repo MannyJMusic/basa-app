@@ -1,0 +1,70 @@
+---
+layout: src/layouts/shopify.njk
+title: Your return label for order {{ order_name }} is ready
+preheader: Your return label for order {{ order_name }} is ready
+---
+{% extends "src/layouts/shopify.njk" %}
+
+{% block shopifyhead %}
+  {% raw %}
+    {% capture order_text_link %}<a href="{{ order_status_url }}" class="text-accent hover-underline">&#8470; {{ order_name }}</a>{% endcapture %}
+
+    {% capture title %} Hi {{ customer.first_name }} 📦 {% endcapture %}
+
+    {% capture body %} Your return label for order {{ order_text_link }} is ready. {% endcapture %}
+
+    {% capture instructions %}
+      <ol class="m-0 pl-20">
+        <li class="text-gray-500 text-16 leading-22 m-0 mb-16">Pack the items you're returning.</li>
+        <li class="text-gray-500 text-16 leading-22 m-0 mb-16">Print your return label and attach it to the package. Cover any existing shipping labels.</li>
+        <li class="text-gray-500 text-16 leading-22 m-0">Give the package to the carrier identified on the label.</li>
+      </ol>
+    {% endcapture %}
+
+    {% capture button_label %} Print return label {% endcapture %}
+  {% endraw %}
+{% endblock %}
+
+{% block template %}
+
+<table class="wrapper w-full all-font-sans">
+  <tr>
+    <td align="center" class="bg-white">
+      <table class="w-640 sm-w-full">
+        <tr>
+          <td align="left" class="bg-white px-40 py-48 sm-px-16 sm-py-24">
+
+            {% include "src/partials/shopify/header.njk" %}
+
+            {% raw %}
+            <p class="text-21 text-gray-900 m-0 leading-28">{{ title | strip }}</p>
+            <p class="text-21 text-gray-900 m-0 leading-28">{{ body | strip }}</p>
+
+            <div class="leading-32 sm-h-32">&nbsp;</div>
+
+            <p class="text-16 text-gray-900 font-bold mt-0 mb-16 leading-22">Instructions:</p>
+
+            <p class="text-16 text-gray-700 m-0 leading-24">{{ instructions | strip }}</p>
+
+            <div class="leading-24">&nbsp;</div>
+
+            <table class="sm-w-full">
+              <tr>
+                <td align="center" class="bg-accent text-white rounded shadow" style="mso-padding-alt: 16px 32px;">
+                  <a href="{{ return_label.public_file_url }}" class="inline-block sm-block text-white font-bold text-14 leading-16 sm-py-16 py-16 px-32">{{ button_label | strip }}</a>
+                </td>
+              </tr>
+            </table>
+            {% endraw %}
+
+            {% include "src/partials/shopify/footer.njk" %}
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% endblock %}
+
