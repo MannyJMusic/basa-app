@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { template, email, firstName } = body
+    const { template, email, firstName, fromName } = body
 
     if (!email || !firstName) {
       return NextResponse.json({ 
@@ -23,11 +23,11 @@ export async function POST(request: NextRequest) {
     switch (template) {
       case 'welcome':
         const activationUrl = body.activationUrl || 'https://dev.businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com'
-        result = await sendWelcomeEmail(email, firstName, activationUrl)
+        result = await sendWelcomeEmail(email, firstName, activationUrl, { fromName })
         break
       case 'password-reset':
         const resetUrl = body.resetUrl || 'https://dev.businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com'
-        result = await sendPasswordResetEmail(email, firstName, resetUrl)
+        result = await sendPasswordResetEmail(email, firstName, resetUrl, { fromName })
         break
       case 'event-invitation':
         const event = body.event || {
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
           calendarUrl: 'https://dev.businessassociationsa.com/events/mixer/calendar',
           shareUrl: 'https://dev.businessassociationsa.com/events/mixer'
         }
-        result = await sendEventInvitationEmail(email, firstName, event)
+        result = await sendEventInvitationEmail(email, firstName, event, { fromName })
         break
       default:
         return NextResponse.json({ 

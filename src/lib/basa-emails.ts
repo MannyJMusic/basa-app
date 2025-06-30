@@ -10,17 +10,23 @@ const mg = mailgun.client({
 
 const DOMAIN = process.env.MAILGUN_DOMAIN!
 const FROM_EMAIL = process.env.FROM_EMAIL || `noreply@${DOMAIN}`
+const FROM_NAME = process.env.FROM_NAME || 'BASA'
 const SITE_URL = process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'development' ? 'https://dev.businessassociationsa.com' : 'https://businessassociationsa.com')
 
 // Base email sending function
 async function sendEmail(to: string, subject: string, html: string, options: {
   from?: string
+  fromName?: string
   replyTo?: string
   attachments?: Array<{ filename: string; data: Buffer; contentType: string }>
 } = {}) {
   try {
+    const fromName = options.fromName || FROM_NAME
+    const fromEmail = options.from || FROM_EMAIL
+    const from = fromName ? `${fromName} <${fromEmail}>` : fromEmail
+
     const messageData = {
-      from: options.from || FROM_EMAIL,
+      from: from,
       to: [to],
       subject: subject,
       html: html,
@@ -429,11 +435,14 @@ export async function sendWelcomeEmail(
   options: { 
     siteUrl?: string
     logoUrl?: string
+    fromName?: string
   } = {}
 ) {
   try {
     const html = generateWelcomeEmailHtml(firstName, activationUrl, options)
-    const response = await sendEmail(email, 'Welcome to BASA - Activate Your Account', html)
+    const response = await sendEmail(email, 'Welcome to BASA - Activate Your Account', html, {
+      fromName: options.fromName
+    })
     return {
       success: true,
       messageId: response.id
@@ -453,11 +462,14 @@ export async function sendPasswordResetEmail(
   options: { 
     siteUrl?: string
     logoUrl?: string
+    fromName?: string
   } = {}
 ) {
   try {
     const html = generatePasswordResetEmailHtml(firstName, resetUrl, options)
-    const response = await sendEmail(email, 'Reset Your BASA Password', html)
+    const response = await sendEmail(email, 'Reset Your BASA Password', html, {
+      fromName: options.fromName
+    })
     return {
       success: true,
       messageId: response.id
@@ -491,11 +503,14 @@ export async function sendEventInvitationEmail(
   options: { 
     siteUrl?: string
     logoUrl?: string
+    fromName?: string
   } = {}
 ) {
   try {
     const html = generateEventInvitationEmailHtml(firstName, event, options)
-    const response = await sendEmail(email, `You're Invited: ${event.title}`, html)
+    const response = await sendEmail(email, `You're Invited: ${event.title}`, html, {
+      fromName: options.fromName
+    })
     return {
       success: true,
       messageId: response.id
@@ -523,11 +538,14 @@ export async function sendPaymentReceiptEmail(
   options: { 
     siteUrl?: string
     logoUrl?: string
+    fromName?: string
   } = {}
 ) {
   try {
     const html = generatePaymentReceiptEmailHtml(firstName, paymentData, options)
-    const response = await sendEmail(email, 'BASA Membership Payment Receipt', html)
+    const response = await sendEmail(email, 'BASA Membership Payment Receipt', html, {
+      fromName: options.fromName
+    })
     return {
       success: true,
       messageId: response.id
@@ -547,11 +565,14 @@ export async function sendMembershipInvitationEmail(
   options: { 
     siteUrl?: string
     logoUrl?: string
+    fromName?: string
   } = {}
 ) {
   try {
     const html = generateMembershipInvitationEmailHtml(name, tierId, options)
-    const response = await sendEmail(email, 'You\'re Invited to Join BASA', html)
+    const response = await sendEmail(email, 'You\'re Invited to Join BASA', html, {
+      fromName: options.fromName
+    })
     return {
       success: true,
       messageId: response.id
