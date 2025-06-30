@@ -27,17 +27,13 @@ services:
     container_name: basa-app-dev
     ports:
       - "3000:3000"
+    env_file:
+      - .env.local
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://basa_user:basa_password@postgres:5432/basa_dev
+      # Override NEXTAUTH_URL for Docker environment
       - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=your-dev-secret-key-here
-      # Add other environment variables as needed
-      - STRIPE_SECRET_KEY=your-stripe-secret-key
-      - STRIPE_PUBLISHABLE_KEY=your-stripe-publishable-key
-      - MAILGUN_API_KEY=your-mailgun-api-key
-      - MAILGUN_DOMAIN=your-mailgun-domain
-      - SENTRY_DSN=your-sentry-dsn
     volumes:
       # Map the entire project directory for real-time updates
       - .:/app
