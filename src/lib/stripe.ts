@@ -18,10 +18,10 @@ export const getStripePublishableKey = () => {
 
 // Membership pricing structure (in cents)
 export const MEMBERSHIP_PRICES = {
-  'meeting-member': 0, // $0/year (included)
-  'associate-member': 15000, // $150/year
-  'trio-member': 30000, // $300/year
-  'class-resource-member': 0, // $0/year (included)
+  'meeting-member': 14900, // $149/year
+  'associate-member': 24500, // $245/year
+  'trio-member': 29500, // $295/year
+  'class-resource-member': 12000, // $120/year
   'nag-resource-member': 0, // $0/year (included)
   'training-resource-member': 22500, // $225/year
   // Add the tier keys that are being referenced

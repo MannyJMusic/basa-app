@@ -2,7 +2,7 @@
 FROM node:18-alpine AS base
 
 # Install pnpm and OpenSSL dependencies for Prisma
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl postgresql-client
 
 # Install pnpm
 RUN npm install -g pnpm
@@ -26,8 +26,11 @@ RUN pnpm install --frozen-lockfile
 # Copy the rest of the application
 COPY . .
 
+# Make the startup script executable
+RUN chmod +x scripts/docker-start.sh
+
 # Expose port
 EXPOSE 3000
 
-# Start development server
-CMD ["pnpm", "dev"] 
+# Start with the script that handles seeding
+CMD ["/bin/sh", "scripts/docker-start.sh"] 
