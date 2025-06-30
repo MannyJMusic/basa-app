@@ -3,6 +3,10 @@ import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/db'
 import { headers } from 'next/headers'
 
+// Import both the main email system and fallback
+import { sendWelcomeEmail, sendPaymentReceiptEmail, sendMembershipInvitationEmail } from '@/lib/basa-emails'
+import { sendWelcomeEmailFallback, sendPaymentReceiptEmailFallback, sendMembershipInvitationEmailFallback } from '@/lib/email-fallback'
+
 export async function POST(request: NextRequest) {
   const body = await request.text()
   const headersList = await headers()
@@ -107,6 +111,50 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
           }
         }
       })
+
+      // Send welcome email to new user
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { member: true }
+        })
+
+        if (user) {
+          const activationUrl = user.verificationToken 
+            ? `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${user.verificationToken}&email=${user.email}`
+            : `${process.env.NEXTAUTH_URL}/auth/sign-in`
+          
+          const firstName = user.firstName || 'Member'
+          
+          // Try main email system first, fallback if it fails
+          try {
+            await sendWelcomeEmail(
+              user.email,
+              firstName,
+              activationUrl,
+              {
+                siteUrl: process.env.NEXTAUTH_URL,
+                logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
+              }
+            )
+            console.log(`Welcome email sent to ${user.email}`)
+          } catch (emailError) {
+            console.log(`Main email system failed, using fallback for ${user.email}`)
+            await sendWelcomeEmailFallback(
+              user.email,
+              firstName,
+              activationUrl,
+              {
+                siteUrl: process.env.NEXTAUTH_URL,
+                logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
+              }
+            )
+            console.log(`Fallback welcome email sent to ${user.email}`)
+          }
+        }
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError)
+      }
     } else {
       // Existing authenticated user - update membership status
       await prisma.user.update({
@@ -129,6 +177,43 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
           }
         }
       })
+    }
+
+    // Send payment receipt email to all users
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { member: true }
+      })
+
+      if (user) {
+        const parsedCart = cart ? JSON.parse(cart) : []
+        const parsedCustomerInfo = customerInfo ? JSON.parse(customerInfo) : {}
+        const parsedBusinessInfo = businessInfo ? JSON.parse(businessInfo) : {}
+        
+        const firstName = user.firstName || parsedCustomerInfo.name?.split(' ')[0] || 'Member'
+        
+        await sendPaymentReceiptEmail(
+          user.email,
+          firstName,
+          {
+            paymentId: paymentIntent.id,
+            amount: paymentIntent.amount / 100, // Convert from cents
+            currency: paymentIntent.currency,
+            cart: parsedCart,
+            customerInfo: parsedCustomerInfo,
+            businessInfo: parsedBusinessInfo,
+            paymentDate: new Date().toISOString()
+          },
+          {
+            siteUrl: process.env.NEXTAUTH_URL,
+            logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
+          }
+        )
+        console.log(`Payment receipt email sent to ${user.email}`)
+      }
+    } catch (emailError) {
+      console.error('Failed to send payment receipt email:', emailError)
     }
 
     // Create membership records for each cart item
@@ -176,8 +261,21 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
             }
           })
 
-          // TODO: Send invitation email
-          // await sendMembershipInvitation(member.email, member.name, member.tierId)
+          // Send invitation email to additional members
+          try {
+            await sendMembershipInvitationEmail(
+              member.email,
+              member.name,
+              member.tierId,
+              {
+                siteUrl: process.env.NEXTAUTH_URL,
+                logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
+              }
+            )
+            console.log(`Invitation email sent to ${member.email}`)
+          } catch (emailError) {
+            console.error('Failed to send invitation email:', emailError)
+          }
         }
       }
     }
@@ -298,5 +396,46 @@ async function handleInvoicePaymentFailed(invoice: any) {
   // Handle recurring payment failure
   if (invoice.subscription) {
     console.log('Recurring payment failed for subscription:', invoice.subscription)
+  }
+}
+
+// Export the webhook handler for use by other endpoints
+export async function handleWebhookEvent(event: any) {
+  try {
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        await handlePaymentIntentSucceeded(event.data.object)
+        break
+
+      case 'payment_intent.payment_failed':
+        await handlePaymentIntentFailed(event.data.object)
+        break
+
+      case 'customer.subscription.created':
+        await handleSubscriptionCreated(event.data.object)
+        break
+
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object)
+        break
+
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeleted(event.data.object)
+        break
+
+      case 'invoice.payment_succeeded':
+        await handleInvoicePaymentSucceeded(event.data.object)
+        break
+
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(event.data.object)
+        break
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`)
+    }
+  } catch (error) {
+    console.error('Error processing webhook:', error)
+    throw error
   }
 } 
