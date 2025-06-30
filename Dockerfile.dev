@@ -1,8 +1,8 @@
 # Development Dockerfile
 FROM node:18-alpine AS base
 
-# Install pnpm and OpenSSL dependencies for Prisma
-RUN apk add --no-cache openssl
+# Install pnpm, OpenSSL dependencies for Prisma, wget for health checks, and postgresql-client for db checks
+RUN apk add --no-cache openssl wget postgresql-client
 
 # Install pnpm
 RUN npm install -g pnpm
@@ -10,10 +10,10 @@ RUN npm install -g pnpm
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files first
 COPY package.json pnpm-lock.yaml ./
 
-# Copy prisma schema first (needed for postinstall script)
+# Copy prisma schema (needed for postinstall script)
 COPY prisma ./prisma
 
 # Set Prisma to use OpenSSL 3.x for Alpine compatibility
@@ -26,8 +26,14 @@ RUN pnpm install --frozen-lockfile
 # Copy the rest of the application
 COPY . .
 
+# Make the startup script executable
+RUN chmod +x scripts/docker-start.sh
+
+# Create necessary directories with proper permissions
+RUN mkdir -p .next && chmod 755 .next
+
 # Expose port
 EXPOSE 3000
 
-# Start development server
-CMD ["pnpm", "dev"] 
+# Use the startup script as the entry point with sh
+CMD ["sh", "scripts/docker-start.sh"] 
