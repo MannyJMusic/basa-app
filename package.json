@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "npm run prebuild && next build",
     "prebuild": "npm run type-check && npm run lint",
+    "postbuild": "npm run db:setup",
+    "db:setup": "npm run db:generate && npm run db:seed",
     "check": "npm run type-check && npm run lint",
     "start": "next start",
     "lint": "next lint",
@@ -25,7 +27,8 @@
     "webhook:test": "node scripts/test-webhooks.js",
     "email:test": "node scripts/test-basa-email.js",
     "email:quick": "node scripts/quick-email-test.js",
-    "email:preview": "echo 'Visit http://localhost:3000/dev/email-preview'"
+    "email:preview": "echo 'Visit http://localhost:3000/dev/email-preview'",
+    "setup:dev": "node scripts/setup-dev.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
