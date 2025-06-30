@@ -10,17 +10,23 @@ const mg = mailgun.client({
 
 const DOMAIN = process.env.MAILGUN_DOMAIN!
 const FROM_EMAIL = process.env.FROM_EMAIL || `noreply@${DOMAIN}`
+const FROM_NAME = process.env.FROM_NAME || 'BASA'
 const SITE_URL = process.env.NEXTAUTH_URL || 'https://basa.org'
 
 // Base email sending function
 async function sendEmail(to: string, subject: string, html: string, options: {
   from?: string
+  fromName?: string
   replyTo?: string
   attachments?: Array<{ filename: string; data: Buffer; contentType: string }>
 } = {}) {
   try {
+    const fromName = options.fromName || FROM_NAME
+    const fromEmail = options.from || FROM_EMAIL
+    const from = fromName ? `${fromName} <${fromEmail}>` : fromEmail
+
     const messageData = {
-      from: options.from || FROM_EMAIL,
+      from: from,
       to: [to],
       subject: subject,
       html: html,
@@ -358,10 +364,13 @@ export async function sendWelcomeEmail(
   options: { 
     siteUrl?: string
     logoUrl?: string
+    fromName?: string
   } = {}
 ) {
   const html = generateWelcomeEmailHtml(firstName, activationUrl, options)
-  return sendEmail(email, 'Welcome to BASA - Activate Your Account', html)
+  return sendEmail(email, 'Welcome to BASA - Activate Your Account', html, {
+    fromName: options.fromName
+  })
 }
 
 export async function sendPasswordResetEmail(
@@ -371,11 +380,14 @@ export async function sendPasswordResetEmail(
   options: { 
     siteUrl?: string
     logoUrl?: string
+    fromName?: string
   } = {}
 ) {
   // For now, use the existing template from email.ts
   const { sendPasswordResetEmail: sendResetEmail } = await import('./email')
-  return sendResetEmail(email, firstName, resetUrl)
+  // Extract token from resetUrl for the email.ts function
+  const resetToken = resetUrl.split('token=')[1]?.split('&')[0] || 'test123'
+  return sendResetEmail(email, firstName, resetToken)
 }
 
 export async function sendEventInvitationEmail(
@@ -399,6 +411,7 @@ export async function sendEventInvitationEmail(
   options: { 
     siteUrl?: string
     logoUrl?: string
+    fromName?: string
   } = {}
 ) {
   // For now, use a simple template
@@ -416,7 +429,9 @@ export async function sendEventInvitationEmail(
       </a>
     </div>
   `
-  return sendEmail(email, `You're Invited: ${event.title}`, html)
+  return sendEmail(email, `You're Invited: ${event.title}`, html, {
+    fromName: options.fromName
+  })
 }
 
 // Email validation and rate limiting
