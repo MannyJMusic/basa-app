@@ -242,6 +242,9 @@ export default function PaymentSuccessPage() {
   const totalMemberships = checkoutData?.cart.reduce((sum, item) => sum + item.quantity, 0) || 0
   const hasMultipleMemberships = totalMemberships > 1
 
+  // Calculate subtotal from cart items
+  const subtotal = checkoutData?.cart.reduce((sum, item) => sum + item.price * item.quantity, 0) || 0
+
   const handlePrintReceipt = () => {
     setIsPrinting(true)
     setTimeout(() => {
@@ -362,9 +365,9 @@ export default function PaymentSuccessPage() {
         </table>
         
         <div class="total-section">
-          <div class="total-row">Subtotal: $${checkoutData?.total.toFixed(2) || '0.00'}</div>
+          <div class="total-row">Subtotal: $${subtotal.toFixed(2)}</div>
           <div class="total-row">Tax: $0.00</div>
-          <div class="total-row" style="font-size: 24px; color: #2563eb;">Total: $${checkoutData?.total.toFixed(2) || '0.00'}</div>
+          <div class="total-row" style="font-size: 24px; color: #2563eb;">Total: $${subtotal.toFixed(2)}</div>
         </div>
         
         <div class="footer">
@@ -491,7 +494,7 @@ export default function PaymentSuccessPage() {
                   <div className="flex flex-col items-end space-y-1">
                     <div className="flex justify-between w-full md:w-1/3">
                       <span className="text-gray-600">Subtotal:</span>
-                      <span className="font-semibold">${checkoutData?.total.toFixed(2) || '0.00'}</span>
+                      <span className="font-semibold">${subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between w-full md:w-1/3">
                       <span className="text-gray-600">Tax:</span>
@@ -499,7 +502,7 @@ export default function PaymentSuccessPage() {
                     </div>
                     <div className="flex justify-between w-full md:w-1/3 text-lg font-bold text-blue-600">
                       <span>Total:</span>
-                      <span>${checkoutData?.total.toFixed(2) || '0.00'}</span>
+                      <span>${subtotal.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
