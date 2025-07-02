@@ -38,9 +38,14 @@ warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-# Check if running as root
+# Check if running as root and switch to appropriate user
 if [ "$EUID" -eq 0 ]; then
-    error "Please do not run this script as root"
+    warning "Running as root, switching to basa user..."
+    if id "basa" &>/dev/null; then
+        exec su - basa -c "$0 $*"
+    else
+        error "Root user detected but 'basa' user not found. Please run as non-root user."
+    fi
 fi
 
 # Check if Docker is running
