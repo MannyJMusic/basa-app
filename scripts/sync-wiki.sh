@@ -27,6 +27,6 @@ if git diff --cached --quiet; then
   echo "No changes to commit. Wiki is up to date."
 else
   git commit -m "Sync wiki from main repo"
-  git push origin main
+  git push origin master
   echo "Wiki updated and pushed to GitHub."
 fi 
