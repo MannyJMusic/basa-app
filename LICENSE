@@ -27,40 +27,22 @@ A commercial use is one primarily intended for commercial advantage or monetary 
 
 ================================================================================
 
-SPECIFIC TERMS FOR BASA APPLICATION
+BASA-SPECIFIC TERMS
 
-This license applies to the BASA (Business Association of San Antonio) web application, including but not limited to:
+This license applies to the BASA (Business Association of San Antonio) web application.
 
 PERMITTED USES:
-✅ Educational purposes (learning, teaching, research)
-✅ Personal projects and portfolios
-✅ Non-profit organizations
-✅ Community projects
-✅ White labeling for non-commercial purposes
+✅ Educational purposes, personal projects, non-profit organizations
+✅ Community projects, white labeling (non-commercial), academic use
 ✅ Inspiration and reference for similar projects
-✅ Academic research and publications
 
 REQUIRED ATTRIBUTION:
-When using this work, you must provide attribution to "Business Association of San Antonio (BASA)" in one of the following ways:
-- Visible credit on the website/page
-- Footer attribution
-- About page or credits section
-- Source code comments
-- Documentation references
-
-The attribution can be discreet but must be reasonably discoverable by users.
+Credit "Business Association of San Antonio (BASA)" in a discoverable way:
+- Website footer, about page, source code comments, or documentation
 
 PROHIBITED USES:
-❌ Commercial websites or applications
-❌ For-profit businesses using the code for revenue generation
-❌ SaaS platforms charging for access to features based on this code
-❌ Reselling or redistributing for profit
-❌ Using in commercial products or services
-
-EXCEPTIONS:
-- Non-profit organizations may use this code for their operations
-- Educational institutions may use this code for teaching and research
-- Personal projects that don't generate revenue are permitted
+❌ Commercial websites, for-profit businesses, SaaS platforms
+❌ Revenue generation, reselling, or commercial products/services
 
 ================================================================================
 

@@ -110,7 +110,7 @@ Visit `/dev` for interactive development tools and demos.
 - [📧 Email System](./docs/BASA_EMAIL_SYSTEM.md) - Email functionality
 - [💳 Stripe Setup](./docs/STRIPE_SETUP.md) - Payment processing
 - [🐳 Docker Guide](./docs/DOCKER.md) - Containerization
-- [📄 License Summary](./LICENSE_SUMMARY.md) - Usage terms
+- [📄 License](./LICENSE) - Usage terms and restrictions
 
 ## 🤝 Contributing
 
