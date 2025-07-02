@@ -90,7 +90,7 @@ jobs:
         # Skip database setup during CI build
         pnpm run type-check
         pnpm run lint
-        pnpm run next build
+        pnpm build
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         NODE_ENV: test
