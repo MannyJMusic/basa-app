@@ -1,10 +1,10 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model Account {
@@ -13,15 +13,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -35,34 +34,33 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  firstName     String?
-  lastName      String?
-  phone         String?
-  hashedPassword String?
-  resetToken    String?
-  resetTokenExpiry DateTime?
-  newsletterSubscribed Boolean @default(false)
-  role          String    @default("GUEST")
-  isActive      Boolean   @default(true)
-  lastLogin     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  accountStatus AccountStatus @default(PENDING_VERIFICATION)
-  verificationToken String? @unique
-  verificationTokenExpiry DateTime?
-  membershipPaymentConfirmed Boolean @default(false)
-
-  accounts      Account[]
-  sessions      Session[]
-  member        Member?
-  auditLogs     AuditLog[]
-  blogPosts     BlogPost[]
-  membershipInvitations MembershipInvitation[]
+  id                         String                 @id @default(cuid())
+  name                       String?
+  email                      String?                @unique
+  emailVerified              DateTime?
+  image                      String?
+  firstName                  String?
+  lastName                   String?
+  hashedPassword             String?
+  role                       String                 @default("GUEST")
+  isActive                   Boolean                @default(true)
+  lastLogin                  DateTime?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  newsletterSubscribed       Boolean                @default(false)
+  phone                      String?
+  resetToken                 String?
+  resetTokenExpiry           DateTime?
+  accountStatus              AccountStatus          @default(PENDING_VERIFICATION)
+  membershipPaymentConfirmed Boolean                @default(false)
+  verificationToken          String?                @unique
+  verificationTokenExpiry    DateTime?
+  accounts                   Account[]
+  auditLogs                  AuditLog[]
+  blogPosts                  BlogPost[]
+  member                     Member?
+  membershipInvitations      MembershipInvitation[]
+  sessions                   Session[]
 }
 
 model VerificationToken {
@@ -76,7 +74,6 @@ model VerificationToken {
 model AuditLog {
   id         String   @id @default(cuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
   action     String
   entityType String
   entityId   String
@@ -85,58 +82,307 @@ model AuditLog {
   timestamp  DateTime @default(now())
   ipAddress  String?
   userAgent  String?
+  user       User     @relation(fields: [userId], references: [id])
 }
 
 model Member {
-  id                  String    @id @default(cuid())
-  userId              String    @unique
-  user                User      @relation(fields: [userId], references: [id])
+  id                 String              @id @default(cuid())
+  userId             String              @unique
+  businessName       String?
+  businessType       String?
+  industry           String[]
+  ein                String?             @unique
+  yearEstablished    Int?
+  numberOfEmployees  String?
+  annualRevenue      String?
+  businessEmail      String?
+  businessPhone      String?
+  businessAddress    String?
+  city               String?
+  state              String?
+  zipCode            String?
+  website            String?
+  membershipTier     MembershipTier?
+  membershipStatus   Status              @default(PENDING)
+  joinedAt           DateTime            @default(now())
+  renewalDate        DateTime?
+  stripeCustomerId   String?             @unique
+  subscriptionId     String?             @unique
+  logo               String?
+  coverImage         String?
+  description        String?
+  tagline            String?
+  specialties        String[]
+  certifications     String[]
+  linkedin           String?
+  facebook           String?
+  instagram          String?
+  twitter            String?
+  youtube            String?
+  showInDirectory    Boolean             @default(true)
+  allowContact       Boolean             @default(true)
+  showAddress        Boolean             @default(false)
+  events             Event[]
+  eventRegistrations EventRegistration[]
+  eventSponsors      EventSponsor[]
+  leads              Lead[]
+  user               User                @relation(fields: [userId], references: [id])
+  referralsReceived  Referral[]          @relation("referred")
+  referralsGiven     Referral[]          @relation("referrer")
+  resources          Resource[]
+  sponsorships       Sponsorship[]
+  testimonials       Testimonial[]
 
-  businessName        String?
-  businessType        String?
-  industry            String[]
-  ein                 String?   @unique
-  yearEstablished     Int?
-  numberOfEmployees   String?
-  annualRevenue       String?
-  businessEmail       String?
-  businessPhone       String?
-  businessAddress     String?
-  city                String?
-  state               String?
-  zipCode             String?
-  website             String?
-  membershipTier      MembershipTier?
-  membershipStatus    Status    @default(PENDING)
-  joinedAt            DateTime  @default(now())
-  renewalDate         DateTime?
-  stripeCustomerId    String?   @unique
-  subscriptionId      String?   @unique
-  logo                String?
-  coverImage          String?
-  description         String?   @db.Text
-  tagline             String?
-  specialties         String[]
-  certifications      String[]
-  linkedin            String?
-  facebook            String?
-  instagram           String?
-  twitter             String?
-  youtube             String?
-  showInDirectory     Boolean   @default(true)
-  allowContact        Boolean   @default(true)
-  showAddress         Boolean   @default(false)
-  resources           Resource[]
-  sponsorships        Sponsorship[]
-  referralsGiven      Referral[] @relation("referrer")
-  referralsReceived   Referral[] @relation("referred")
-  events              Event[]
-  eventRegistrations  EventRegistration[]
-  eventSponsors       EventSponsor[]
-  testimonials         Testimonial[]
-  leads               Lead[]
   @@index([businessType, membershipStatus])
   @@index([industry])
+}
+
+model Resource {
+  id            String   @id @default(cuid())
+  memberId      String?
+  category      String?
+  createdAt     DateTime @default(now())
+  description   String?
+  downloadCount Int      @default(0)
+  fileSize      Int?
+  fileType      String?
+  fileUrl       String?
+  isActive      Boolean  @default(true)
+  tags          String[]
+  title         String
+  updatedAt     DateTime @updatedAt
+  member        Member?  @relation(fields: [memberId], references: [id])
+
+  @@index([isActive])
+  @@index([category])
+  @@index([memberId])
+}
+
+model Sponsorship {
+  id       String @id @default(cuid())
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id])
+}
+
+model Referral {
+  id         String @id @default(cuid())
+  referrerId String
+  referredId String
+  referred   Member @relation("referred", fields: [referredId], references: [id])
+  referrer   Member @relation("referrer", fields: [referrerId], references: [id])
+}
+
+model Event {
+  id               String              @id @default(cuid())
+  title            String
+  slug             String              @unique
+  description      String
+  shortDescription String?
+  startDate        DateTime
+  endDate          DateTime
+  location         String
+  address          String?
+  city             String?
+  state            String?
+  zipCode          String?
+  capacity         Int?
+  price            Decimal?            @db.Decimal(10, 2)
+  memberPrice      Decimal?            @db.Decimal(10, 2)
+  category         String
+  type             String              @default("NETWORKING")
+  status           EventStatus         @default(DRAFT)
+  isFeatured       Boolean             @default(false)
+  image            String?
+  organizerId      String
+  tags             String[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  organizer        Member              @relation(fields: [organizerId], references: [id])
+  registrations    EventRegistration[]
+  speakers         EventSpeaker[]
+  sponsors         EventSponsor[]
+
+  @@index([startDate])
+  @@index([category])
+  @@index([status])
+  @@index([organizerId])
+}
+
+model EventRegistration {
+  id              String             @id @default(cuid())
+  eventId         String
+  memberId        String?
+  name            String
+  email           String
+  company         String?
+  phone           String?
+  ticketCount     Int                @default(1)
+  totalAmount     Decimal            @db.Decimal(10, 2)
+  status          RegistrationStatus @default(PENDING)
+  paymentIntentId String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  event           Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member          Member?            @relation(fields: [memberId], references: [id])
+
+  @@index([eventId])
+  @@index([memberId])
+  @@index([status])
+}
+
+model EventSpeaker {
+  id        String   @id @default(cuid())
+  eventId   String
+  name      String
+  title     String?
+  company   String?
+  bio       String?
+  image     String?
+  topic     String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+}
+
+model EventSponsor {
+  id        String      @id @default(cuid())
+  eventId   String
+  memberId  String?
+  name      String
+  logo      String?
+  website   String?
+  tier      SponsorTier @default(BRONZE)
+  createdAt DateTime    @default(now())
+  event     Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member    Member?     @relation(fields: [memberId], references: [id])
+
+  @@index([eventId])
+  @@index([memberId])
+}
+
+model Settings {
+  id                       String   @id @default(cuid())
+  organizationName         String   @default("BASA - Business Association of San Antonio")
+  contactEmail             String   @default("admin@basa.org")
+  phoneNumber              String?
+  website                  String   @default("https://basa.org")
+  address                  String?
+  description              String?
+  maintenanceMode          Boolean  @default(false)
+  autoApproveMembers       Boolean  @default(false)
+  emailNotifications       Boolean  @default(true)
+  requireTwoFactor         Boolean  @default(true)
+  sessionTimeout           Int      @default(30)
+  enforcePasswordPolicy    Boolean  @default(true)
+  allowedIpAddresses       String?
+  apiRateLimit             Int      @default(100)
+  notifyNewMembers         Boolean  @default(true)
+  notifyPayments           Boolean  @default(true)
+  notifyEventRegistrations Boolean  @default(true)
+  notifySystemAlerts       Boolean  @default(true)
+  adminEmails              String?
+  stripePublicKey          String?
+  stripeSecretKey          String?
+  stripeTestMode           Boolean  @default(true)
+  smtpHost                 String?
+  smtpPort                 Int?
+  smtpUsername             String?
+  smtpPassword             String?
+  googleAnalyticsId        String?
+  googleTagManagerId       String?
+  logoUrl                  String?
+  faviconUrl               String?
+  primaryColor             String   @default("#1e40af")
+  secondaryColor           String   @default("#059669")
+  showMemberCount          Boolean  @default(true)
+  showEventCalendar        Boolean  @default(true)
+  showTestimonials         Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model BlogPost {
+  id              String     @id @default(cuid())
+  title           String
+  slug            String     @unique
+  excerpt         String?
+  content         String
+  featuredImage   String?
+  authorId        String
+  status          PostStatus @default(DRAFT)
+  publishedAt     DateTime?
+  tags            String[]
+  metaTitle       String?
+  metaDescription String?
+  viewCount       Int        @default(0)
+  isFeatured      Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  author          User       @relation(fields: [authorId], references: [id])
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([authorId])
+  @@index([tags])
+}
+
+model Testimonial {
+  id          String            @id @default(cuid())
+  authorName  String
+  authorTitle String?
+  content     String
+  rating      Int?
+  status      TestimonialStatus @default(DRAFT)
+  isFeatured  Boolean           @default(false)
+  memberId    String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  company     String?
+  member      Member?           @relation(fields: [memberId], references: [id])
+
+  @@index([status])
+  @@index([memberId])
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  company   String?
+  message   String?
+  source    String?
+  memberId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  status    String   @default("NEW")
+  member    Member?  @relation(fields: [memberId], references: [id])
+
+  @@index([status])
+  @@index([memberId])
+}
+
+model MembershipInvitation {
+  id         String           @id @default(cuid())
+  email      String
+  name       String
+  tierId     String
+  invitedBy  String
+  status     InvitationStatus @default(PENDING)
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  metadata   Json?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  inviter    User             @relation(fields: [invitedBy], references: [id])
+
+  @@index([email])
+  @@index([status])
+  @@index([invitedBy])
 }
 
 enum MembershipTier {
@@ -158,131 +404,6 @@ enum Status {
   INACTIVE
 }
 
-model Resource {
-  id          String   @id @default(cuid())
-  title       String
-  description String?  @db.Text
-  fileUrl     String?
-  fileType    String?
-  fileSize    Int?
-  downloadCount Int    @default(0)
-  isActive    Boolean  @default(true)
-  category    String?
-  tags        String[]
-  memberId    String?
-  member      Member?  @relation(fields: [memberId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([isActive])
-  @@index([category])
-  @@index([memberId])
-}
-
-model Sponsorship {
-  id        String   @id @default(cuid())
-  memberId  String
-  member    Member   @relation(fields: [memberId], references: [id])
-}
-
-model Referral {
-  id         String   @id @default(cuid())
-  referrerId String
-  referredId String
-  referrer   Member   @relation("referrer", fields: [referrerId], references: [id])
-  referred   Member   @relation("referred", fields: [referredId], references: [id])
-}
-
-model Event {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
-  description String   @db.Text
-  shortDescription String?
-  startDate   DateTime
-  endDate     DateTime
-  location    String
-  address     String?
-  city        String?
-  state       String?
-  zipCode     String?
-  capacity    Int?
-  price       Decimal? @db.Decimal(10, 2)
-  memberPrice Decimal? @db.Decimal(10, 2)
-  category    String
-  type        String   @default("NETWORKING") // NETWORKING, SUMMIT, RIBBON_CUTTING, COMMUNITY
-  status      EventStatus @default(DRAFT)
-  isFeatured  Boolean  @default(false)
-  image       String?
-  organizerId String
-  organizer   Member   @relation(fields: [organizerId], references: [id])
-  registrations EventRegistration[]
-  speakers    EventSpeaker[]
-  sponsors    EventSponsor[]
-  tags        String[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([startDate])
-  @@index([category])
-  @@index([status])
-  @@index([organizerId])
-}
-
-model EventRegistration {
-  id        String   @id @default(cuid())
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  memberId  String?
-  member    Member?  @relation(fields: [memberId], references: [id])
-  name      String
-  email     String
-  company   String?
-  phone     String?
-  ticketCount Int    @default(1)
-  totalAmount Decimal @db.Decimal(10, 2)
-  status    RegistrationStatus @default(PENDING)
-  paymentIntentId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([eventId])
-  @@index([memberId])
-  @@index([status])
-}
-
-model EventSpeaker {
-  id        String   @id @default(cuid())
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  name      String
-  title     String?
-  company   String?
-  bio       String?  @db.Text
-  image     String?
-  topic     String?
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-
-  @@index([eventId])
-}
-
-model EventSponsor {
-  id        String   @id @default(cuid())
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  memberId  String?
-  member    Member?  @relation(fields: [memberId], references: [id])
-  name      String
-  logo      String?
-  website   String?
-  tier      SponsorTier @default(BRONZE)
-  createdAt DateTime @default(now())
-
-  @@index([eventId])
-  @@index([memberId])
-}
-
 enum EventStatus {
   DRAFT
   PUBLISHED
@@ -302,143 +423,6 @@ enum SponsorTier {
   SILVER
   GOLD
   PLATINUM
-}
-
-model Settings {
-  id                    String   @id @default(cuid())
-  
-  // Organization Information
-  organizationName      String   @default("BASA - Business Association of San Antonio")
-  contactEmail          String   @default("admin@basa.org")
-  phoneNumber           String?
-  website               String   @default("https://basa.org")
-  address               String?
-  description           String?  @db.Text
-  
-  // System Settings
-  maintenanceMode       Boolean  @default(false)
-  autoApproveMembers    Boolean  @default(false)
-  emailNotifications    Boolean  @default(true)
-  
-  // Security Settings
-  requireTwoFactor      Boolean  @default(true)
-  sessionTimeout        Int      @default(30) // minutes
-  enforcePasswordPolicy Boolean  @default(true)
-  allowedIpAddresses    String?
-  apiRateLimit          Int      @default(100)
-  
-  // Notification Settings
-  notifyNewMembers      Boolean  @default(true)
-  notifyPayments        Boolean  @default(true)
-  notifyEventRegistrations Boolean @default(true)
-  notifySystemAlerts    Boolean  @default(true)
-  adminEmails           String?  @db.Text // JSON array of email addresses
-  
-  // Integration Settings
-  stripePublicKey       String?
-  stripeSecretKey       String?
-  stripeTestMode        Boolean  @default(true)
-  smtpHost              String?
-  smtpPort              Int?
-  smtpUsername          String?
-  smtpPassword          String?
-  googleAnalyticsId     String?
-  googleTagManagerId    String?
-  
-  // Appearance Settings
-  logoUrl               String?
-  faviconUrl            String?
-  primaryColor          String   @default("#1e40af")
-  secondaryColor        String   @default("#059669")
-  showMemberCount       Boolean  @default(true)
-  showEventCalendar     Boolean  @default(true)
-  showTestimonials      Boolean  @default(true)
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
-  @@map("settings")
-}
-
-// Content Management Models
-model BlogPost {
-  id          String      @id @default(cuid())
-  title       String
-  slug        String      @unique
-  excerpt     String?     @db.Text
-  content     String      @db.Text
-  featuredImage String?
-  authorId    String
-  author      User        @relation(fields: [authorId], references: [id])
-  status      PostStatus  @default(DRAFT)
-  publishedAt DateTime?
-  tags        String[]
-  metaTitle   String?
-  metaDescription String?
-  viewCount   Int         @default(0)
-  isFeatured  Boolean     @default(false)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  @@index([status])
-  @@index([publishedAt])
-  @@index([authorId])
-  @@index([tags])
-}
-
-model Testimonial {
-  id          String   @id @default(cuid())
-  content     String   @db.Text
-  authorName  String
-  authorTitle String?
-  company     String?
-  rating      Int?
-  status      TestimonialStatus @default(DRAFT)
-  isFeatured  Boolean  @default(false)
-  memberId    String?
-  member      Member?  @relation(fields: [memberId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([status])
-  @@index([memberId])
-}
-
-model Lead {
-  id          String   @id @default(cuid())
-  name        String
-  email       String
-  phone       String?
-  company     String?
-  message     String?  @db.Text
-  source      String?
-  status      String   @default("NEW")
-  memberId    String?
-  member      Member?  @relation(fields: [memberId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([status])
-  @@index([memberId])
-}
-
-model MembershipInvitation {
-  id          String   @id @default(cuid())
-  email       String
-  name        String
-  tierId      String
-  invitedBy   String
-  inviter     User     @relation(fields: [invitedBy], references: [id])
-  status      InvitationStatus @default(PENDING)
-  expiresAt   DateTime
-  acceptedAt  DateTime?
-  metadata    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([email])
-  @@index([status])
-  @@index([invitedBy])
 }
 
 enum PostStatus {
@@ -465,4 +449,4 @@ enum InvitationStatus {
   ACCEPTED
   EXPIRED
   DECLINED
-} 
+}
