@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     )
 
     // Use the new detailed webhook handlers from the other endpoint
-    const { handleWebhookEvent } = await import('../webhooks/stripe/route')
+    const { handleWebhookEvent } = await import('../../webhooks/stripe/route')
     await handleWebhookEvent(event)
 
     return NextResponse.json({ received: true })
@@ -123,21 +123,23 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
         if (user) {
           const activationUrl = user.verificationToken 
-            ? `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${user.verificationToken}&email=${user.email}`
+            ? `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${user.verificationToken}&email=${user.email || ''}`
             : `${process.env.NEXTAUTH_URL}/auth/sign-in`
           
           const firstName = user.firstName || 'Member'
           
-          await sendWelcomeEmail(
-            user.email,
-            firstName,
-            activationUrl,
-            {
-              siteUrl: process.env.NEXTAUTH_URL,
-              logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
-            }
-          )
-          console.log(`Welcome email sent to ${user.email}`)
+          if (user.email) {
+            await sendWelcomeEmail(
+              user.email,
+              firstName,
+              activationUrl,
+              {
+                siteUrl: process.env.NEXTAUTH_URL,
+                logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
+              }
+            )
+          }
+          console.log(`Welcome email sent to ${user.email || 'unknown'}`)
         }
       } catch (emailError) {
         console.error('Failed to send welcome email:', emailError)

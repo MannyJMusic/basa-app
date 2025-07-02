@@ -27,6 +27,7 @@ import {
   Info
 } from "lucide-react"
 import { useEvents } from "@/hooks/use-events"
+import { BasaEventLoading } from "@/components/ui/basa-loading"
 
 export default function EventsPage() {
   const { events, loading, fetchEvents } = useEvents()
@@ -167,10 +168,7 @@ export default function EventsPage() {
           </div>
 
           {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-              <p className="mt-2 text-gray-600">Loading events...</p>
-            </div>
+            <BasaEventLoading />
           ) : !events || events.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>No upcoming events found.</p>

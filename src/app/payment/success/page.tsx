@@ -42,6 +42,7 @@ import {
   CreditCard
 } from 'lucide-react'
 import Link from 'next/link'
+import { DevControlPanel } from '@/components/dev/DevControlPanel'
 
 interface CartItem {
   tierId: string
@@ -237,6 +238,9 @@ export default function PaymentSuccessPage() {
     }
   }, [cartParam, paymentId])
 
+  // Note: Emails are now handled by the webhook system
+  // This prevents duplicate emails from being sent
+
   const isMembership = type === 'membership'
   const isEvent = type === 'event'
   const totalMemberships = checkoutData?.cart.reduce((sum, item) => sum + item.quantity, 0) || 0
@@ -399,206 +403,211 @@ export default function PaymentSuccessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
-      {/* Banner Header */}
-      <div className="w-full bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 text-white flex items-center px-4 py-4 md:py-3 shadow-md">
-        <img src="/images/BASA-LOGO.png" alt="BASA Logo" className="h-12 w-auto mr-4" />
-        <div className="flex items-center">
-          <CheckCircle className="w-8 h-8 text-white mr-2" />
-          <span className="text-2xl md:text-3xl font-bold">Payment Successful!</span>
+    <DevControlPanel
+      paymentData={checkoutData}
+      emailStatus={{ active: true, paymentId, customerEmail: checkoutData?.customerInfo?.email || checkoutData?.contactInfo?.email }}
+    >
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
+        {/* Banner Header */}
+        <div className="w-full bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 text-white flex items-center px-4 py-4 md:py-3 shadow-md">
+          <img src="/images/BASA-LOGO.png" alt="BASA Logo" className="h-12 w-auto mr-4" />
+          <div className="flex items-center">
+            <CheckCircle className="w-8 h-8 text-white mr-2" />
+            <span className="text-2xl md:text-3xl font-bold">Payment Successful!</span>
+          </div>
+          <div className="ml-auto flex flex-col items-end text-xs opacity-80">
+            <span>Payment ID: {paymentId}</span>
+            <span>{isClient ? currentDate : 'Loading...'}</span>
+          </div>
         </div>
-        <div className="ml-auto flex flex-col items-end text-xs opacity-80">
-          <span>Payment ID: {paymentId}</span>
-          <span>{isClient ? currentDate : 'Loading...'}</span>
-        </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Main Summary/Receipt Card */}
-          <div className="md:col-span-2">
-            <Card className="shadow-xl border-0 bg-white">
-              <CardHeader className="pb-4 flex flex-col md:flex-row md:items-center md:justify-between">
-                <div>
-                  <CardTitle className="text-2xl flex items-center">
-                    <FileText className="w-6 h-6 mr-3 text-green-500" />
-                    Receipt & Membership Summary
-                  </CardTitle>
-                  <CardDescription>
-                    Thank you for joining BASA! Below are your membership and payment details.
-                  </CardDescription>
-                </div>
-                {/* Activation Instructions */}
-                <div className="mt-4 md:mt-0 md:ml-8">
-                  <div className="flex items-center bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
-                    <Mail className="w-5 h-5 text-amber-600 mr-2" />
-                    <span className="text-amber-800 text-sm">Check your email to activate your account.</span>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Contact & Business Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Main Summary/Receipt Card */}
+            <div className="md:col-span-2">
+              <Card className="shadow-xl border-0 bg-white">
+                <CardHeader className="pb-4 flex flex-col md:flex-row md:items-center md:justify-between">
                   <div>
-                    <h4 className="font-semibold text-gray-900 flex items-center mb-2">
-                      <User className="w-4 h-4 mr-2" />Primary Contact
-                    </h4>
-                    <div className="space-y-1 text-sm">
-                      <div><span className="text-gray-600">Name:</span> <span className="font-medium">{checkoutData?.customerInfo?.name || (checkoutData?.contactInfo ? `${checkoutData.contactInfo.firstName} ${checkoutData.contactInfo.lastName}` : 'N/A')}</span></div>
-                      <div><span className="text-gray-600">Email:</span> <span className="font-medium">{checkoutData?.customerInfo?.email || checkoutData?.contactInfo?.email || 'N/A'}</span></div>
-                      <div><span className="text-gray-600">Phone:</span> <span className="font-medium">{checkoutData?.customerInfo?.phone || checkoutData?.contactInfo?.phone || 'N/A'}</span></div>
-                      {checkoutData?.contactInfo?.jobTitle && <div><span className="text-gray-600">Job Title:</span> <span className="font-medium">{checkoutData.contactInfo.jobTitle}</span></div>}
+                    <CardTitle className="text-2xl flex items-center">
+                      <FileText className="w-6 h-6 mr-3 text-green-500" />
+                      Receipt & Membership Summary
+                    </CardTitle>
+                    <CardDescription>
+                      Thank you for joining BASA! Below are your membership and payment details.
+                    </CardDescription>
+                  </div>
+                  {/* Activation Instructions */}
+                  <div className="mt-4 md:mt-0 md:ml-8">
+                    <div className="flex items-center bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+                      <Mail className="w-5 h-5 text-amber-600 mr-2" />
+                      <span className="text-amber-800 text-sm">Check your email to activate your account.</span>
                     </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 flex items-center mb-2">
-                      <Building2 className="w-4 h-4 mr-2" />Business Info
-                    </h4>
-                    <div className="space-y-1 text-sm">
-                      <div><span className="text-gray-600">Company:</span> <span className="font-medium">{checkoutData?.businessInfo?.businessName || checkoutData?.customerInfo?.company || 'N/A'}</span></div>
-                      {checkoutData?.businessInfo?.businessAddress && <div><span className="text-gray-600">Address:</span> <span className="font-medium">{checkoutData.businessInfo.businessAddress}</span></div>}
-                      {checkoutData?.businessInfo?.city && <div><span className="text-gray-600">City:</span> <span className="font-medium">{checkoutData.businessInfo.city}</span></div>}
-                      {checkoutData?.businessInfo?.state && <div><span className="text-gray-600">State:</span> <span className="font-medium">{checkoutData.businessInfo.state}</span></div>}
-                      {checkoutData?.businessInfo?.zipCode && <div><span className="text-gray-600">ZIP:</span> <span className="font-medium">{checkoutData.businessInfo.zipCode}</span></div>}
-                      {checkoutData?.businessInfo?.businessPhone && <div><span className="text-gray-600">Business Phone:</span> <span className="font-medium">{checkoutData.businessInfo.businessPhone}</span></div>}
+                </CardHeader>
+                <CardContent>
+                  {/* Contact & Business Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 flex items-center mb-2">
+                        <User className="w-4 h-4 mr-2" />Primary Contact
+                      </h4>
+                      <div className="space-y-1 text-sm">
+                        <div><span className="text-gray-600">Name:</span> <span className="font-medium">{checkoutData?.customerInfo?.name || (checkoutData?.contactInfo ? `${checkoutData.contactInfo.firstName} ${checkoutData.contactInfo.lastName}` : 'N/A')}</span></div>
+                        <div><span className="text-gray-600">Email:</span> <span className="font-medium">{checkoutData?.customerInfo?.email || checkoutData?.contactInfo?.email || 'N/A'}</span></div>
+                        <div><span className="text-gray-600">Phone:</span> <span className="font-medium">{checkoutData?.customerInfo?.phone || checkoutData?.contactInfo?.phone || 'N/A'}</span></div>
+                        {checkoutData?.contactInfo?.jobTitle && <div><span className="text-gray-600">Job Title:</span> <span className="font-medium">{checkoutData.contactInfo.jobTitle}</span></div>}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 flex items-center mb-2">
+                        <Building2 className="w-4 h-4 mr-2" />Business Info
+                      </h4>
+                      <div className="space-y-1 text-sm">
+                        <div><span className="text-gray-600">Company:</span> <span className="font-medium">{checkoutData?.businessInfo?.businessName || checkoutData?.customerInfo?.company || 'N/A'}</span></div>
+                        {checkoutData?.businessInfo?.businessAddress && <div><span className="text-gray-600">Address:</span> <span className="font-medium">{checkoutData.businessInfo.businessAddress}</span></div>}
+                        {checkoutData?.businessInfo?.city && <div><span className="text-gray-600">City:</span> <span className="font-medium">{checkoutData.businessInfo.city}</span></div>}
+                        {checkoutData?.businessInfo?.state && <div><span className="text-gray-600">State:</span> <span className="font-medium">{checkoutData.businessInfo.state}</span></div>}
+                        {checkoutData?.businessInfo?.zipCode && <div><span className="text-gray-600">ZIP:</span> <span className="font-medium">{checkoutData.businessInfo.zipCode}</span></div>}
+                        {checkoutData?.businessInfo?.businessPhone && <div><span className="text-gray-600">Business Phone:</span> <span className="font-medium">{checkoutData.businessInfo.businessPhone}</span></div>}
+                      </div>
                     </div>
                   </div>
-                </div>
-                {/* Itemized Purchase Breakdown */}
-                <div className="mb-6">
-                  <h4 className="font-semibold text-gray-900 flex items-center mb-2">
-                    <FileText className="w-4 h-4 mr-2" />Purchase Details
-                  </h4>
-                  <div className="space-y-4">
-                    {checkoutData?.cart.map((item) => {
-                      const tier = MEMBERSHIP_TIERS[item.tierId as keyof typeof MEMBERSHIP_TIERS]
-                      return (
-                        <div key={item.tierId} className="border border-gray-200 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between">
-                          <div>
-                            <div className="font-semibold text-gray-900">{tier.name}</div>
-                            <div className="text-xs text-gray-600">Annual Membership</div>
-                            <div className="text-xs text-gray-500">Qty: {item.quantity}</div>
-                          </div>
-                          <div className="text-right mt-2 md:mt-0">
-                            <div className="font-semibold text-lg">${(item.price * item.quantity).toFixed(2)}</div>
-                            <div className="text-xs text-gray-500">Unit: ${item.price.toFixed(2)}</div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <Separator className="my-4" />
-                  <div className="flex flex-col items-end space-y-1">
-                    <div className="flex justify-between w-full md:w-1/3">
-                      <span className="text-gray-600">Subtotal:</span>
-                      <span className="font-semibold">${checkoutData?.total.toFixed(2) || '0.00'}</span>
-                    </div>
-                    <div className="flex justify-between w-full md:w-1/3">
-                      <span className="text-gray-600">Tax:</span>
-                      <span>$0.00</span>
-                    </div>
-                    <div className="flex justify-between w-full md:w-1/3 text-lg font-bold text-blue-600">
-                      <span>Total:</span>
-                      <span>${checkoutData?.total.toFixed(2) || '0.00'}</span>
-                    </div>
-                  </div>
-                </div>
-                {/* Membership Details (collapsible) */}
-                {isMembership && checkoutData && (
+                  {/* Itemized Purchase Breakdown */}
                   <div className="mb-6">
                     <h4 className="font-semibold text-gray-900 flex items-center mb-2">
-                      <Trophy className="w-4 h-4 mr-2 text-yellow-500" />Your BASA Membership
+                      <FileText className="w-4 h-4 mr-2" />Purchase Details
                     </h4>
-                    <div className="space-y-2">
-                      {checkoutData.cart.map((item) => {
+                    <div className="space-y-4">
+                      {checkoutData?.cart.map((item) => {
                         const tier = MEMBERSHIP_TIERS[item.tierId as keyof typeof MEMBERSHIP_TIERS]
                         return (
-                          <div key={item.tierId} className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-bold text-blue-900">{tier.name}</span>
-                              <span className="text-xs text-gray-600">Qty: {item.quantity}</span>
+                          <div key={item.tierId} className="border border-gray-200 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between">
+                            <div>
+                              <div className="font-semibold text-gray-900">{tier.name}</div>
+                              <div className="text-xs text-gray-600">Annual Membership</div>
+                              <div className="text-xs text-gray-500">Qty: {item.quantity}</div>
                             </div>
-                            <ul className="text-xs text-gray-700 list-disc ml-5">
-                              {tier.features.slice(0, 3).map((feature, idx) => (
-                                <li key={idx}>{feature}</li>
-                              ))}
-                            </ul>
+                            <div className="text-right mt-2 md:mt-0">
+                              <div className="font-semibold text-lg">${(item.price * item.quantity).toFixed(2)}</div>
+                              <div className="text-xs text-gray-500">Unit: ${item.price.toFixed(2)}</div>
+                            </div>
                           </div>
                         )
                       })}
                     </div>
-                    {checkoutData.additionalMembers.length > 0 && (
-                      <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <h5 className="font-semibold text-blue-900 mb-2 flex items-center">
-                          <UserPlus className="w-4 h-4 mr-2" />Additional Members ({checkoutData.additionalMembers.length})
-                        </h5>
-                        <div className="space-y-2">
-                          {checkoutData.additionalMembers.map((member) => (
-                            <div key={member.id} className="bg-white p-2 rounded border border-blue-100 flex flex-col md:flex-row md:items-center md:justify-between">
-                              <span className="font-medium text-gray-900">{member.name}</span>
-                              <span className="text-xs text-gray-600">{member.email}</span>
-                              {member.sendInvitation && <span className="text-xs text-green-700 ml-2">Invitation Sent</span>}
-                            </div>
-                          ))}
-                        </div>
+                    <Separator className="my-4" />
+                    <div className="flex flex-col items-end space-y-1">
+                      <div className="flex justify-between w-full md:w-1/3">
+                        <span className="text-gray-600">Subtotal:</span>
+                        <span className="font-semibold">${checkoutData?.total.toFixed(2) || '0.00'}</span>
                       </div>
-                    )}
+                      <div className="flex justify-between w-full md:w-1/3">
+                        <span className="text-gray-600">Tax:</span>
+                        <span>$0.00</span>
+                      </div>
+                      <div className="flex justify-between w-full md:w-1/3 text-lg font-bold text-blue-600">
+                        <span>Total:</span>
+                        <span>${checkoutData?.total.toFixed(2) || '0.00'}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                {/* Print/Download Buttons */}
-                <div className="flex flex-col md:flex-row md:justify-end gap-3 mt-4">
-                  <Button onClick={handlePrintReceipt} disabled={isPrinting} variant="outline">
-                    {isPrinting ? (<><div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />Printing...</>) : (<><Printer className="w-4 h-4 mr-2" />Print Receipt</>)}
-                  </Button>
-                  <Button onClick={handleDownloadReceipt} disabled={isDownloading}>
-                    {isDownloading ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Downloading...</>) : (<><Download className="w-4 h-4 mr-2" />Download Receipt</>)}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          {/* Sidebar: Quick Actions & Security Notice */}
-          <div className="space-y-6">
-            <Card className="shadow-xl border-0 bg-white">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl flex items-center">
-                  <Award className="w-5 h-5 mr-2" />Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button asChild className="w-full" size="lg">
-                  <Link href="/dashboard">
-                    <ArrowRight className="w-4 h-4 mr-2" />Go to Dashboard
-                  </Link>
-                </Button>
-                <div className="grid grid-cols-2 gap-3">
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/events">
-                      <Calendar className="w-4 h-4 mr-2" />Events
+                  {/* Membership Details (collapsible) */}
+                  {isMembership && checkoutData && (
+                    <div className="mb-6">
+                      <h4 className="font-semibold text-gray-900 flex items-center mb-2">
+                        <Trophy className="w-4 h-4 mr-2 text-yellow-500" />Your BASA Membership
+                      </h4>
+                      <div className="space-y-2">
+                        {checkoutData.cart.map((item) => {
+                          const tier = MEMBERSHIP_TIERS[item.tierId as keyof typeof MEMBERSHIP_TIERS]
+                          return (
+                            <div key={item.tierId} className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-bold text-blue-900">{tier.name}</span>
+                                <span className="text-xs text-gray-600">Qty: {item.quantity}</span>
+                              </div>
+                              <ul className="text-xs text-gray-700 list-disc ml-5">
+                                {tier.features.slice(0, 3).map((feature, idx) => (
+                                  <li key={idx}>{feature}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      {checkoutData.additionalMembers.length > 0 && (
+                        <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                          <h5 className="font-semibold text-blue-900 mb-2 flex items-center">
+                            <UserPlus className="w-4 h-4 mr-2" />Additional Members ({checkoutData.additionalMembers.length})
+                          </h5>
+                          <div className="space-y-2">
+                            {checkoutData.additionalMembers.map((member) => (
+                              <div key={member.id} className="bg-white p-2 rounded border border-blue-100 flex flex-col md:flex-row md:items-center md:justify-between">
+                                <span className="font-medium text-gray-900">{member.name}</span>
+                                <span className="text-xs text-gray-600">{member.email}</span>
+                                {member.sendInvitation && <span className="text-xs text-green-700 ml-2">Invitation Sent</span>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* Print/Download Buttons */}
+                  <div className="flex flex-col md:flex-row md:justify-end gap-3 mt-4">
+                    <Button onClick={handlePrintReceipt} disabled={isPrinting} variant="outline">
+                      {isPrinting ? (<><div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />Printing...</>) : (<><Printer className="w-4 h-4 mr-2" />Print Receipt</>)}
+                    </Button>
+                    <Button onClick={handleDownloadReceipt} disabled={isDownloading}>
+                      {isDownloading ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Downloading...</>) : (<><Download className="w-4 h-4 mr-2" />Download Receipt</>)}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            {/* Sidebar: Quick Actions & Security Notice */}
+            <div className="space-y-6">
+              <Card className="shadow-xl border-0 bg-white">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl flex items-center">
+                    <Award className="w-5 h-5 mr-2" />Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button asChild className="w-full" size="lg">
+                    <Link href="/dashboard">
+                      <ArrowRight className="w-4 h-4 mr-2" />Go to Dashboard
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/membership">
-                      <Users className="w-4 h-4 mr-2" />Membership
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-xl border-0 bg-blue-50 border border-blue-200">
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-3">
-                  <Shield className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-blue-900 mb-1">Secure & Protected</h4>
-                    <p className="text-sm text-blue-800">Your payment information is encrypted and secure. We use industry-standard SSL encryption.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/events">
+                        <Calendar className="w-4 h-4 mr-2" />Events
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/membership">
+                        <Users className="w-4 h-4 mr-2" />Membership
+                      </Link>
+                    </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+              <Card className="shadow-xl border-0 bg-blue-50 border border-blue-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start space-x-3">
+                    <Shield className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-blue-900 mb-1">Secure & Protected</h4>
+                      <p className="text-sm text-blue-800">Your payment information is encrypted and secure. We use industry-standard SSL encryption.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </DevControlPanel>
   )
 } 
