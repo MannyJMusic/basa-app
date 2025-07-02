@@ -43,6 +43,7 @@ import {
 } from "lucide-react"
 import { StripeForm } from "@/components/payments/stripe-form"
 import { TestDataPopulator } from "@/components/ui/test-data-populator"
+import { DevControlPanel } from "@/components/dev/DevControlPanel"
 
 // Load Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -314,51 +315,89 @@ export default function JoinPage() {
   }
 
   const createPaymentIntent = async () => {
-    if (!canProceedToNextStep()) return
+    if (!canProceedToNextStep()) {
+      console.log('Cannot proceed - validation failed:', {
+        currentStep,
+        cartLength: cart.length,
+        businessInfoValid: isBusinessInfoValid(),
+        contactInfoValid: isContactInfoValid()
+      })
+      return
+    }
 
     console.log('Creating payment intent...', {
       cart,
       contactInfo,
       businessInfo,
-      subtotal
+      subtotal,
+      currentStep
     })
 
     setPaymentLoading(true)
     setPaymentError(null)
 
     try {
+      const requestBody = {
+        cart,
+        additionalMembers,
+        customerInfo: {
+          name: `${contactInfo.firstName} ${contactInfo.lastName}`,
+          email: contactInfo.email,
+          company: businessInfo.businessName,
+          phone: contactInfo.phone
+        },
+        businessInfo,
+        contactInfo,
+        autoRenew: false,
+      }
+
+      console.log('Sending request body:', requestBody)
+
       const response = await fetch('/api/payments/membership', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          cart,
-          additionalMembers,
-          customerInfo: {
-            name: `${contactInfo.firstName} ${contactInfo.lastName}`,
-            email: contactInfo.email,
-            company: businessInfo.businessName,
-            phone: contactInfo.phone
-          },
-          businessInfo,
-          contactInfo,
-          autoRenew: false,
-        }),
+        body: JSON.stringify(requestBody),
+        // Add a timeout to prevent hanging requests
+        signal: AbortSignal.timeout(30000) // 30 second timeout
       })
+
+      console.log('Response status:', response.status)
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
+      console.log('Response ok:', response.ok)
+      console.log('Response statusText:', response.statusText)
 
       const data = await response.json()
       console.log('Payment intent response:', data)
+      console.log('Response data type:', typeof data)
+      console.log('Response data keys:', Object.keys(data))
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create payment')
+        console.error('API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data
+        })
+        throw new Error(data.error || data.details || 'Failed to create payment')
       }
 
       console.log('Setting client secret:', data.clientSecret ? 'secret received' : 'no secret')
       setClientSecret(data.clientSecret)
     } catch (err) {
       console.error('Payment intent creation failed:', err)
-      setPaymentError(err instanceof Error ? err.message : 'Failed to create payment')
+      
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          setPaymentError('Request timed out. Please try again.')
+        } else if (err.name === 'TypeError' && err.message.includes('fetch')) {
+          setPaymentError('Network error. Please check your connection and try again.')
+        } else {
+          setPaymentError(err.message || 'Failed to create payment')
+        }
+      } else {
+        setPaymentError('An unexpected error occurred. Please try again.')
+      }
     } finally {
       setPaymentLoading(false)
     }
@@ -479,7 +518,12 @@ export default function JoinPage() {
   }, [currentStep, clientSecret, paymentLoading, paymentError])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+    <DevControlPanel
+      paymentData={cart.length > 0 ? { cart, total: subtotal } : undefined}
+      emailStatus={{ active: true, customerEmail: contactInfo.email }}
+    >
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+      
       {/* Compact Header */}
       <section className="relative bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 text-white py-8 overflow-hidden">
         {/* Background Image */}
@@ -520,6 +564,36 @@ export default function JoinPage() {
       <section className="py-8">
         <div className="container mx-auto px-4">
           <div className="max-w-7xl mx-auto">
+            
+            {/* Test Data Populator - Only show in development */}
+            <div className="mb-6">
+              <TestDataPopulator
+                onPopulateContact={(data) => {
+                  setContactInfo({
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    email: data.email,
+                    phone: data.phone,
+                    jobTitle: data.jobTitle,
+                    linkedin: data.linkedin
+                  })
+                }}
+                onPopulateBusiness={(data) => {
+                  setBusinessInfo({
+                    businessName: data.businessName,
+                    industry: data.industry,
+                    businessAddress: data.businessAddress,
+                    city: data.city,
+                    state: data.state,
+                    zipCode: data.zipCode,
+                    businessPhone: data.businessPhone,
+                    website: data.website,
+                    businessDescription: data.businessDescription
+                  })
+                }}
+              />
+            </div>
+            
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               
               {/* Left Column - Membership Selection & Forms */}
@@ -1391,73 +1465,13 @@ export default function JoinPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Test Data Populator - Only show in development */}
-                  <TestDataPopulator
-                    onPopulateContact={(data) => {
-                      setContactInfo({
-                        firstName: data.firstName,
-                        lastName: data.lastName,
-                        email: data.email,
-                        phone: data.phone,
-                        jobTitle: data.jobTitle,
-                        linkedin: data.linkedin
-                      })
-                    }}
-                    onPopulateBusiness={(data) => {
-                      setBusinessInfo({
-                        businessName: data.businessName,
-                        industry: data.industry,
-                        businessAddress: data.businessAddress,
-                        city: data.city,
-                        state: data.state,
-                        zipCode: data.zipCode,
-                        businessPhone: data.businessPhone,
-                        website: data.website,
-                        businessDescription: data.businessDescription
-                      })
-                    }}
-                  />
                 </div>
               </div>
             </div>
           </div>
         </div>
       </section>
-
-      {/* Compact Benefits Section */}
-      {/* <section className="py-12 bg-white border-t border-gray-100">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center justify-center">
-              <Heart className="w-6 h-6 mr-2 text-red-500" />
-              What You'll Get as a BASA Member
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Users className="w-6 h-6 text-blue-600" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Networking Opportunities</h3>
-                <p className="text-sm text-gray-600">Connect with local business leaders and build meaningful relationships</p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Target className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Business Growth</h3>
-                <p className="text-sm text-gray-600">Access resources, training, and opportunities to grow your business</p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Heart className="w-6 h-6 text-purple-600" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Community Impact</h3>
-                <p className="text-sm text-gray-600">Give back to the San Antonio community through charitable initiatives</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section> */}
     </div>
+    </DevControlPanel>
   )
 } 

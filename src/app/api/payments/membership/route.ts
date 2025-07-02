@@ -39,13 +39,22 @@ interface PaymentRequest {
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now()
   try {
+    console.log('=== Membership Payment API Called ===')
+    
     const session = await auth()
+    console.log('Session:', session ? 'Authenticated' : 'Not authenticated')
+    console.log('Auth time:', Date.now() - startTime, 'ms')
+    
     const body: PaymentRequest = await request.json()
+    console.log('Request body received:', JSON.stringify(body, null, 2))
+    
     const { cart, additionalMembers, customerInfo, autoRenew, businessInfo, contactInfo } = body
 
     // Validate cart
     if (!cart || cart.length === 0) {
+      console.log('Validation failed: No cart items')
       return NextResponse.json(
         { error: 'No memberships selected' },
         { status: 400 }
@@ -54,6 +63,7 @@ export async function POST(request: NextRequest) {
 
     // Validate customer info
     if (!customerInfo?.email || !customerInfo.email.includes('@')) {
+      console.log('Validation failed: Invalid email')
       return NextResponse.json(
         { error: 'Valid email address is required' },
         { status: 400 }
@@ -61,11 +71,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!customerInfo?.name || customerInfo.name.trim().length < 2) {
+      console.log('Validation failed: Invalid name')
       return NextResponse.json(
         { error: 'Valid name is required' },
         { status: 400 }
       )
     }
+
+    console.log('Validation passed, proceeding with payment creation...')
 
     // Calculate total amount
     const totalAmount = cart.reduce((sum, item) => {
@@ -148,6 +161,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create payment intent
+    console.log('Creating Stripe payment intent...')
+    const stripeStartTime = Date.now()
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalAmount,
       currency: 'usd',
@@ -167,9 +182,12 @@ export async function POST(request: NextRequest) {
         isNewUser: (!session?.user).toString()
       }
     })
+    console.log('Stripe payment intent created in:', Date.now() - stripeStartTime, 'ms')
 
     // If authenticated user, update their membership immediately
     if (session?.user) {
+      console.log('Updating user membership...')
+      const dbStartTime = Date.now()
       await prisma.user.update({
         where: { id: session.user.id },
         data: {
@@ -190,6 +208,7 @@ export async function POST(request: NextRequest) {
           }
         }
       })
+      console.log('User membership updated in:', Date.now() - dbStartTime, 'ms')
 
       // Create membership records for each cart item
       for (const item of cart) {
@@ -258,6 +277,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    console.log('Total API execution time:', Date.now() - startTime, 'ms')
     return NextResponse.json({
       success: true,
       paymentIntentId: paymentIntent.id,
@@ -265,7 +285,11 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Membership payment error:', error)
+    console.error('=== Membership Payment Error ===')
+    console.error('Error type:', typeof error)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
+    console.error('Full error object:', error)
     
     return NextResponse.json(
       { error: 'Payment failed', details: error.message },

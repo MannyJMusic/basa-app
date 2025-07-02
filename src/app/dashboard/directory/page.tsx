@@ -35,6 +35,7 @@ import {
 import { useMembers } from "@/hooks/use-members"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { GuestOverlay } from "@/components/ui/guest-overlay"
+import { BasaMemberLoading } from "@/components/ui/basa-loading"
 
 export default function DirectoryPage() {
   const { data: session } = useSession()
@@ -288,10 +289,7 @@ export default function DirectoryPage() {
             </div>
 
             {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                <p className="mt-2 text-gray-600">Loading members...</p>
-              </div>
+              <BasaMemberLoading />
             ) : filteredMembers.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <p>No members found matching your criteria.</p>
