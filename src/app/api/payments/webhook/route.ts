@@ -177,7 +177,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
       if (user) {
         const parsedCart = cart ? JSON.parse(cart) : []
-        const parsedCustomerInfo = customerInfo ? JSON.parse(customerInfo) : {}
+        const parsedCustomerInfo = customerInfo && typeof customerInfo === 'string' && customerInfo !== 'null' ? JSON.parse(customerInfo) : {}
         const parsedBusinessInfo = businessInfo ? JSON.parse(businessInfo) : {}
         
         const firstName = user.firstName || parsedCustomerInfo.name?.split(' ')[0] || 'Member'
