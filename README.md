@@ -1,5 +1,7 @@
 # BASA (Business Association of San Antonio) - Web Application
 
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+
 A modern, full-stack web application built for the Business Association of San Antonio, providing membership management, event organization, networking opportunities, and community engagement features.
 
 ## 🚀 Project Overview
@@ -146,7 +148,7 @@ basa-app/
 │   │   └── ...
 │   ├── hooks/              # Custom React hooks
 │   ├── lib/                # Utility functions and configurations
-│   └── styles/             # Global styles
+│   └── styles/             # Additional styles (globals.css in app/)
 ├── mail-templates/          # Email templates (Nunjucks)
 ├── scripts/                # Utility scripts and database tools
 └── cypress/                # End-to-end tests
@@ -276,7 +278,28 @@ Comprehensive documentation is available in the `docs/` directory:
 
 ## 📄 License
 
-This project is proprietary software for the Business Association of San Antonio.
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License**.
+
+### What You Can Do:
+- ✅ Use for educational purposes and learning
+- ✅ Use for personal projects and portfolios  
+- ✅ Use for non-profit organizations
+- ✅ Use for community projects
+- ✅ White label for non-commercial purposes
+- ✅ Use as inspiration for similar projects
+
+### What You Cannot Do:
+- ❌ Use for commercial purposes or profit generation
+- ❌ Use in for-profit businesses or SaaS platforms
+- ❌ Resell or redistribute for profit
+
+### Attribution Required:
+When using this work, you must provide attribution to "Business Association of San Antonio (BASA)" in a reasonably discoverable way (footer, about page, source code comments, etc.).
+
+**Full License**: [LICENSE](./LICENSE)  
+**License URL**: https://creativecommons.org/licenses/by-nc/4.0/
+
+For commercial licensing inquiries, please contact BASA.
 
 ## 🆘 Support
 

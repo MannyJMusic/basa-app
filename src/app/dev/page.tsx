@@ -111,20 +111,12 @@ const devTools = [
     badge: 'Test'
   },
   {
-    title: 'API Testing Script',
-    description: 'Test events API endpoint',
+    title: 'Events API Test',
+    description: 'Test events API endpoint directly',
     icon: TestTube,
-    href: '/scripts/test-api.js',
+    href: '/api/events?status=PUBLISHED&sortBy=startDate&sortOrder=asc',
     category: 'Testing',
-    badge: 'Script'
-  },
-  {
-    title: 'Event Date Update',
-    description: 'Update event dates to future dates',
-    icon: Settings,
-    href: '/scripts/update-event-dates-future.js',
-    category: 'Database',
-    badge: 'Script'
+    badge: 'API'
   }
 ]
 

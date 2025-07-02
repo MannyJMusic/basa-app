@@ -4,10 +4,10 @@ This document outlines the complete technology stack powering the BASA (Business
 
 ## 🚀 Core Technologies
 
-### Next.js 14+ with App Router
-- **Version**: 14.1.0
+### Next.js 15+ with App Router
+- **Version**: 15.3.4
 - **Features**: App Router, Server Components, Streaming, Suspense
-- **Configuration**: `next.config.ts` with Sentry integration
+- **Configuration**: `next.config.js` with Sentry integration
 - **Benefits**: Optimal performance, SEO, and developer experience
 
 ### TypeScript
@@ -178,7 +178,7 @@ pnpm dev
 
 ## 🔍 Demo & Examples
 
-Visit `/tech-demo` to see a comprehensive demonstration of all technology stack features.
+Visit `/dev/tech-demo` to see a comprehensive demonstration of all technology stack features.
 
 ## 📚 Additional Resources
 

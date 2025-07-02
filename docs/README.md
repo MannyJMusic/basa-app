@@ -43,6 +43,12 @@ Welcome to the BASA (Business Association of San Antonio) documentation. This di
 - **Utility Scripts** - Database tools and API testing scripts in `/scripts`
 - **Tech Stack Reference** - Technology overview in `docs/techstack.ts`
 
+### 📄 Licensing
+- **[License Summary](../LICENSE_SUMMARY.md)** - Quick reference for license terms
+- **[Full License](../LICENSE)** - Complete Creative Commons BY-NC 4.0 license
+- **Permitted Uses** - Educational, personal, non-profit, white labeling
+- **Attribution Required** - Credit BASA in discoverable way
+
 ## 📖 How to Use This Documentation
 
 ### For New Developers
