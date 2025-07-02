@@ -152,23 +152,43 @@ jobs:
 
     - name: Health check development
       run: |
-        echo "Waiting for application to start..."
-        sleep 60
+        echo "🚀 Starting efficient health check..."
         
-        echo "Checking if application is responding..."
-        for i in {1..10}; do
-          echo "Attempt $i/10..."
-          if curl -s -f "http://${{ secrets.SERVER_HOST }}:3001/api/health" > /dev/null; then
-            echo "✅ Health check passed!"
+        # Quick initial check after 10 seconds
+        echo "⏳ Initial check in 10 seconds..."
+        sleep 10
+        
+        # Progressive health check with shorter intervals
+        for i in {1..20}; do
+          echo "🔍 Health check attempt $i/20..."
+          
+          # Try to connect with timeout
+          if timeout 5 curl -s -f "http://${{ secrets.SERVER_HOST }}:3001/api/health" > /dev/null; then
+            echo "✅ Health check passed on attempt $i!"
             exit 0
           else
-            echo "❌ Health check failed, retrying in 15 seconds..."
-            sleep 15
+            echo "❌ Health check failed on attempt $i"
+            
+            # Show progress every 5 attempts
+            if [ $((i % 5)) -eq 0 ]; then
+              echo "📊 Progress: $i/20 attempts completed"
+              echo "🔍 Checking container status..."
+              ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-dev && docker-compose -f docker-compose.dev.yml ps"
+            fi
+            
+            # Shorter intervals: 5 seconds for first 10 attempts, then 10 seconds
+            if [ $i -lt 10 ]; then
+              sleep 5
+            else
+              sleep 10
+            fi
           fi
         done
         
-        echo "❌ Health check failed after 10 attempts"
-        echo "Checking container logs..."
+        echo "❌ Health check failed after 20 attempts"
+        echo "📋 Final container status:"
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-dev && docker-compose -f docker-compose.dev.yml ps"
+        echo "📋 Recent container logs:"
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-dev && docker-compose -f docker-compose.dev.yml logs --tail=50"
         exit 1
 
@@ -215,23 +235,43 @@ jobs:
 
     - name: Health check production
       run: |
-        echo "Waiting for application to start..."
-        sleep 60
+        echo "🚀 Starting efficient health check..."
         
-        echo "Checking if application is responding..."
-        for i in {1..10}; do
-          echo "Attempt $i/10..."
-          if curl -s -f "https://${{ secrets.PRODUCTION_DOMAIN }}/api/health" > /dev/null; then
-            echo "✅ Health check passed!"
+        # Quick initial check after 10 seconds
+        echo "⏳ Initial check in 10 seconds..."
+        sleep 10
+        
+        # Progressive health check with shorter intervals
+        for i in {1..20}; do
+          echo "🔍 Health check attempt $i/20..."
+          
+          # Try to connect with timeout
+          if timeout 5 curl -s -f "https://${{ secrets.PRODUCTION_DOMAIN }}/api/health" > /dev/null; then
+            echo "✅ Health check passed on attempt $i!"
             exit 0
           else
-            echo "❌ Health check failed, retrying in 15 seconds..."
-            sleep 15
+            echo "❌ Health check failed on attempt $i"
+            
+            # Show progress every 5 attempts
+            if [ $((i % 5)) -eq 0 ]; then
+              echo "📊 Progress: $i/20 attempts completed"
+              echo "🔍 Checking container status..."
+              ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
+            fi
+            
+            # Shorter intervals: 5 seconds for first 10 attempts, then 10 seconds
+            if [ $i -lt 10 ]; then
+              sleep 5
+            else
+              sleep 10
+            fi
           fi
         done
         
-        echo "❌ Health check failed after 10 attempts"
-        echo "Checking container logs..."
+        echo "❌ Health check failed after 20 attempts"
+        echo "📋 Final container status:"
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
+        echo "📋 Recent container logs:"
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml logs --tail=50"
         exit 1
 
