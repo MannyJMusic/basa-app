@@ -175,7 +175,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
         include: { member: true }
       })
 
-      if (user) {
+      if (user && user.email) {
         const parsedCart = cart ? JSON.parse(cart) : []
         const parsedCustomerInfo = customerInfo && typeof customerInfo === 'string' && customerInfo !== 'null' ? JSON.parse(customerInfo) : {}
         const parsedBusinessInfo = businessInfo ? JSON.parse(businessInfo) : {}
