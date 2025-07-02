@@ -33,6 +33,7 @@ import {
 import { useEvents, Event, CreateEventData, EventFilters } from '@/hooks/use-events'
 import { useMembers } from '@/hooks/use-members'
 import { EventDetailDialog } from '@/components/events/event-detail-dialog'
+import { DashboardTableLoading } from '@/components/ui/dashboard-loading'
 
 export default function AdminEventsPage() {
   const {
@@ -610,10 +611,7 @@ export default function AdminEventsPage() {
       {/* Events List */}
       <div className="space-y-4">
         {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading events...</p>
-          </div>
+          <DashboardTableLoading />
         ) : events.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
