@@ -148,8 +148,25 @@ jobs:
 
     - name: Health check development
       run: |
-        sleep 30
-        curl -f http://${{ secrets.SERVER_HOST }}:3001/api/health || exit 1
+        echo "Waiting for application to start..."
+        sleep 60
+        
+        echo "Checking if application is responding..."
+        for i in {1..10}; do
+          echo "Attempt $i/10..."
+          if curl -s -f "http://${{ secrets.SERVER_HOST }}:3001/api/health" > /dev/null; then
+            echo "✅ Health check passed!"
+            exit 0
+          else
+            echo "❌ Health check failed, retrying in 15 seconds..."
+            sleep 15
+          fi
+        done
+        
+        echo "❌ Health check failed after 10 attempts"
+        echo "Checking container logs..."
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-dev && docker-compose -f docker-compose.dev.yml logs --tail=50"
+        exit 1
 
   # Production Deployment
   deploy-prod:
@@ -190,8 +207,25 @@ jobs:
 
     - name: Health check production
       run: |
-        sleep 30
-        curl -f https://${{ secrets.PRODUCTION_DOMAIN }}/api/health || exit 1
+        echo "Waiting for application to start..."
+        sleep 60
+        
+        echo "Checking if application is responding..."
+        for i in {1..10}; do
+          echo "Attempt $i/10..."
+          if curl -s -f "https://${{ secrets.PRODUCTION_DOMAIN }}/api/health" > /dev/null; then
+            echo "✅ Health check passed!"
+            exit 0
+          else
+            echo "❌ Health check failed, retrying in 15 seconds..."
+            sleep 15
+          fi
+        done
+        
+        echo "❌ Health check failed after 10 attempts"
+        echo "Checking container logs..."
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml logs --tail=50"
+        exit 1
 
     - name: Notify deployment success
       if: success()
