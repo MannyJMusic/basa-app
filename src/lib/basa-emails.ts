@@ -586,6 +586,46 @@ export async function sendMembershipInvitationEmail(
   }
 }
 
+export async function sendContactFormEmail(
+  to: string,
+  contact: {
+    firstName: string
+    lastName: string
+    email: string
+    phone?: string
+    company?: string
+    subject: string
+    message: string
+    preferredContact: string
+    membershipInterest: boolean
+  },
+  options: { 
+    siteUrl?: string
+    logoUrl?: string
+    fromName?: string
+    ipAddress?: string
+    userAgent?: string
+    referrer?: string
+  } = {}
+) {
+  try {
+    const html = generateContactFormEmailHtml(contact, options)
+    const response = await sendEmail(to, `New Contact Form Submission - ${contact.subject}`, html, {
+      fromName: options.fromName,
+      replyTo: contact.email
+    })
+    return {
+      success: true,
+      messageId: response.id
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
 // Email validation and rate limiting
 export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -1637,3 +1677,254 @@ export function generateMembershipInvitationEmailHtml(name: string, tierId: stri
 </html>
 `
 } 
+
+// BASA Contact Form Email Template
+export function generateContactFormEmailHtml(contact: {
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
+  company?: string
+  subject: string
+  message: string
+  preferredContact: string
+  membershipInterest: boolean
+}, options: { 
+  siteUrl?: string
+  logoUrl?: string
+  ipAddress?: string
+  userAgent?: string
+  referrer?: string
+} = {}) {
+  const siteUrl = options.siteUrl || SITE_URL
+  const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
+  const submissionDate = new Date()
+  
+  return `
+<!DOCTYPE html>
+<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>New Contact Form Submission - ${contact.subject}</title>
+  
+  <style>
+    /* BASA Email Styles */
+    .basa-gradient-primary {
+      background: linear-gradient(135deg, #1B365D 0%, #15294d 100%);
+    }
+    .basa-gradient-secondary {
+      background: linear-gradient(135deg, #FFD700 0%, #FFC300 100%);
+    }
+    .basa-gradient-accent {
+      background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%);
+    }
+    .basa-text-navy {
+      color: #1B365D;
+    }
+    .basa-text-gold {
+      color: #FFD700;
+    }
+    .basa-text-teal {
+      color: #17A2B8;
+    }
+    .basa-text-white {
+      color: #ffffff;
+    }
+    .basa-bg-navy {
+      background-color: #1B365D;
+    }
+    .basa-bg-gold {
+      background-color: #FFD700;
+    }
+    .basa-bg-teal {
+      background-color: #17A2B8;
+    }
+    .basa-bg-warm {
+      background-color: #fefbf7;
+    }
+    .basa-bg-light-navy {
+      background-color: #f8fafc;
+    }
+    .basa-border-navy {
+      border-color: #1B365D;
+    }
+    .basa-border-gold {
+      border-color: #FFD700;
+    }
+    .basa-border-teal {
+      border-color: #17A2B8;
+    }
+    .basa-hover-underline:hover {
+      text-decoration: underline !important;
+    }
+    .basa-button {
+      display: inline-block;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .basa-button:hover {
+      background: linear-gradient(135deg, #1391a5 0%, #117a8a 100%);
+    }
+    .basa-card {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .basa-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, #e2e8f0 50%, transparent 100%);
+      margin: 24px 0;
+    }
+    .contact-info {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .contact-field {
+      margin-bottom: 12px;
+    }
+    .contact-label {
+      font-weight: 600;
+      color: #1B365D;
+      font-size: 14px;
+    }
+    .contact-value {
+      color: #64748b;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+    .message-content {
+      background: #fefbf7;
+      border-left: 4px solid #FFD700;
+      padding: 16px;
+      margin: 16px 0;
+      border-radius: 0 8px 8px 0;
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table class="wrapper" style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+    <tr>
+      <td align="center" style="background-color: #f8fafc; padding: 20px 0;">
+        <table class="sm-w-full" style="width: 600px; max-width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td class="basa-card" style="padding: 40px;">
+              <!-- Header -->
+              <div style="text-align: center; margin-bottom: 32px;">
+                <img src="${logoUrl}" alt="BASA Logo" style="height: 60px; width: auto; margin-bottom: 16px;">
+                <h1 class="basa-text-navy" style="margin: 0; font-size: 24px; font-weight: 700;">New Contact Form Submission</h1>
+                <p class="basa-text-teal" style="margin: 8px 0 0 0; font-size: 16px;">Business Association of San Antonio</p>
+              </div>
+
+              <!-- Subject -->
+              <div style="margin-bottom: 24px;">
+                <h2 class="basa-text-navy" style="margin: 0 0 16px 0; font-size: 20px;">Subject: ${contact.subject}</h2>
+                <p style="color: #64748b; line-height: 1.6; margin: 0; font-size: 14px;">
+                  Submitted on ${submissionDate.toLocaleDateString()} at ${submissionDate.toLocaleTimeString()}
+                </p>
+              </div>
+
+              <!-- Contact Information -->
+              <div class="contact-info">
+                <h3 class="basa-text-navy" style="margin: 0 0 16px 0; font-size: 16px;">Contact Information</h3>
+                
+                <div class="contact-field">
+                  <div class="contact-label">Name:</div>
+                  <div class="contact-value">${contact.firstName} ${contact.lastName}</div>
+                </div>
+                
+                <div class="contact-field">
+                  <div class="contact-label">Email:</div>
+                  <div class="contact-value">
+                    <a href="mailto:${contact.email}" class="basa-text-teal basa-hover-underline" style="text-decoration: none;">${contact.email}</a>
+                  </div>
+                </div>
+                
+                ${contact.phone ? `
+                <div class="contact-field">
+                  <div class="contact-label">Phone:</div>
+                  <div class="contact-value">
+                    <a href="tel:${contact.phone}" class="basa-text-teal basa-hover-underline" style="text-decoration: none;">${contact.phone}</a>
+                  </div>
+                </div>
+                ` : ''}
+                
+                ${contact.company ? `
+                <div class="contact-field">
+                  <div class="contact-label">Company:</div>
+                  <div class="contact-value">${contact.company}</div>
+                </div>
+                ` : ''}
+                
+                <div class="contact-field">
+                  <div class="contact-label">Preferred Contact Method:</div>
+                  <div class="contact-value">${contact.preferredContact === 'email' ? 'Email' : 'Phone'}</div>
+                </div>
+                
+                <div class="contact-field">
+                  <div class="contact-label">Membership Interest:</div>
+                  <div class="contact-value">${contact.membershipInterest ? 'Yes' : 'No'}</div>
+                </div>
+              </div>
+
+              <!-- Message -->
+              <div class="message-content">
+                <h3 class="basa-text-navy" style="margin: 0 0 12px 0; font-size: 16px;">Message:</h3>
+                <p style="color: #64748b; line-height: 1.6; margin: 0; font-size: 14px; white-space: pre-wrap;">${contact.message}</p>
+              </div>
+
+              <!-- Technical Details -->
+              ${options.ipAddress || options.userAgent || options.referrer ? `
+              <div class="basa-card" style="background: #f1f5f9; border-left: 4px solid #17A2B8; padding: 16px; margin-top: 24px;">
+                <h3 class="basa-text-navy" style="margin: 0 0 12px 0; font-size: 14px;">Technical Details</h3>
+                ${options.ipAddress ? `<p style="color: #64748b; line-height: 1.6; margin: 0 0 8px 0; font-size: 12px;"><strong>IP Address:</strong> ${options.ipAddress}</p>` : ''}
+                ${options.userAgent ? `<p style="color: #64748b; line-height: 1.6; margin: 0 0 8px 0; font-size: 12px;"><strong>User Agent:</strong> ${options.userAgent}</p>` : ''}
+                ${options.referrer ? `<p style="color: #64748b; line-height: 1.6; margin: 0; font-size: 12px;"><strong>Referrer:</strong> ${options.referrer}</p>` : ''}
+              </div>
+              ` : ''}
+
+              <!-- Action Buttons -->
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="mailto:${contact.email}" class="basa-button" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: 600; margin-right: 12px;">
+                  Reply to ${contact.firstName}
+                </a>
+                ${contact.phone ? `
+                <a href="tel:${contact.phone}" class="basa-button" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #1B365D 0%, #15294d 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  Call ${contact.firstName}
+                </a>
+                ` : ''}
+              </div>
+
+              <!-- Footer -->
+              <div class="basa-divider"></div>
+              <div style="text-align: center;">
+                <p style="color: #64748b; line-height: 1.6; margin: 0 0 8px 0; font-size: 14px;">
+                  Connecting, growing, and giving back to the San Antonio business community
+                </p>
+                <p style="color: #64748b; line-height: 1.6; margin: 0 0 8px 0; font-size: 12px;">
+                  This email was sent from the BASA contact form. Reply directly to respond to the sender.
+                </p>
+                <p style="color: #64748b; line-height: 1.6; margin: 0; font-size: 12px;">
+                  &copy; ${new Date().getFullYear()} Business Association of San Antonio. All rights reserved.
+                </p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+}

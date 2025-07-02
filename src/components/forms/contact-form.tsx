@@ -60,8 +60,19 @@ export default function ContactForm() {
     setIsSubmitting(true)
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send message')
+      }
       
       toast({
         title: "Message Sent Successfully!",
@@ -82,9 +93,10 @@ export default function ContactForm() {
         membershipInterest: false
       })
     } catch (error) {
+      console.error('Contact form error:', error)
       toast({
         title: "Error Sending Message",
-        description: "Please try again or contact us directly.",
+        description: error instanceof Error ? error.message : "Please try again or contact us directly.",
         variant: "destructive",
       })
     } finally {

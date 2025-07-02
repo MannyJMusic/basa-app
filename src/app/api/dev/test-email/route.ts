@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sendWelcomeEmail, sendPasswordResetEmail, sendEventInvitationEmail, sendPaymentReceiptEmail } from '@/lib/basa-emails'
+import { sendWelcomeEmail, sendPasswordResetEmail, sendEventInvitationEmail, sendPaymentReceiptEmail, sendContactFormEmail } from '@/lib/basa-emails'
 
 export async function POST(request: NextRequest) {
   // Only allow in development
@@ -72,6 +72,20 @@ export async function POST(request: NextRequest) {
           paymentDate: new Date().toISOString()
         }
         result = await sendPaymentReceiptEmail(email, firstName, paymentData, { fromName })
+        break
+      case 'contact-form':
+        const contact = body.contact || {
+          firstName,
+          lastName: 'Doe',
+          email,
+          phone: '(210) 555-0123',
+          company: 'Acme Corporation',
+          subject: 'General Inquiry',
+          message: 'Hello, I would like to learn more about BASA membership opportunities and upcoming events.',
+          preferredContact: 'email',
+          membershipInterest: true
+        }
+        result = await sendContactFormEmail('info@businessassociationsa.com', contact, { fromName })
         break
       default:
         return NextResponse.json({ 

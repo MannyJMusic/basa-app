@@ -1,0 +1,196 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Test and Build Job
+  test-and-build:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'pnpm'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 9
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Setup environment variables
+      run: |
+        cp .env.example .env.test
+        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/test_db" >> .env.test
+        echo "NEXTAUTH_SECRET=test-secret-key" >> .env.test
+        echo "NEXTAUTH_URL=http://localhost:3000" >> .env.test
+        echo "NODE_ENV=test" >> .env.test
+
+    - name: Generate Prisma client
+      run: pnpm prisma generate
+
+    - name: Run database migrations
+      run: pnpm prisma migrate deploy
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+
+    - name: Run type check
+      run: pnpm type-check
+
+    - name: Run linting
+      run: pnpm lint
+
+    - name: Run tests
+      run: pnpm test
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+
+    - name: Build application
+      run: pnpm build
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-files
+        path: |
+          .next/
+          public/
+          package.json
+          pnpm-lock.yaml
+          prisma/
+          next.config.js
+
+  # Development Deployment
+  deploy-dev:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-files
+        path: ./
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Add server to known hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to development server
+      run: |
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          cd /opt/basa-app-dev
+          git pull origin develop
+          cp .env.example .env.local
+          echo "Deploying development version..."
+          docker-compose -f docker-compose.dev.yml --env-file .env.local down
+          docker-compose -f docker-compose.dev.yml --env-file .env.local up -d --build
+          echo "Development deployment completed"
+        EOF
+
+    - name: Health check development
+      run: |
+        sleep 30
+        curl -f http://${{ secrets.SERVER_HOST }}:3001/api/health || exit 1
+
+  # Production Deployment
+  deploy-prod:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-files
+        path: ./
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Add server to known hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to production server
+      run: |
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          cd /opt/basa-app-prod
+          git pull origin main
+          echo "Deploying production version..."
+          docker-compose -f docker-compose.prod.yml --env-file .env.production down
+          docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+          echo "Production deployment completed"
+        EOF
+
+    - name: Health check production
+      run: |
+        sleep 30
+        curl -f https://${{ secrets.PRODUCTION_DOMAIN }}/api/health || exit 1
+
+    - name: Notify deployment success
+      if: success()
+      run: |
+        echo "Production deployment successful!"
+        # Add notification logic here (Slack, email, etc.)
+
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          cd /opt/basa-app-prod
+          echo "Rolling back to previous version..."
+          docker-compose -f docker-compose.prod.yml --env-file .env.production down
+          git reset --hard HEAD~1
+          docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+          echo "Rollback completed"
+        EOF 
