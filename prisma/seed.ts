@@ -388,7 +388,7 @@ async function main() {
           state: memberData.state,
           zipCode: memberData.zipCode,
           website: memberData.website,
-          membershipTier: memberData.membershipTier,
+          membershipTier: mapTier(memberData.membershipTier as string) as any,
           membershipStatus: 'PENDING',
           joinedAt: new Date(),
           renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
