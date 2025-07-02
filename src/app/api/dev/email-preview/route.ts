@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateWelcomeEmailHtml, generatePasswordResetEmailHtml, generateEventInvitationEmailHtml } from '@/lib/basa-emails'
+import { generateWelcomeEmailHtml, generatePasswordResetEmailHtml, generateEventInvitationEmailHtml, generateContactFormEmailHtml } from '@/lib/basa-emails'
 
 export async function GET(request: NextRequest) {
   // Only allow in development
@@ -48,6 +48,23 @@ export async function GET(request: NextRequest) {
         shareUrl: searchParams.get('shareUrl') || 'https://dev.businessassociationsa.com/events/mixer'
       }
       html = generateEventInvitationEmailHtml(firstName, eventData, {
+        siteUrl: process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com',
+        logoUrl: `${process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com'}/images/BASA-LOGO.png`
+      })
+      break
+    case 'contact-form':
+      const contactData = {
+        firstName,
+        lastName: searchParams.get('lastName') || 'Doe',
+        email,
+        phone: searchParams.get('phone') || '(210) 555-0123',
+        company: searchParams.get('company') || 'Acme Corporation',
+        subject: searchParams.get('subject') || 'General Inquiry',
+        message: searchParams.get('message') || 'Hello, I would like to learn more about BASA membership opportunities and upcoming events.',
+        preferredContact: searchParams.get('preferredContact') || 'email',
+        membershipInterest: searchParams.get('membershipInterest') === 'true'
+      }
+      html = generateContactFormEmailHtml(contactData, {
         siteUrl: process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com',
         logoUrl: `${process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com'}/images/BASA-LOGO.png`
       })

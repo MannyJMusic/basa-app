@@ -24,6 +24,15 @@ export default function EmailPreviewPage() {
   const [eventDescription, setEventDescription] = useState('Join us for an evening of networking and professional development with fellow BASA members.')
   const [rsvpUrl, setRsvpUrl] = useState('https://dev.businessassociationsa.com/events/mixer/rsvp')
 
+  // Contact form fields
+  const [contactLastName, setContactLastName] = useState('Doe')
+  const [contactPhone, setContactPhone] = useState('(210) 555-0123')
+  const [contactCompany, setContactCompany] = useState('Acme Corporation')
+  const [contactSubject, setContactSubject] = useState('General Inquiry')
+  const [contactMessage, setContactMessage] = useState('Hello, I would like to learn more about BASA membership opportunities and upcoming events.')
+  const [contactPreferredContact, setContactPreferredContact] = useState('email')
+  const [contactMembershipInterest, setContactMembershipInterest] = useState(true)
+
   const [lastSendStatus, setLastSendStatus] = useState<'success' | 'error' | null>(null)
   const [lastSendMessage, setLastSendMessage] = useState<string>('')
   const [lastSentDetails, setLastSentDetails] = useState<{template: string, email: string, firstName: string} | null>(null)
@@ -51,6 +60,14 @@ export default function EmailPreviewPage() {
       params.append('rsvpUrl', rsvpUrl)
       params.append('calendarUrl', rsvpUrl.replace('/rsvp', '/calendar'))
       params.append('shareUrl', rsvpUrl.replace('/rsvp', ''))
+    } else if (template === 'contact-form') {
+      params.append('lastName', contactLastName)
+      params.append('phone', contactPhone)
+      params.append('company', contactCompany)
+      params.append('subject', contactSubject)
+      params.append('message', contactMessage)
+      params.append('preferredContact', contactPreferredContact)
+      params.append('membershipInterest', contactMembershipInterest.toString())
     }
 
     return `/api/dev/email-preview?${params.toString()}`
@@ -94,6 +111,18 @@ export default function EmailPreviewPage() {
           rsvpUrl,
           calendarUrl: rsvpUrl.replace('/rsvp', '/calendar'),
           shareUrl: rsvpUrl.replace('/rsvp', '')
+        }
+      } else if (template === 'contact-form') {
+        emailData.contact = {
+          firstName,
+          lastName: contactLastName,
+          email,
+          phone: contactPhone,
+          company: contactCompany,
+          subject: contactSubject,
+          message: contactMessage,
+          preferredContact: contactPreferredContact,
+          membershipInterest: contactMembershipInterest
         }
       }
 
@@ -155,6 +184,7 @@ export default function EmailPreviewPage() {
                   <option value="welcome">Welcome Email</option>
                   <option value="password-reset">Password Reset</option>
                   <option value="event-invitation">Event Invitation</option>
+                  <option value="contact-form">Contact Form</option>
                 </select>
               </div>
 
@@ -333,6 +363,98 @@ export default function EmailPreviewPage() {
                       onChange={(e) => setRsvpUrl(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                  </div>
+                </div>
+              )}
+
+              {template === 'contact-form' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={contactLastName}
+                      onChange={(e) => setContactLastName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Company
+                    </label>
+                    <input
+                      type="text"
+                      value={contactCompany}
+                      onChange={(e) => setContactCompany(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Subject
+                    </label>
+                    <input
+                      type="text"
+                      value={contactSubject}
+                      onChange={(e) => setContactSubject(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Message
+                    </label>
+                    <textarea
+                      value={contactMessage}
+                      onChange={(e) => setContactMessage(e.target.value)}
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Preferred Contact
+                    </label>
+                    <select
+                      value={contactPreferredContact}
+                      onChange={(e) => setContactPreferredContact(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="email">Email</option>
+                      <option value="phone">Phone</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={contactMembershipInterest}
+                        onChange={(e) => setContactMembershipInterest(e.target.checked)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm font-medium text-gray-700">
+                        Interested in BASA membership
+                      </span>
+                    </label>
                   </div>
                 </div>
               )}
