@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "pnpm run prebuild && next build",
     "prebuild": "pnpm run type-check && pnpm run lint",
-    "postbuild": "pnpm run db:setup",
+    "postbuild": "if [ \"$NODE_ENV\" != \"production\" ]; then pnpm run db:setup; fi",
     "db:setup": "pnpm run db:generate && pnpm run db:seed",
     "check": "pnpm run type-check && pnpm run lint",
     "start": "next start",
