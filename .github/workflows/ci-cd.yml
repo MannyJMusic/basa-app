@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, dev]
   pull_request:
     branches: [main]
 
@@ -120,7 +120,7 @@ jobs:
   # Development Deployment - Fast deployment without tests
   deploy-dev:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/dev'
     
     steps:
     - name: Checkout code
@@ -140,7 +140,7 @@ jobs:
       run: |
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-dev
-          git pull origin develop
+          git pull origin dev
           cp .env.example .env.local
           echo "Deploying development version..."
           docker-compose -f docker-compose.dev.yml --env-file .env.local down
