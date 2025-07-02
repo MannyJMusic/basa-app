@@ -17,8 +17,8 @@ const updateMemberSchema = z.object({
   state: z.string().optional(),
   zipCode: z.string().optional(),
   website: z.string().url().optional(),
-  membershipTier: z.enum(["BASIC", "PREMIUM", "VIP"]).optional(),
-  membershipStatus: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
+  membershipTier: z.enum(["BASIC", "PREMIUM", "VIP", "MEETING_MEMBER", "ASSOCIATE_MEMBER", "TRIO_MEMBER", "CLASS_RESOURCE_MEMBER", "NAG_RESOURCE_MEMBER", "TRAINING_RESOURCE_MEMBER"]).optional(),
+  membershipStatus: z.enum(["PENDING", "ACTIVE", "EXPIRED", "INACTIVE"]).optional(),
   role: z.enum(["MEMBER", "MODERATOR", "ADMIN"]).optional(),
   isActive: z.boolean().optional(),
 })
@@ -212,7 +212,7 @@ export async function PUT(
           },
           newValues: {
             memberId: updatedMember.id,
-            userEmail: updatedMember.user.email,
+            userEmail: updatedMember.user?.email,
             businessName: updatedMember.businessName,
             membershipTier: updatedMember.membershipTier,
             membershipStatus: updatedMember.membershipStatus,

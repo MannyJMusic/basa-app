@@ -238,8 +238,12 @@ export function DevControlPanel({
                       </CardHeader>
                       <CardContent className="h-full overflow-auto">
                         <DevNotifications 
-                          paymentData={paymentData} 
-                          emailStatus={emailStatus} 
+                          paymentId={paymentData?.paymentId}
+                          customerEmail={paymentData?.customerEmail}
+                          customerName={paymentData?.customerName}
+                          membershipType={paymentData?.membershipType}
+                          totalAmount={paymentData?.totalAmount}
+                          additionalMembers={paymentData?.additionalMembers}
                         />
                       </CardContent>
                     </Card>
