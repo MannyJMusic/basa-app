@@ -10,7 +10,7 @@ APP_NAME="basa-app-dev"
 APP_DIR="/opt/basa-app-dev"
 COMPOSE_FILE="docker-compose.dev.yml"
 ENV_FILE=".env.local"
-BRANCH="develop"
+BRANCH="dev"
 PORT="3001"
 
 # Colors for output
