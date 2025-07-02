@@ -119,6 +119,10 @@ pnpm email:preview    # Preview email templates
 
 # Development Tools
 pnpm setup:dev        # Setup development environment
+
+# Database Scripts
+node scripts/test-api.js                    # Test events API
+node scripts/update-event-dates-future.js   # Update event dates to future
 ```
 
 ## 🏗️ Project Structure
@@ -144,7 +148,7 @@ basa-app/
 │   ├── lib/                # Utility functions and configurations
 │   └── styles/             # Global styles
 ├── mail-templates/          # Email templates (Nunjucks)
-├── scripts/                # Utility scripts
+├── scripts/                # Utility scripts and database tools
 └── cypress/                # End-to-end tests
 ```
 

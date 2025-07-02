@@ -40,6 +40,8 @@ Welcome to the BASA (Business Association of San Antonio) documentation. This di
 - **UI Component Demos** - Interactive showcases of loading states and animations
 - **Debug APIs** - Database, session, and user debugging endpoints
 - **Email Testing** - Template preview and delivery testing tools
+- **Utility Scripts** - Database tools and API testing scripts in `/scripts`
+- **Tech Stack Reference** - Technology overview in `docs/techstack.ts`
 
 ## 📖 How to Use This Documentation
 
