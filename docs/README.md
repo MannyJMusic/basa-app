@@ -46,8 +46,7 @@ Welcome to the BASA (Business Association of San Antonio) documentation. This di
 - **Tech Stack Reference** - Technology overview in `docs/techstack.ts`
 
 ### 📄 Licensing
-- **[License Summary](../LICENSE_SUMMARY.md)** - Quick reference for license terms
-- **[Full License](../LICENSE)** - Complete Creative Commons BY-NC 4.0 license
+- **[License](../LICENSE)** - Complete Creative Commons BY-NC 4.0 license terms
 - **Permitted Uses** - Educational, personal, non-profit, white labeling
 - **Attribution Required** - Credit BASA in discoverable way
 
