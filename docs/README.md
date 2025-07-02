@@ -2,6 +2,8 @@
 
 Welcome to the BASA (Business Association of San Antonio) documentation. This directory contains comprehensive documentation for all aspects of the application.
 
+> **💡 Quick Start**: If you're new to BASA, start with the [Main README](../README.md) for a streamlined overview, then dive deeper into specific topics here.
+
 ## 📚 Documentation Index
 
 ### 🚀 Getting Started
@@ -52,10 +54,10 @@ Welcome to the BASA (Business Association of San Antonio) documentation. This di
 ## 📖 How to Use This Documentation
 
 ### For New Developers
-1. Start with the [Main README](../README.md) for project overview
-2. Review the [Technology Stack](./TECH_STACK.md) to understand the codebase
-3. Follow the [Developer Control Panel](./DEVELOPER_CONTROL_PANEL.md) for setup
-4. Visit `/dev` for development tools and testing utilities
+1. **Start with the [Main README](../README.md)** - Quick overview and essential setup
+2. **Review the [Technology Stack](./TECH_STACK.md)** - Understand what powers BASA
+3. **Visit `/dev`** - Interactive development tools and demos
+4. **Follow the [Developer Control Panel](./DEVELOPER_CONTROL_PANEL.md)** - Detailed setup guide
 
 ### For Email Development
 1. Read the [Email System Overview](./BASA_EMAIL_SYSTEM.md)
