@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, dev]
   pull_request:
     branches: [main]
 
@@ -120,7 +120,7 @@ jobs:
   # Development Deployment - Fast deployment without tests
   deploy-dev:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/dev'
     
     steps:
     - name: Checkout code
@@ -140,18 +140,33 @@ jobs:
       run: |
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-dev
-          git pull origin develop
-          cp .env.example .env.local
+          git pull origin dev
           echo "Deploying development version..."
-          docker-compose -f docker-compose.dev.yml --env-file .env.local down
-          docker-compose -f docker-compose.dev.yml --env-file .env.local up -d --build
+          ./scripts/deploy-dev.sh
           echo "Development deployment completed"
         EOF
 
     - name: Health check development
       run: |
-        sleep 30
-        curl -f http://${{ secrets.SERVER_HOST }}:3001/api/health || exit 1
+        echo "Waiting for application to start..."
+        sleep 60
+        
+        echo "Checking if application is responding..."
+        for i in {1..10}; do
+          echo "Attempt $i/10..."
+          if curl -s -f "http://${{ secrets.SERVER_HOST }}:3001/api/health" > /dev/null; then
+            echo "✅ Health check passed!"
+            exit 0
+          else
+            echo "❌ Health check failed, retrying in 15 seconds..."
+            sleep 15
+          fi
+        done
+        
+        echo "❌ Health check failed after 10 attempts"
+        echo "Checking container logs..."
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-dev && docker-compose -f docker-compose.dev.yml logs --tail=50"
+        exit 1
 
   # Production Deployment
   deploy-prod:
@@ -186,15 +201,31 @@ jobs:
           cd /opt/basa-app-prod
           git pull origin main
           echo "Deploying production version..."
-          docker-compose -f docker-compose.prod.yml --env-file .env.production down
-          docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+          ./scripts/deploy-prod.sh
           echo "Production deployment completed"
         EOF
 
     - name: Health check production
       run: |
-        sleep 30
-        curl -f https://${{ secrets.PRODUCTION_DOMAIN }}/api/health || exit 1
+        echo "Waiting for application to start..."
+        sleep 60
+        
+        echo "Checking if application is responding..."
+        for i in {1..10}; do
+          echo "Attempt $i/10..."
+          if curl -s -f "https://${{ secrets.PRODUCTION_DOMAIN }}/api/health" > /dev/null; then
+            echo "✅ Health check passed!"
+            exit 0
+          else
+            echo "❌ Health check failed, retrying in 15 seconds..."
+            sleep 15
+          fi
+        done
+        
+        echo "❌ Health check failed after 10 attempts"
+        echo "Checking container logs..."
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml logs --tail=50"
+        exit 1
 
     - name: Notify deployment success
       if: success()
