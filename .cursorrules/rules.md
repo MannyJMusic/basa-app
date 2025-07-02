@@ -1,4 +1,3 @@
-
 These examples should be used as guidance when configuring Sentry functionality within a project.
 
 # Exception Catching
@@ -86,7 +85,7 @@ Initialization does not need to be repeated in other files, it only needs to hap
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
-  dsn: "https://1e595e01ef451af7d0e1d6d920dadcd9@o4509550898905088.ingest.us.sentry.io/4509550900150272",
+  dsn: "https://1dc0242a0283d2686dca5624f6ba6e4a@o4509585254711296.ingest.us.sentry.io/4509585258250240",
 
   _experiments: {
     enableLogs: true,
@@ -98,7 +97,7 @@ Sentry.init({
 
 ```javascript
 Sentry.init({
-  dsn: "https://1e595e01ef451af7d0e1d6d920dadcd9@o4509550898905088.ingest.us.sentry.io/4509550900150272",
+  dsn: "https://1dc0242a0283d2686dca5624f6ba6e4a@o4509585254711296.ingest.us.sentry.io/4509585258250240",
   integrations: [
     // send console.log, console.error, and console.warn calls as logs to Sentry
     Sentry.consoleLoggingIntegration({ levels: ["log", "error", "warn"] }),

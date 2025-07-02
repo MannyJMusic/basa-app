@@ -24,6 +24,10 @@ export default function EmailPreviewPage() {
   const [eventDescription, setEventDescription] = useState('Join us for an evening of networking and professional development with fellow BASA members.')
   const [rsvpUrl, setRsvpUrl] = useState('https://dev.businessassociationsa.com/events/mixer/rsvp')
 
+  const [lastSendStatus, setLastSendStatus] = useState<'success' | 'error' | null>(null)
+  const [lastSendMessage, setLastSendMessage] = useState<string>('')
+  const [lastSentDetails, setLastSentDetails] = useState<{template: string, email: string, firstName: string} | null>(null)
+
   const buildPreviewUrl = () => {
     const params = new URLSearchParams({
       template,
@@ -63,7 +67,8 @@ export default function EmailPreviewPage() {
     }
 
     setIsSending(true)
-    
+    setLastSendStatus(null)
+    setLastSendMessage('')
     try {
       const emailData: any = {
         template,
@@ -111,6 +116,8 @@ export default function EmailPreviewPage() {
           description: data.error || 'Unknown error occurred',
           variant: "destructive"
         })
+        setLastSendStatus('error')
+        setLastSendMessage(data.error || 'Unknown error occurred')
       }
     } catch (error) {
       toast({
@@ -118,6 +125,8 @@ export default function EmailPreviewPage() {
         description: error instanceof Error ? error.message : 'Network error occurred',
         variant: "destructive"
       })
+      setLastSendStatus('error')
+      setLastSendMessage(error instanceof Error ? error.message : 'Network error occurred')
     } finally {
       setIsSending(false)
     }
@@ -350,6 +359,21 @@ export default function EmailPreviewPage() {
                   {isSending ? 'Sending...' : 'Send Test Email'}
                 </button>
               </div>
+              {/* Persistent feedback message */}
+              {lastSendStatus && (
+                <div className={`mt-2 p-3 rounded-md text-sm ${lastSendStatus === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                  {lastSendMessage}
+                </div>
+              )}
+              {/* Last sent email details */}
+              {lastSentDetails && lastSendStatus === 'success' && (
+                <div className="mt-2 p-3 rounded-md bg-blue-50 text-blue-900 border border-blue-200 text-xs">
+                  <div><strong>Last Sent Email:</strong></div>
+                  <div>Template: <span className="font-mono">{lastSentDetails.template}</span></div>
+                  <div>To: <span className="font-mono">{lastSentDetails.email}</span></div>
+                  <div>First Name: <span className="font-mono">{lastSentDetails.firstName}</span></div>
+                </div>
+              )}
             </div>
 
             {/* Preview */}

@@ -1,235 +1,228 @@
 # Docker Setup for BASA Application
 
-This document provides instructions for running the BASA application using Docker for both development and production environments.
+## Overview
 
-## Prerequisites
-
-- Docker and Docker Compose installed on your system
-- Git (to clone the repository)
+This document provides instructions for running the BASA application using Docker in both development and production environments.
 
 ## Development Environment
 
+### Prerequisites
+
+- Docker and Docker Compose installed
+- `.env.local` file with your local development environment variables
+
 ### Quick Start
 
-1. **Clone the repository and navigate to the project directory:**
+1. **Clone the repository and navigate to the project directory**
    ```bash
    cd basa-app
    ```
 
-2. **Create environment file:**
+2. **Create your `.env.local` file**
    ```bash
-   cp .env.example .env
+   cp .env .env.local
+   # Edit .env.local with your local development settings
    ```
-   Edit `.env` with your actual environment variables.
 
-3. **Start the development environment:**
+3. **Start the development environment**
    ```bash
    docker-compose -f docker-compose.dev.yml up --build
    ```
 
-4. **Access the application:**
-   - Application: http://localhost:3000
-   - Database: localhost:5432
+### What Happens During Startup
 
-### Development Features
+The development environment automatically:
 
-- **Hot Reload**: Changes to your local files are immediately reflected in the container
-- **Volume Mapping**: The entire project directory is mapped to `/app` in the container
-- **Database Persistence**: PostgreSQL data is persisted in a Docker volume
-- **Health Checks**: Database health checks ensure proper startup order
+1. **Starts PostgreSQL database** with health checks
+2. **Waits for database to be ready** before proceeding
+3. **Generates Prisma client** for database operations
+4. **Runs database migrations** to ensure schema is up to date
+5. **Seeds the database** with initial data (admin users, settings, sample members)
+6. **Starts Next.js development server** with hot reloading
 
-### Development Commands
+### Database Migration and Seeding
 
+The development environment includes automatic database setup:
+
+- **Migrations**: All Prisma migrations are automatically applied
+- **Seeding**: Initial data is seeded only if no admin users exist
+- **Health Checks**: Database connectivity is verified before starting the app
+
+### Accessing the Application
+
+- **Main Application**: http://localhost:3000
+- **Database**: localhost:5432 (PostgreSQL)
+- **Health Check**: http://localhost:3000/api/health
+
+### Development Workflow
+
+1. **Code Changes**: Automatically reflected due to volume mounting
+2. **Database Changes**: Run migrations locally or restart containers
+3. **Environment Variables**: Update `.env.local` and restart containers
+
+### Troubleshooting
+
+#### Database Connection Issues
 ```bash
-# Start development environment
-docker-compose -f docker-compose.dev.yml up
+# Check if database is running
+docker-compose -f docker-compose.dev.yml ps
 
-# Start in background
-docker-compose -f docker-compose.dev.yml up -d
+# View database logs
+docker-compose -f docker-compose.dev.yml logs postgres
 
-# View logs
-docker-compose -f docker-compose.dev.yml logs -f
-
-# Stop development environment
-docker-compose -f docker-compose.dev.yml down
-
-# Rebuild containers
+# Reset database (WARNING: This will delete all data)
+docker-compose -f docker-compose.dev.yml down -v
 docker-compose -f docker-compose.dev.yml up --build
+```
 
-# Access container shell
-docker exec -it basa-app-dev sh
+#### Application Issues
+```bash
+# View application logs
+docker-compose -f docker-compose.dev.yml logs basa-app
 
-# Run database migrations
-docker exec -it basa-app-dev pnpm db:migrate
+# Restart application only
+docker-compose -f docker-compose.dev.yml restart basa-app
 
-# Seed database
-docker exec -it basa-app-dev pnpm db:seed
+# Rebuild and restart
+docker-compose -f docker-compose.dev.yml up --build --force-recreate
 ```
 
 ## Production Environment
 
-### VPS Deployment
+### Prerequisites
 
-1. **Clone the repository on your VPS:**
+- Docker and Docker Compose installed
+- Production environment variables configured
+- SSL certificates (if using HTTPS)
+
+### Deployment
+
+1. **Configure production environment**
    ```bash
-   git clone <repository-url>
-   cd basa-app
+   # Set up production environment variables
+   cp .env .env.production
+   # Edit .env.production with production settings
    ```
 
-2. **Create production environment file:**
+2. **Build and start production environment**
    ```bash
-   cp .env.example .env.production
-   ```
-   Edit `.env.production` with your production environment variables.
-
-3. **Build and start production environment:**
-   ```bash
-   docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+   docker-compose -f docker-compose.prod.yml up --build -d
    ```
 
 ### Production Features
 
-- **Multi-stage Build**: Optimized production image with minimal size
-- **Non-root User**: Application runs as non-root user for security
-- **Health Checks**: Application and database health monitoring
-- **Environment Variables**: All configuration via environment variables
-- **Restart Policy**: Automatic restart on failure
-
-### Production Commands
-
-```bash
-# Start production environment
-docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
-
-# View logs
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Stop production environment
-docker-compose -f docker-compose.prod.yml down
-
-# Update application
-git pull
-docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
-
-# Backup database
-docker exec basa-postgres-prod pg_dump -U basa_user basa_prod > backup.sql
-
-# Restore database
-docker exec -i basa-postgres-prod psql -U basa_user basa_prod < backup.sql
-```
+- **Multi-stage builds** for optimized images
+- **Health checks** for both database and application
+- **Restart policies** for high availability
+- **Volume persistence** for database data
+- **Network isolation** for security
 
 ## Environment Variables
 
 ### Required Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
-| `NEXTAUTH_URL` | Your application URL | `https://yourdomain.com` |
-| `NEXTAUTH_SECRET` | NextAuth secret key | `your-secret-key` |
-| `STRIPE_SECRET_KEY` | Stripe secret key | `sk_live_...` |
-| `STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | `pk_live_...` |
-| `MAILGUN_API_KEY` | Mailgun API key | `key-...` |
-| `MAILGUN_DOMAIN` | Mailgun domain | `yourdomain.com` |
+- `DATABASE_URL`: PostgreSQL connection string
+- `NEXTAUTH_URL`: Application URL for authentication
+- `NEXTAUTH_SECRET`: Secret key for NextAuth
+- `POSTGRES_DB`: Database name
+- `POSTGRES_USER`: Database user
+- `POSTGRES_PASSWORD`: Database password
 
 ### Optional Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `POSTGRES_DB` | Database name | `basa_prod` |
-| `POSTGRES_USER` | Database user | `basa_user` |
-| `POSTGRES_PASSWORD` | Database password | `basa_password` |
-| `SENTRY_DSN` | Sentry DSN for error tracking | - |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | - |
+- `STRIPE_SECRET_KEY`: Stripe payment processing
+- `MAILGUN_API_KEY`: Email service
+- `SENTRY_DSN`: Error monitoring
+- `NODE_ENV`: Environment mode
 
 ## Database Management
 
-### Initial Setup
+### Running Migrations
 
 ```bash
-# Run migrations
-docker exec -it basa-app-dev pnpm db:migrate
+# Inside the container
+docker-compose -f docker-compose.dev.yml exec basa-app pnpm run db:migrate
 
-# Seed database
-docker exec -it basa-app-dev pnpm db:seed
+# Or locally with database connection
+pnpm run db:migrate
 ```
 
-### Backup and Restore
+### Seeding Database
 
 ```bash
-# Create backup
-docker exec basa-postgres-prod pg_dump -U basa_user basa_prod > backup_$(date +%Y%m%d_%H%M%S).sql
+# Inside the container
+docker-compose -f docker-compose.dev.yml exec basa-app pnpm run db:seed
 
-# Restore from backup
-docker exec -i basa-postgres-prod psql -U basa_user basa_prod < backup.sql
+# Or locally
+pnpm run db:seed
 ```
 
-## Troubleshooting
+### Database Studio
 
-### Common Issues
-
-1. **Port already in use:**
-   ```bash
-   # Check what's using the port
-   lsof -i :3000
-   # Kill the process or change the port in docker-compose
-   ```
-
-2. **Database connection issues:**
-   ```bash
-   # Check database logs
-   docker-compose logs postgres
-   
-   # Check database health
-   docker exec basa-postgres-prod pg_isready -U basa_user
-   ```
-
-3. **Permission issues:**
-   ```bash
-   # Fix file permissions
-   sudo chown -R $USER:$USER .
-   ```
-
-4. **Container won't start:**
-   ```bash
-   # Check container logs
-   docker logs basa-app-dev
-   
-   # Rebuild containers
-   docker-compose down
-   docker-compose up --build
-   ```
-
-### Health Checks
-
-The application includes health checks at `/api/health` that verify:
-- Application is running
-- Database connection is working
-
-You can test it manually:
 ```bash
-curl http://localhost:3000/api/health
+# Access Prisma Studio
+docker-compose -f docker-compose.dev.yml exec basa-app pnpm run db:studio
 ```
 
 ## Security Considerations
 
-1. **Environment Variables**: Never commit `.env` files to version control
+1. **Environment Files**: Never commit `.env.local` or `.env.production` to version control
 2. **Database Passwords**: Use strong, unique passwords for production
-3. **Network Security**: Consider using Docker networks for isolation
-4. **Updates**: Regularly update Docker images and dependencies
-5. **Backups**: Implement regular database backups
+3. **Network Access**: Limit database port exposure in production
+4. **Volume Permissions**: Ensure proper file permissions for mounted volumes
 
 ## Performance Optimization
 
-1. **Resource Limits**: Set appropriate CPU and memory limits
-2. **Caching**: Use Docker layer caching for faster builds
-3. **Database**: Consider using connection pooling for high traffic
-4. **Monitoring**: Implement application and infrastructure monitoring
+### Development
 
-## Support
+- **Volume Mounting**: Source code is mounted for hot reloading
+- **Node Modules**: Excluded from volume mounting to prevent conflicts
+- **Build Cache**: Leverages Docker layer caching
 
-For issues related to Docker setup, check:
-1. Docker logs: `docker-compose logs`
-2. Application logs: `docker logs <container-name>`
-3. Database logs: `docker logs postgres`
-4. Health check endpoint: `http://localhost:3000/api/health` 
+### Production
+
+- **Multi-stage Builds**: Reduces final image size
+- **Optimized Dependencies**: Only production dependencies included
+- **Static Asset Optimization**: Next.js optimizations enabled
+
+## Monitoring and Logs
+
+### Health Checks
+
+- **Database**: PostgreSQL readiness check
+- **Application**: HTTP health endpoint at `/api/health`
+
+### Logging
+
+```bash
+# View all logs
+docker-compose -f docker-compose.dev.yml logs
+
+# Follow logs in real-time
+docker-compose -f docker-compose.dev.yml logs -f
+
+# View specific service logs
+docker-compose -f docker-compose.dev.yml logs basa-app
+```
+
+## Backup and Recovery
+
+### Database Backup
+
+```bash
+# Create backup
+docker-compose -f docker-compose.dev.yml exec postgres pg_dump -U basa_user basa_db > backup.sql
+
+# Restore backup
+docker-compose -f docker-compose.dev.yml exec -T postgres psql -U basa_user basa_db < backup.sql
+```
+
+### Volume Backup
+
+```bash
+# Backup volumes
+docker run --rm -v basa-app_postgres_data:/data -v $(pwd):/backup alpine tar czf /backup/postgres_backup.tar.gz -C /data .
+
+# Restore volumes
+docker run --rm -v basa-app_postgres_data:/data -v $(pwd):/backup alpine tar xzf /backup/postgres_backup.tar.gz -C /data
+``` 
