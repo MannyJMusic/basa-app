@@ -109,6 +109,22 @@ const devTools = [
     href: '/dev/test-webhook',
     category: 'Testing',
     badge: 'Test'
+  },
+  {
+    title: 'API Testing Script',
+    description: 'Test events API endpoint',
+    icon: TestTube,
+    href: '/scripts/test-api.js',
+    category: 'Testing',
+    badge: 'Script'
+  },
+  {
+    title: 'Event Date Update',
+    description: 'Update event dates to future dates',
+    icon: Settings,
+    href: '/scripts/update-event-dates-future.js',
+    category: 'Database',
+    badge: 'Script'
   }
 ]
 
@@ -118,7 +134,8 @@ const categories = [
   'Email System',
   'Debug',
   'Monitoring',
-  'Testing'
+  'Testing',
+  'Database'
 ]
 
 export default function DevToolsPage() {
