@@ -79,6 +79,8 @@ else
     git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git .
 fi
 
+
+
 # Create environment file if it doesn't exist
 if [ ! -f "$ENV_FILE" ]; then
     log "⚙️ Creating environment file..."
