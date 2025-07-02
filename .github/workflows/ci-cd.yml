@@ -4,16 +4,17 @@ on:
   push:
     branches: [ main, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Test and Build Job
+  # Test and Build Job - Only for main branch and PRs
   test-and-build:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     
     services:
       postgres:
@@ -116,21 +117,14 @@ jobs:
           prisma/
           next.config.js
 
-  # Development Deployment
+  # Development Deployment - Fast deployment without tests
   deploy-dev:
-    needs: test-and-build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: build-files
-        path: ./
 
     - name: Setup SSH
       uses: webfactory/ssh-agent@v0.8.0
