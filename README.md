@@ -194,7 +194,7 @@ The application uses Prisma ORM with PostgreSQL. Key models include:
 - **Content**: Blog posts, resources, testimonials
 - **Payment**: Payment records and receipts
 
-## 🧪 Testing
+## 🧪 Testing & Development Tools
 
 ### Unit Tests
 ```bash
@@ -205,6 +205,16 @@ pnpm test
 ```bash
 pnpm cypress:open
 ```
+
+### Development Tools
+Visit `/dev` for a comprehensive collection of development and testing tools:
+
+- **UI Components Demo** - Interactive loading states and animations
+- **Technology Stack Demo** - Complete technology showcase
+- **Email Testing** - Preview templates and test delivery
+- **Debug Tools** - Database, session, and user debugging
+- **Sentry Testing** - Error tracking and monitoring tests
+- **Webhook Testing** - Test webhook endpoints
 
 ### Email Testing
 ```bash

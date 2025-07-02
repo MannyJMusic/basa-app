@@ -35,12 +35,19 @@ Welcome to the BASA (Business Association of San Antonio) documentation. This di
 ### 🔍 Monitoring & Debugging
 - **[Sentry Setup](./SENTRY_SETUP.md)** - Error tracking and monitoring configuration
 
+### 🛠️ Development Tools
+- **Dev Tools Dashboard** - Visit `/dev` for comprehensive development utilities
+- **UI Component Demos** - Interactive showcases of loading states and animations
+- **Debug APIs** - Database, session, and user debugging endpoints
+- **Email Testing** - Template preview and delivery testing tools
+
 ## 📖 How to Use This Documentation
 
 ### For New Developers
 1. Start with the [Main README](../README.md) for project overview
 2. Review the [Technology Stack](./TECH_STACK.md) to understand the codebase
 3. Follow the [Developer Control Panel](./DEVELOPER_CONTROL_PANEL.md) for setup
+4. Visit `/dev` for development tools and testing utilities
 
 ### For Email Development
 1. Read the [Email System Overview](./BASA_EMAIL_SYSTEM.md)
