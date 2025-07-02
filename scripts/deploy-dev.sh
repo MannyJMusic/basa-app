@@ -105,28 +105,44 @@ docker image prune -f
 log "🔨 Building and starting containers..."
 docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build
 
-# Wait for containers to be healthy
-log "⏳ Waiting for containers to be healthy..."
-sleep 30
+# Wait for containers to start
+log "⏳ Waiting for containers to start..."
+sleep 10
 
-# Check application health
+# Check application health with progressive intervals
 log "🏥 Checking application health..."
-MAX_RETRIES=10
+MAX_RETRIES=15
 RETRY_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -s -f "http://localhost:$PORT/api/health" > /dev/null; then
+    if timeout 5 curl -s -f "http://localhost:$PORT/api/health" > /dev/null; then
         success "Application is healthy!"
         break
     else
         RETRY_COUNT=$((RETRY_COUNT + 1))
-        warning "Health check failed (attempt $RETRY_COUNT/$MAX_RETRIES). Retrying in 10 seconds..."
-        sleep 10
+        
+        # Show progress every 5 attempts
+        if [ $((RETRY_COUNT % 5)) -eq 0 ]; then
+            log "📊 Progress: $RETRY_COUNT/$MAX_RETRIES attempts completed"
+            log "📋 Container status:"
+            docker-compose -f "$COMPOSE_FILE" ps
+        fi
+        
+        # Progressive intervals: 3 seconds for first 10 attempts, then 5 seconds
+        if [ $RETRY_COUNT -lt 10 ]; then
+            warning "Health check failed (attempt $RETRY_COUNT/$MAX_RETRIES). Retrying in 3 seconds..."
+            sleep 3
+        else
+            warning "Health check failed (attempt $RETRY_COUNT/$MAX_RETRIES). Retrying in 5 seconds..."
+            sleep 5
+        fi
     fi
 done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     error "Application health check failed after $MAX_RETRIES attempts"
+    log "📋 Container status:"
+    docker-compose -f "$COMPOSE_FILE" ps
     log "📋 Container logs:"
     docker-compose -f "$COMPOSE_FILE" logs --tail=50
     exit 1
