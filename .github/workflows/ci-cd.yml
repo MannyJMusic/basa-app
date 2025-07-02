@@ -33,19 +33,25 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 9
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'pnpm'
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 9
-
     - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      run: |
+        echo "Node version: $(node --version)"
+        echo "NPM version: $(npm --version)"
+        echo "PNPM version: $(pnpm --version)"
+        echo "Installing dependencies..."
+        pnpm install --frozen-lockfile
+        echo "Dependencies installed successfully"
 
     - name: Setup environment variables
       run: |
@@ -59,7 +65,9 @@ jobs:
       run: pnpm prisma generate
 
     - name: Run database migrations
-      run: pnpm prisma migrate deploy
+      run: |
+        pnpm prisma generate
+        pnpm prisma migrate deploy
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
 
@@ -73,11 +81,22 @@ jobs:
       run: pnpm test
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        NODE_ENV: test
+        NEXTAUTH_SECRET: test-secret-key
+        NEXTAUTH_URL: http://localhost:3000
 
     - name: Build application
-      run: pnpm build
+      run: |
+        echo "Building application..."
+        # Skip database setup during CI build
+        pnpm run type-check
+        pnpm run lint
+        pnpm run next build
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        NODE_ENV: test
+        NEXTAUTH_SECRET: test-secret-key
+        NEXTAUTH_URL: http://localhost:3000
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
