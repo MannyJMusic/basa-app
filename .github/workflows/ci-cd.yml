@@ -138,13 +138,11 @@ jobs:
 
     - name: Deploy to development server
       run: |
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+        ssh ${{ secrets.SERVER_USER }}@${å{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-dev
           git pull origin dev
-          cp .env.example .env.local
           echo "Deploying development version..."
-          docker-compose -f docker-compose.dev.yml --env-file .env.local down
-          docker-compose -f docker-compose.dev.yml --env-file .env.local up -d --build
+          ./scripts/deploy-dev.sh
           echo "Development deployment completed"
         EOF
 
@@ -186,8 +184,7 @@ jobs:
           cd /opt/basa-app-prod
           git pull origin main
           echo "Deploying production version..."
-          docker-compose -f docker-compose.prod.yml --env-file .env.production down
-          docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+          ./scripts/deploy-prod.sh
           echo "Production deployment completed"
         EOF
 
