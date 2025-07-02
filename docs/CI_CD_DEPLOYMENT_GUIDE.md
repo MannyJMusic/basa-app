@@ -55,26 +55,89 @@ The CI/CD pipeline consists of:
 
 ### 1. Initial Server Configuration
 
-SSH into your Ubuntu server and run the setup script:
+**Recommended:** Run the setup script on a fresh Ubuntu server for complete automation.
 
 ```bash
-# Download the setup script
-wget https://raw.githubusercontent.com/businessassociationsa/basa-app/main/scripts/setup-server.sh
-chmod +x setup-server.sh
+# SSH into your fresh Ubuntu server
+ssh root@your-server-ip
 
-# Run the setup script
-sudo ./setup-server.sh
+# Download and run the setup script from GitHub
+curl -fsSL https://raw.githubusercontent.com/MannyJMusic/basa-app/main/scripts/fetch-and-run-setup.sh | bash
 ```
 
 This script will:
+- Download the setup script from GitHub
 - Update system packages
 - Install Docker and Docker Compose
 - Install Nginx and configure reverse proxy
 - Set up firewall and security
-- Create application directories
+- Create application directories (`/opt/basa-app-prod` and `/opt/basa-app-dev`)
+- Clone both production and development repositories from GitHub
+- Set up environment file templates
 - Configure automatic backups
+- Create deployment scripts (`deploy-basa-prod`, `deploy-basa-dev`)
+- **NOT start the application automatically** (you configure environment files first)
 
-### 2. Domain Configuration
+**Alternative:** If you prefer manual control:
+
+```bash
+# Download the setup script manually
+wget https://raw.githubusercontent.com/MannyJMusic/basa-app/main/scripts/setup-server.sh
+chmod +x setup-server.sh
+sudo ./setup-server.sh
+```
+
+**Note:** The setup script is the single source of truth for server provisioning. It sets up infrastructure but does NOT start the application - you configure environment files first, then deploy manually.
+
+### 2. Environment Configuration
+
+After the server setup, you need to configure your environment files:
+
+1. **Configure domain settings:**
+   ```bash
+   # Edit the domain configuration
+   nano /opt/basa-app-prod/.env.domains
+   ```
+   
+   Replace the placeholder domains with your actual domains:
+   ```env
+   PRODUCTION_DOMAIN=yourdomain.com
+   DEV_DOMAIN=dev.yourdomain.com
+   ```
+
+2. **Configure production environment:**
+   ```bash
+   # Edit the production environment
+   nano /opt/basa-app-prod/.env.production
+   ```
+   
+   Update with your actual credentials:
+   ```env
+   NODE_ENV=production
+   DATABASE_URL=postgresql://basa_user:basa_password@localhost:5432/basa_prod
+   NEXTAUTH_URL=https://yourdomain.com
+   NEXTAUTH_SECRET=your-actual-secret-key
+   STRIPE_SECRET_KEY=sk_live_your_actual_stripe_key
+   MAILGUN_API_KEY=key-your_actual_mailgun_key
+   # ... other credentials
+   ```
+
+3. **Configure development environment:**
+   ```bash
+   # Edit the development environment
+   nano /opt/basa-app-dev/.env.development
+   ```
+   
+   Update with your development credentials (similar to production but with dev domain).
+
+4. **Generate Nginx configuration:**
+   ```bash
+   cd /opt/basa-app-prod
+   ./scripts/generate-nginx-config.sh
+   sudo systemctl reload nginx
+   ```
+
+### 3. Domain Configuration
 
 Configure your domain DNS to point to your server:
 
@@ -85,7 +148,7 @@ A       www     YOUR_SERVER_IP
 A       dev     YOUR_SERVER_IP
 ```
 
-### 3. SSL Certificate Setup
+### 4. SSL Certificate Setup
 
 After DNS propagation, set up SSL certificates:
 
@@ -96,6 +159,54 @@ sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
 # Development subdomain
 sudo certbot --nginx -d dev.yourdomain.com
 ```
+
+### 5. Deploy Applications
+
+Once your environment is configured, deploy the applications:
+
+```bash
+# Deploy production
+deploy-basa-prod
+
+# Deploy development
+deploy-basa-dev
+
+# Check status
+monitor-basa
+```
+
+**Useful deployment commands:**
+- `deploy-basa-prod` - Deploy production version
+- `deploy-basa-dev` - Deploy development version  
+- `stop-basa-prod` - Stop production version
+- `stop-basa-dev` - Stop development version
+- `monitor-basa` - Check application status
+
+## Nginx Configuration Generation
+
+The script `scripts/generate-nginx-config.sh` is used by the setup script to generate your Nginx config from a template. It:
+- Substitutes your domain variables from `.env.domains`
+- Fixes known issues (e.g., `gzip_proxied` directive)
+- Validates the config with `nginx -t`
+- If validation fails, prints the error and the generated config for easy debugging
+
+**If you see an error like:**
+```
+[ERROR] Generated Nginx configuration is invalid!
+nginx: [emerg] open() "/usr/share/nginx/nginx/basa-app.conf" failed (2: No such file or directory)
+```
+- Check that the generated config path is correct and matches your Nginx setup
+- Review the printed config for missing or incorrect domain variables
+- Make sure `.env.domains` is present and correct
+- If you see empty `server_name` or other variables, fix `.env.domains` and re-run the setup script
+- If you see a `gzip_proxied` error, the script should now fix this automatically
+
+**After fixing any issues, simply re-run the setup script:**
+```bash
+sudo /tmp/setup-server.sh
+```
+
+**Manual steps are only for debugging.**
 
 ## GitHub Repository Configuration
 
@@ -160,6 +271,8 @@ chmod +x scripts/generate-nginx-config.sh
 ```
 
 This will create `nginx/basa-app.conf` with your actual domains.
+
+If you encounter errors, see the troubleshooting section below.
 
 ## Environment Configuration
 
