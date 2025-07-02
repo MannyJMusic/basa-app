@@ -43,7 +43,9 @@ fi
 # Load domain configuration
 if [ -f "$ENV_FILE" ]; then
     log "📄 Loading domain configuration from $ENV_FILE"
+    set -a
     source "$ENV_FILE"
+    set +a
 else
     warning "Domain configuration file $ENV_FILE not found!"
     echo "Please create $ENV_FILE with the following content:"
@@ -69,18 +71,24 @@ echo "   Development Domain: $DEV_DOMAIN"
 log "📝 Creating Nginx configuration..."
 envsubst '${PRODUCTION_DOMAIN} ${DEV_DOMAIN}' < "$TEMPLATE_FILE" > "$OUTPUT_FILE"
 
+# Fix the gzip_proxied directive issue (remove must-revalidate)
+sed -i 's/gzip_proxied expired no-cache no-store private must-revalidate auth;/gzip_proxied expired no-cache no-store private auth;/g' "$OUTPUT_FILE"
+
 # Validate generated configuration (only if nginx is available)
 if command -v nginx &> /dev/null; then
-    if nginx -t -c "$(pwd)/$OUTPUT_FILE" > /dev/null 2>&1; then
-        success "Nginx configuration generated successfully!"
+    if nginx -t -c "$OUTPUT_FILE"; then
+        success "Nginx configuration generated and validated successfully!"
         log "📁 Output file: $OUTPUT_FILE"
     else
         error "Generated Nginx configuration is invalid!"
-        log "📋 Configuration validation failed. Please check the generated file."
+        log "📋 Configuration validation failed. Please check the generated file below:"
+        echo "-------------------"
+        cat "$OUTPUT_FILE"
+        echo "-------------------"
         exit 1
     fi
 else
-    success "Nginx configuration generated successfully!"
+    success "Nginx configuration generated successfully! (nginx not available for validation)"
     log "📁 Output file: $OUTPUT_FILE"
     warning "Nginx validation skipped (nginx not available locally)"
 fi
