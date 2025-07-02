@@ -99,18 +99,33 @@ pnpm db:seed          # Seed database
 ### Development Tools
 Visit `/dev` for interactive development tools and demos.
 
+### Documentation Workflow
+- **User Documentation**: Edit files in `wiki/` directory, then run `./scripts/sync-wiki.sh` to update GitHub Wiki
+- **Technical Documentation**: Edit files in `docs/` directory, commit directly to main repository
+- **Wiki Updates**: Can also be edited directly on GitHub through the Wiki interface
+
 ## 📖 Documentation
 
-**[📚 Complete Documentation](./docs/README.md)** - Everything you need to know
+BASA uses a dual documentation system for optimal organization:
 
-### Quick Links
-- [🚀 Technology Stack](./docs/TECH_STACK.md) - What powers BASA
-- [⚙️ Developer Tools](./docs/DEVELOPER_CONTROL_PANEL.md) - Development utilities
-- [🎨 Design System](./docs/BASA_DESIGN_SYSTEM.md) - UI/UX guidelines
-- [📧 Email System](./docs/BASA_EMAIL_SYSTEM.md) - Email functionality
-- [💳 Stripe Setup](./docs/STRIPE_SETUP.md) - Payment processing
-- [🐳 Docker Guide](./docs/DOCKER.md) - Containerization
-- [📄 License](./LICENSE) - Usage terms and restrictions
+### 🌐 [GitHub Wiki](https://github.com/MannyJMusic/basa-app/wiki) - User & Community Documentation
+- **[🏠 Home](https://github.com/MannyJMusic/basa-app/wiki/Home)** - Project overview and getting started
+- **[🚀 Getting Started](https://github.com/MannyJMusic/basa-app/wiki/Getting-Started)** - Quick setup guide
+- **[🤝 Contributing](https://github.com/MannyJMusic/basa-app/wiki/Contributing)** - How to contribute to BASA
+- **[👥 Project Overview](https://github.com/MannyJMusic/basa-app/wiki/Project-Overview)** - Features and capabilities
+- **[🛠️ Developer Tools](https://github.com/MannyJMusic/basa-app/wiki/Developer-Tools)** - Development utilities
+- **[⚙️ Environment Setup](https://github.com/MannyJMusic/basa-app/wiki/Environment-Setup)** - Development environment
+- **[📋 License Information](https://github.com/MannyJMusic/basa-app/wiki/License-Information)** - Usage terms
+
+### 📚 [Technical Documentation](./docs/README.md) - Developer & Setup Guides
+- **[🚀 Technology Stack](./docs/TECH_STACK.md)** - What powers BASA
+- **[⚙️ Developer Control Panel](./docs/DEVELOPER_CONTROL_PANEL.md)** - Development utilities
+- **[🎨 Design System](./docs/BASA_DESIGN_SYSTEM.md)** - UI/UX guidelines
+- **[📧 Email System](./docs/BASA_EMAIL_SYSTEM.md)** - Email functionality
+- **[💳 Stripe Setup](./docs/STRIPE_SETUP.md)** - Payment processing
+- **[🐳 Docker Guide](./docs/DOCKER.md)** - Containerization
+- **[📧 Mailgun Setup](./docs/MAILGUN_SETUP.md)** - Email service configuration
+- **[🔧 Admin Settings](./docs/ADMIN_SETTINGS.md)** - Administrative features
 
 ## 🤝 Contributing
 
@@ -148,9 +163,10 @@ For commercial licensing inquiries, please contact BASA.
 ## 🆘 Support
 
 For support and questions:
-- Check the documentation in the `docs/` directory
-- Review the [Developer Control Panel](./docs/DEVELOPER_CONTROL_PANEL.md)
-- Contact the development team
+- **📖 Check the [GitHub Wiki](https://github.com/MannyJMusic/basa-app/wiki)** - User guides and community documentation
+- **🔧 Review the [Technical Documentation](./docs/README.md)** - Developer guides and setup instructions
+- **🛠️ Use the [Developer Control Panel](./docs/DEVELOPER_CONTROL_PANEL.md)** - Interactive development tools
+- **📧 Contact the development team** - For additional support
 
 ---
 
