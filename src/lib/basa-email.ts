@@ -2,7 +2,6 @@ import formData from 'form-data'
 import Mailgun from 'mailgun.js'
 import fs from 'fs'
 import path from 'path'
-import * as nunjucks from 'nunjucks'
 
 // Initialize Mailgun
 const mailgun = new Mailgun(formData)
@@ -19,26 +18,45 @@ const SITE_URL = process.env.NEXTAUTH_URL || 'https://basa.org'
 // Load email templates from the built Maizzle templates
 const loadTemplate = (templateName: string): string => {
   try {
-    const templatePath = path.join(process.cwd(), 'mail-templates', 'dist', 'basa', `${templateName}.html`)
-    return fs.readFileSync(templatePath, 'utf-8')
+    // First try to load from compiled templates
+    const compiledPath = path.join(process.cwd(), 'mail-templates', 'dist', 'basa', `${templateName}.html`)
+    if (fs.existsSync(compiledPath)) {
+      return fs.readFileSync(compiledPath, 'utf-8')
+    }
+    
+    // Fallback to source Nunjucks templates
+    const sourcePath = path.join(process.cwd(), 'mail-templates', 'src', 'templates', 'basa', `${templateName}.njk`)
+    if (fs.existsSync(sourcePath)) {
+      return fs.readFileSync(sourcePath, 'utf-8')
+    }
+    
+    throw new Error(`Template ${templateName} not found in either compiled or source directories`)
   } catch (error) {
     console.error(`Failed to load template ${templateName}:`, error)
     throw new Error(`Template ${templateName} not found`)
   }
 }
 
-// Configure Nunjucks for template rendering
-const nunjucksEnv = new nunjucks.Environment()
-nunjucksEnv.addFilter('date', (date: Date, format: string) => {
-  if (!date) return ''
-  const d = new Date(date)
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long'
-  })
-})
+// Configure Nunjucks for template rendering (server-side only)
+let nunjucksEnv: any = null
+
+const getNunjucksEnv = async () => {
+  if (!nunjucksEnv) {
+    const nunjucks = await import('nunjucks')
+    nunjucksEnv = new nunjucks.Environment()
+    nunjucksEnv.addFilter('date', (date: Date, format: string) => {
+      if (!date) return ''
+      const d = new Date(date)
+      return d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+      })
+    })
+  }
+  return nunjucksEnv
+}
 
 // Base email sending function
 async function sendEmail(to: string, subject: string, html: string, options: {
@@ -90,8 +108,9 @@ export async function sendWelcomeEmail(
   } = {}
 ) {
   const template = loadTemplate('welcome')
+  const env = await getNunjucksEnv()
   
-  const html = nunjucksEnv.renderString(template, {
+  const html = env.renderString(template, {
     user: { firstName },
     activationUrl,
     page: {
@@ -116,8 +135,9 @@ export async function sendPasswordResetEmail(
   } = {}
 ) {
   const template = loadTemplate('password-reset')
+  const env = await getNunjucksEnv()
   
-  const html = nunjucksEnv.renderString(template, {
+  const html = env.renderString(template, {
     user: { firstName },
     resetUrl,
     page: {
@@ -156,8 +176,9 @@ export async function sendEventInvitationEmail(
   } = {}
 ) {
   const template = loadTemplate('event-invitation')
+  const env = await getNunjucksEnv()
   
-  const html = nunjucksEnv.renderString(template, {
+  const html = env.renderString(template, {
     user: { firstName },
     event,
     page: {
@@ -215,8 +236,9 @@ export async function sendNewsletterEmail(
   } = {}
 ) {
   const template = loadTemplate('newsletter')
+  const env = await getNunjucksEnv()
   
-  const html = nunjucksEnv.renderString(template, {
+  const html = env.renderString(template, {
     user: { firstName },
     newsletter,
     unsubscribeUrl: options.unsubscribeUrl || `${SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}`,
@@ -229,6 +251,10 @@ export async function sendNewsletterEmail(
 
   return sendEmail(email, `BASA Newsletter - ${newsletter.title}`, html)
 }
+
+
+
+
 
 // Utility functions for building templates
 export async function buildBasaTemplates() {
