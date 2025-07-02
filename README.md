@@ -99,11 +99,6 @@ pnpm db:seed          # Seed database
 ### Development Tools
 Visit `/dev` for interactive development tools and demos.
 
-### Documentation Workflow
-- **User Documentation**: Edit files in `wiki/` directory, then run `./scripts/sync-wiki.sh` to update GitHub Wiki
-- **Technical Documentation**: Edit files in `docs/` directory, commit directly to main repository
-- **Wiki Updates**: Can also be edited directly on GitHub through the Wiki interface
-
 ## 📖 Documentation
 
 BASA uses a dual documentation system for optimal organization:
