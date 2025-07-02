@@ -141,6 +141,10 @@ jobs:
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-dev
           git pull origin dev
+          echo "Making scripts executable..."
+          chmod +x scripts/*.sh
+          echo "Current user: $(whoami)"
+          echo "Current directory: $(pwd)"
           echo "Deploying development version..."
           ./scripts/deploy-dev.sh
           echo "Development deployment completed"
@@ -200,6 +204,10 @@ jobs:
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-prod
           git pull origin main
+          echo "Making scripts executable..."
+          chmod +x scripts/*.sh
+          echo "Current user: $(whoami)"
+          echo "Current directory: $(pwd)"
           echo "Deploying production version..."
           ./scripts/deploy-prod.sh
           echo "Production deployment completed"
