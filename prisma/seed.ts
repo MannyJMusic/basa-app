@@ -97,6 +97,16 @@ async function main() {
     console.log('Settings already exist')
   }
 
+  // Map old membership tiers to new ones
+  function mapTier(oldTier: string): string {
+    switch (oldTier) {
+      case 'BASIC': return 'MEETING_MEMBER'
+      case 'PREMIUM': return 'ASSOCIATE_MEMBER'
+      case 'VIP': return 'TRIO_MEMBER'
+      default: return 'MEETING_MEMBER'
+    }
+  }
+
   // Create sample members for events
   const sampleMembers = [
     {
@@ -339,7 +349,10 @@ async function main() {
       allowContact: true,
       showAddress: false,
     }
-  ]
+  ].map(m => ({
+    ...m,
+    membershipTier: mapTier(m.membershipTier as string)
+  }))
 
   const createdMembers = []
 
@@ -376,7 +389,7 @@ async function main() {
           zipCode: memberData.zipCode,
           website: memberData.website,
           membershipTier: memberData.membershipTier,
-          membershipStatus: 'ACTIVE',
+          membershipStatus: 'PENDING',
           joinedAt: new Date(),
           renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
           description: memberData.description,

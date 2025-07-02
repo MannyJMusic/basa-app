@@ -107,7 +107,7 @@ model Member {
   zipCode             String?
   website             String?
   membershipTier      MembershipTier?
-  membershipStatus    Status    @default(ACTIVE)
+  membershipStatus    Status    @default(PENDING)
   joinedAt            DateTime  @default(now())
   renewalDate         DateTime?
   stripeCustomerId    String?   @unique
@@ -143,12 +143,19 @@ enum MembershipTier {
   BASIC
   PREMIUM
   VIP
+  MEETING_MEMBER
+  ASSOCIATE_MEMBER
+  TRIO_MEMBER
+  CLASS_RESOURCE_MEMBER
+  NAG_RESOURCE_MEMBER
+  TRAINING_RESOURCE_MEMBER
 }
 
 enum Status {
+  PENDING
   ACTIVE
+  EXPIRED
   INACTIVE
-  SUSPENDED
 }
 
 model Resource {

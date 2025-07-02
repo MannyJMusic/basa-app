@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run prebuild && next build",
-    "prebuild": "npm run type-check && npm run lint",
-    "check": "npm run type-check && npm run lint",
+    "build": "pnpm run prebuild && next build",
+    "prebuild": "pnpm run type-check && pnpm run lint",
+    "postbuild": "pnpm run db:setup",
+    "db:setup": "pnpm run db:generate && pnpm run db:seed",
+    "check": "pnpm run type-check && pnpm run lint",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
@@ -25,7 +27,8 @@
     "webhook:test": "node scripts/test-webhooks.js",
     "email:test": "node scripts/test-basa-email.js",
     "email:quick": "node scripts/quick-email-test.js",
-    "email:preview": "echo 'Visit http://localhost:3000/dev/email-preview'"
+    "email:preview": "echo 'Visit http://localhost:3000/dev/email-preview'",
+    "setup:dev": "node scripts/setup-dev.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -60,6 +63,7 @@
     "cmdk": "^0.2.0",
     "csv-parse": "^5.6.0",
     "date-fns": "^3.3.1",
+    "dotenv": "^17.0.1",
     "form-data": "^4.0.3",
     "framer-motion": "^12.19.1",
     "lucide-react": "^0.323.0",

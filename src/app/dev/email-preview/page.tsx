@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { toast } from 'sonner'
+import { useToast } from '@/components/ui/use-toast'
 
 export default function EmailPreviewPage() {
+  const { toast } = useToast()
   const [template, setTemplate] = useState('welcome')
   const [firstName, setFirstName] = useState('John')
   const [email, setEmail] = useState('test@example.com')
+  const [fromName, setFromName] = useState('BASA')
   const [activationUrl, setActivationUrl] = useState('https://dev.businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com')
   const [resetUrl, setResetUrl] = useState('https://dev.businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com')
   const [isSending, setIsSending] = useState(false)
@@ -56,9 +58,11 @@ export default function EmailPreviewPage() {
 
   const handleSendTestEmail = async () => {
     if (!email || !firstName) {
-      toast.error('Please fill in all required fields')
-      setLastSendStatus('error')
-      setLastSendMessage('Please fill in all required fields')
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      })
       return
     }
 
@@ -69,7 +73,8 @@ export default function EmailPreviewPage() {
       const emailData: any = {
         template,
         email,
-        firstName
+        firstName,
+        fromName
       }
 
       if (template === 'welcome') {
@@ -101,25 +106,24 @@ export default function EmailPreviewPage() {
       const data = await response.json()
 
       if (data.success) {
-        toast.success(`Test ${template} email sent successfully!`, {
-          description: `Check your inbox: ${email}`,
-          duration: 5000
+        toast({
+          title: "Success!",
+          description: `Test ${template} email sent successfully! Check your inbox: ${email}`,
         })
-        setLastSendStatus('success')
-        setLastSendMessage(`Test ${template} email sent successfully! Check your inbox: ${email}`)
-        setLastSentDetails({ template, email, firstName })
       } else {
-        toast.error('Failed to send test email', {
+        toast({
+          title: "Failed to send test email",
           description: data.error || 'Unknown error occurred',
-          duration: 5000
+          variant: "destructive"
         })
         setLastSendStatus('error')
         setLastSendMessage(data.error || 'Unknown error occurred')
       }
     } catch (error) {
-      toast.error('Failed to send test email', {
+      toast({
+        title: "Failed to send test email",
         description: error instanceof Error ? error.message : 'Network error occurred',
-        duration: 5000
+        variant: "destructive"
       })
       setLastSendStatus('error')
       setLastSendMessage(error instanceof Error ? error.message : 'Network error occurred')
@@ -174,6 +178,18 @@ export default function EmailPreviewPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  From Name
+                </label>
+                <input
+                  type="text"
+                  value={fromName}
+                  onChange={(e) => setFromName(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
