@@ -1,0 +1,182 @@
+---
+title: New Contact Form Submission - {{ contact.subject }}
+preheader: New contact form submission from {{ contact.firstName }} {{ contact.lastName }}
+layout: basa.njk
+---
+
+{% extends "src/layouts/basa.njk" %}
+
+{% block template %}
+<!-- Contact Form Header -->
+<div style="text-align: center; margin-bottom: 32px;">
+  <h1 style="font-size: 32px; font-weight: 700; line-height: 1.2; margin: 0; color: #1B365D;">
+    New Contact Form Submission 📧
+  </h1>
+  <p style="font-size: 18px; line-height: 1.5; margin: 16px 0 0 0; color: #64748b;">
+    A new message has been submitted through the BASA website
+  </p>
+</div>
+
+<!-- Contact Information Card -->
+<div style="background: linear-gradient(135deg, #fefbf7 0%, #ffffff 100%); border-radius: 12px; padding: 32px; margin-bottom: 32px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">
+  <h2 style="font-size: 24px; font-weight: 600; line-height: 1.3; margin: 0 0 24px 0; color: #1B365D;">
+    Contact Information
+  </h2>
+
+  <div style="display: table; width: 100%;">
+    <div style="display: table-row;">
+      <div style="display: table-cell; vertical-align: top; padding-right: 16px; width: 50%;">
+        <div style="margin-bottom: 16px;">
+          <strong style="color: #1B365D; font-size: 14px;">Name:</strong>
+          <p style="margin: 4px 0 0 0; color: #334155; font-size: 16px;">{{ contact.firstName }} {{ contact.lastName }}</p>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <strong style="color: #1B365D; font-size: 14px;">Email:</strong>
+          <p style="margin: 4px 0 0 0; color: #334155; font-size: 16px;">
+            <a href="mailto:{{ contact.email }}" style="color: #17A2B8; text-decoration: none;">{{ contact.email }}</a>
+          </p>
+        </div>
+
+        {% if contact.phone %}
+        <div style="margin-bottom: 16px;">
+          <strong style="color: #1B365D; font-size: 14px;">Phone:</strong>
+          <p style="margin: 4px 0 0 0; color: #334155; font-size: 16px;">
+            <a href="tel:{{ contact.phone }}" style="color: #17A2B8; text-decoration: none;">{{ contact.phone }}</a>
+          </p>
+        </div>
+        {% endif %}
+      </div>
+
+      <div style="display: table-cell; vertical-align: top; padding-left: 16px; width: 50%;">
+        {% if contact.company %}
+        <div style="margin-bottom: 16px;">
+          <strong style="color: #1B365D; font-size: 14px;">Company:</strong>
+          <p style="margin: 4px 0 0 0; color: #334155; font-size: 16px;">{{ contact.company }}</p>
+        </div>
+        {% endif %}
+
+        <div style="margin-bottom: 16px;">
+          <strong style="color: #1B365D; font-size: 14px;">Preferred Contact:</strong>
+          <p style="margin: 4px 0 0 0; color: #334155; font-size: 16px; text-transform: capitalize;">{{ contact.preferredContact }}</p>
+        </div>
+
+        {% if contact.membershipInterest %}
+        <div style="margin-bottom: 16px;">
+          <strong style="color: #1B365D; font-size: 14px;">Membership Interest:</strong>
+          <p style="margin: 4px 0 0 0; color: #17A2B8; font-size: 16px; font-weight: 600;">✓ Interested in BASA membership</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Message Content -->
+<div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 32px; margin-bottom: 32px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">
+  <h2 style="font-size: 24px; font-weight: 600; line-height: 1.3; margin: 0 0 16px 0; color: #1B365D;">
+    Subject: {{ contact.subject }}
+  </h2>
+
+  <div style="background: #f8fafc; border-left: 4px solid #17A2B8; padding: 24px; border-radius: 0 8px 8px 0;">
+    <p style="font-size: 16px; line-height: 1.6; margin: 0; color: #334155; white-space: pre-wrap;">{{ contact.message }}</p>
+  </div>
+</div>
+
+<!-- Action Buttons -->
+<div style="text-align: center; margin-bottom: 32px;">
+  <p style="font-size: 16px; line-height: 1.5; margin: 0 0 16px 0; color: #334155;">
+    Quick Actions:
+  </p>
+
+  <div style="display: inline-block; margin: 0 8px;">
+    <a href="mailto:{{ contact.email }}?subject=Re: {{ contact.subject }}"
+       class="basa-btn-primary sm-block sm-py-16"
+       style="display: inline-block; font-weight: 700; line-height: 1; padding: 16px 32px; color: #ffffff; font-size: 14px; text-decoration: none; border-radius: 8px; background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%); box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);">
+      Reply to {{ contact.firstName }}
+    </a>
+  </div>
+
+  {% if contact.phone %}
+  <div style="display: inline-block; margin: 0 8px;">
+    <a href="tel:{{ contact.phone }}"
+       class="basa-btn-secondary sm-block sm-py-16"
+       style="display: inline-block; font-weight: 700; line-height: 1; padding: 16px 32px; color: #1B365D; font-size: 14px; text-decoration: none; border-radius: 8px; background: linear-gradient(135deg, #FFD700 0%, #FFC300 100%); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);">
+      Call {{ contact.firstName }}
+    </a>
+  </div>
+  {% endif %}
+
+  {% if contact.membershipInterest %}
+  <div style="display: inline-block; margin: 0 8px;">
+    <a href="{{ page.siteUrl or 'https://businessassociationsa.com' }}/membership"
+       class="basa-btn-outline sm-block sm-py-16"
+       style="display: inline-block; font-weight: 700; line-height: 1; padding: 14px 30px; color: #1B365D; font-size: 14px; text-decoration: none; border-radius: 8px; background: #ffffff; border: 2px solid #1B365D;">
+      View Membership Info
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Submission Details -->
+<div style="background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 32px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">
+  <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 16px 0; color: #1B365D;">
+    Submission Details
+  </h3>
+
+  <div style="display: table; width: 100%;">
+    <div style="display: table-row;">
+      <div style="display: table-cell; vertical-align: top; padding-right: 16px; width: 50%;">
+        <p style="margin: 8px 0; font-size: 14px; color: #64748b;">
+          <strong>Submitted:</strong> {{ submissionDate | date('MMMM D, YYYY [at] h:mm A') }}
+        </p>
+        <p style="margin: 8px 0; font-size: 14px; color: #64748b;">
+          <strong>IP Address:</strong> {{ ipAddress or 'Not available' }}
+        </p>
+      </div>
+      <div style="display: table-cell; vertical-align: top; padding-left: 16px; width: 50%;">
+        <p style="margin: 8px 0; font-size: 14px; color: #64748b;">
+          <strong>User Agent:</strong> {{ userAgent or 'Not available' }}
+        </p>
+        <p style="margin: 8px 0; font-size: 14px; color: #64748b;">
+          <strong>Referrer:</strong> {{ referrer or 'Direct visit' }}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Actions -->
+<div style="background: linear-gradient(135deg, #1B365D 0%, #15294d 100%); border-radius: 12px; padding: 32px; margin-bottom: 32px; box-shadow: 0 4px 20px rgba(27, 54, 93, 0.15);">
+  <h3 style="font-size: 20px; font-weight: 600; margin: 0 0 16px 0; color: #ffffff;">
+    Admin Actions
+  </h3>
+
+  <div style="display: table; width: 100%;">
+    <div style="display: table-row;">
+      <div style="display: table-cell; vertical-align: top; padding-right: 12px; width: 50%;">
+        <ul style="margin: 0; padding-left: 20px; color: #ffffff;">
+          <li style="margin-bottom: 8px; font-size: 14px; line-height: 1.5;">Review and respond within 24 hours</li>
+          <li style="margin-bottom: 8px; font-size: 14px; line-height: 1.5;">Add to CRM if applicable</li>
+          <li style="margin-bottom: 8px; font-size: 14px; line-height: 1.5;">Follow up on membership interest</li>
+        </ul>
+      </div>
+      <div style="display: table-cell; vertical-align: top; padding-left: 12px; width: 50%;">
+        <ul style="margin: 0; padding-left: 20px; color: #ffffff;">
+          <li style="margin-bottom: 8px; font-size: 14px; line-height: 1.5;">Schedule follow-up call if needed</li>
+          <li style="margin-bottom: 8px; font-size: 14px; line-height: 1.5;">Add to newsletter if interested</li>
+          <li style="margin-bottom: 8px; font-size: 14px; line-height: 1.5;">Update contact database</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer Note -->
+<div style="background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); border-left: 4px solid #17A2B8; padding: 16px; border-radius: 0 8px 8px 0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">
+  <p style="font-size: 14px; line-height: 1.5; margin: 0; color: #64748b;">
+    <strong>Note:</strong> This is an automated notification from the BASA website contact form.
+    Please respond directly to {{ contact.email }} to continue the conversation.
+  </p>
+</div>
+{% endblock %}
