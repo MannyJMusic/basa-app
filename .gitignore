@@ -33,7 +33,7 @@ yarn-error.log*
 # env files
 .env
 .env.local
-.env.development.local
+.env.development*
 .env.test.local
 .env.production.local
 .env.domains
@@ -48,3 +48,4 @@ next-env.d.ts
 # Sentry Config File
 .env.sentry-build-plugin
 .env.production
+.env.development
