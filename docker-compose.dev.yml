@@ -30,7 +30,7 @@ services:
     ports:
       - "3001:3000"
     env_file:
-      - .env.development
+      - .env.local
     environment:
       # Override DATABASE_URL to use the Docker PostgreSQL service
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}

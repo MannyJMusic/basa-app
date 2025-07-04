@@ -154,18 +154,9 @@ fi
 
 # Check if environment file exists
 if [ ! -f "$ENV_FILE" ]; then
-    log "⚙️ Creating environment file from example..."
-    if [ -f "scripts/create-env-file.sh" ]; then
-        ./scripts/create-env-file.sh production
-    elif [ -f ".env.example" ]; then
-        cp .env.example "$ENV_FILE"
-        warning "Please edit $ENV_FILE with your production environment variables"
-        warning "Deployment will continue with example values - update them after deployment"
-    else
-        error "Production environment file $ENV_FILE not found and .env.example is missing!"
-        echo "Please create $ENV_FILE with your production environment variables"
-        exit 1
-    fi
+    error "Production environment file $ENV_FILE not found!"
+    echo "Please create $ENV_FILE with your production environment variables"
+    exit 1
 fi
 
 # Stop existing containers
