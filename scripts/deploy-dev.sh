@@ -84,7 +84,19 @@ log "📥 Pulling latest changes from $BRANCH branch..."
 if [ -d ".git" ]; then
     # Ensure Git ownership is properly configured
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+    
+    # Handle any local changes or divergent branches
+    log "🔄 Fetching latest changes..."
     git fetch origin
+    
+    # Check if we have local changes that need to be handled
+    if ! git diff-index --quiet HEAD --; then
+        log "⚠️ Local changes detected, stashing them..."
+        git stash
+    fi
+    
+    # Reset to match remote branch exactly
+    log "🔄 Resetting to match remote branch..."
     git reset --hard origin/$BRANCH
 else
     git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git .

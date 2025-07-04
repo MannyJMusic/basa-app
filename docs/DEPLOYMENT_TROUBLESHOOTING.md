@@ -25,7 +25,31 @@ If you encounter this issue manually, run:
 git config --global --add safe.directory /path/to/your/repository
 ```
 
-### 2. Script Not Found Errors
+### 2. Divergent Branches Issues
+
+**Error Message:**
+```
+hint: You have divergent branches and need to specify how to reconcile them.
+fatal: Need to specify how to reconcile divergent branches.
+```
+
+**Cause:**
+The local repository on the server has commits that differ from the remote repository, causing Git to refuse automatic merging.
+
+**Solution:**
+The GitHub Actions workflow has been updated to handle this automatically using:
+```bash
+git fetch origin
+git reset --hard origin/dev
+```
+
+**Manual Fix:**
+Run the dedicated fix script:
+```bash
+./scripts/fix-divergent-branches.sh
+```
+
+### 3. Script Not Found Errors
 
 **Error Message:**
 ```
@@ -34,21 +58,23 @@ git config --global --add safe.directory /path/to/your/repository
 
 **Causes:**
 - Git pull failed due to ownership issues
+- Git pull failed due to divergent branches
 - Script file doesn't exist in the repository
 - Script permissions are incorrect
 
 **Solutions:**
 1. **Fix Git ownership first** (see above)
-2. **Verify script exists:**
+2. **Fix divergent branches** (see above)
+3. **Verify script exists:**
    ```bash
    ls -la scripts/deploy-dev.sh
    ```
-3. **Make script executable:**
+4. **Make script executable:**
    ```bash
    chmod +x scripts/*.sh
    ```
 
-### 3. Docker Issues
+### 4. Docker Issues
 
 **Common Problems:**
 - Docker not running
@@ -140,11 +166,10 @@ The CI/CD workflow has been enhanced with:
    docker-compose -f docker-compose.dev.yml down
    ```
 
-2. **Reset Git repository:**
+2. **Fix Git issues:**
    ```bash
    cd /opt/basa-app-dev
-   git config --global --add safe.directory /opt/basa-app-dev
-   git reset --hard origin/dev
+   ./scripts/fix-divergent-branches.sh
    ```
 
 3. **Redeploy:**
