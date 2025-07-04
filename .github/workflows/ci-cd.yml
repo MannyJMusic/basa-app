@@ -140,11 +140,33 @@ jobs:
       run: |
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-dev
+          
+          # Fix Git ownership issue
+          echo "Fixing Git ownership..."
+          git config --global --add safe.directory /opt/basa-app-dev
+          
+          # Pull latest changes
+          echo "Pulling latest changes..."
           git pull origin dev
+          
+          # Make scripts executable
           echo "Making scripts executable..."
           chmod +x scripts/*.sh
+          
+          # Verify script exists
           echo "Current user: $(whoami)"
           echo "Current directory: $(pwd)"
+          echo "Checking if deploy script exists..."
+          ls -la scripts/deploy-dev.sh
+          
+          # Run debug script if available
+          if [ -f "scripts/debug-deployment-issues.sh" ]; then
+            echo "Running debug script..."
+            chmod +x scripts/debug-deployment-issues.sh
+            ./scripts/debug-deployment-issues.sh
+          fi
+          
+          # Deploy
           echo "Deploying development version..."
           ./scripts/deploy-dev.sh
           echo "Development deployment completed"
@@ -223,11 +245,33 @@ jobs:
       run: |
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-prod
+          
+          # Fix Git ownership issue
+          echo "Fixing Git ownership..."
+          git config --global --add safe.directory /opt/basa-app-prod
+          
+          # Pull latest changes
+          echo "Pulling latest changes..."
           git pull origin main
+          
+          # Make scripts executable
           echo "Making scripts executable..."
           chmod +x scripts/*.sh
+          
+          # Verify script exists
           echo "Current user: $(whoami)"
           echo "Current directory: $(pwd)"
+          echo "Checking if deploy script exists..."
+          ls -la scripts/deploy-prod.sh
+          
+          # Run debug script if available
+          if [ -f "scripts/debug-deployment-issues.sh" ]; then
+            echo "Running debug script..."
+            chmod +x scripts/debug-deployment-issues.sh
+            ./scripts/debug-deployment-issues.sh
+          fi
+          
+          # Deploy
           echo "Deploying production version..."
           ./scripts/deploy-prod.sh
           echo "Production deployment completed"
