@@ -69,6 +69,10 @@ fi
 
 cd "$APP_DIR"
 
+# Verify we're in the right directory
+log "📍 Current directory: $(pwd)"
+log "👤 Current user: $(whoami)"
+
 # Backup current environment file if it exists
 if [ -f "$ENV_FILE" ]; then
     log "💾 Backing up current environment file..."
@@ -78,6 +82,8 @@ fi
 # Pull latest changes
 log "📥 Pulling latest changes from $BRANCH branch..."
 if [ -d ".git" ]; then
+    # Ensure Git ownership is properly configured
+    git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
     git fetch origin
     git reset --hard origin/$BRANCH
 else
@@ -92,6 +98,18 @@ if [ ! -f "$ENV_FILE" ]; then
     cp .env.example "$ENV_FILE"
     warning "Please edit $ENV_FILE with your development environment variables"
 fi
+
+# Verify required files exist
+log "🔍 Verifying required files..."
+if [ ! -f "$COMPOSE_FILE" ]; then
+    error "Docker Compose file $COMPOSE_FILE not found!"
+fi
+
+if [ ! -f "scripts/deploy-dev.sh" ]; then
+    error "Deploy script scripts/deploy-dev.sh not found!"
+fi
+
+log "✅ All required files found"
 
 # Stop existing containers
 log "🛑 Stopping existing containers..."
