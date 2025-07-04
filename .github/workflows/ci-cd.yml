@@ -145,6 +145,11 @@ jobs:
           chmod +x scripts/*.sh
           echo "Current user: $(whoami)"
           echo "Current directory: $(pwd)"
+          echo "Creating environment file if needed..."
+          if [ ! -f ".env.development" ] && [ -f ".env.example" ]; then
+            cp .env.example .env.development
+            echo "Created .env.development from .env.example"
+          fi
           echo "Deploying development version..."
           ./scripts/deploy-dev.sh
           echo "Development deployment completed"
@@ -228,6 +233,11 @@ jobs:
           chmod +x scripts/*.sh
           echo "Current user: $(whoami)"
           echo "Current directory: $(pwd)"
+          echo "Creating environment file if needed..."
+          if [ ! -f ".env.production" ] && [ -f ".env.example" ]; then
+            cp .env.example .env.production
+            echo "Created .env.production from .env.example"
+          fi
           echo "Deploying production version..."
           ./scripts/deploy-prod.sh
           echo "Production deployment completed"
