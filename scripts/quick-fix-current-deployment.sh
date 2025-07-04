@@ -74,10 +74,12 @@ else
     success "✅ No local changes to clean up"
 fi
 
-# 4. Make sure scripts are executable
-log "🔐 Making scripts executable..."
+# 4. Fix permissions for basa user
+log "🔐 Fixing permissions..."
+chown -R basa:basa /opt/basa-app-dev
+chmod -R 755 /opt/basa-app-dev
 chmod +x scripts/*.sh
-success "✅ Scripts made executable"
+success "✅ Permissions fixed"
 
 # 5. Run the deployment
 log "🚀 Starting deployment..."

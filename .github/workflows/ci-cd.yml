@@ -150,9 +150,14 @@ jobs:
           git fetch origin
           git reset --hard origin/dev
           
-          # Make scripts executable
+          # Make scripts executable and fix permissions
           echo "Making scripts executable..."
           chmod +x scripts/*.sh
+          
+          # Fix Git directory permissions for basa user
+          echo "Fixing Git directory permissions..."
+          chown -R basa:basa /opt/basa-app-dev
+          chmod -R 755 /opt/basa-app-dev
           
           # Verify script exists
           echo "Current user: $(whoami)"
@@ -268,9 +273,14 @@ jobs:
           git fetch origin
           git reset --hard origin/main
           
-          # Make scripts executable
+          # Make scripts executable and fix permissions
           echo "Making scripts executable..."
           chmod +x scripts/*.sh
+          
+          # Fix Git directory permissions for basa user
+          echo "Fixing Git directory permissions..."
+          chown -R basa:basa /opt/basa-app-prod
+          chmod -R 755 /opt/basa-app-prod
           
           # Verify script exists
           echo "Current user: $(whoami)"
