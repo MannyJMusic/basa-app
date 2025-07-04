@@ -9,7 +9,7 @@ set -e
 APP_NAME="basa-app-dev"
 APP_DIR="/opt/basa-app-dev"
 COMPOSE_FILE="docker-compose.dev.yml"
-ENV_FILE=".env.development"
+ENV_FILE=".env.local"
 BRANCH="dev"
 PORT="3001"
 
@@ -89,12 +89,8 @@ fi
 # Create environment file if it doesn't exist
 if [ ! -f "$ENV_FILE" ]; then
     log "⚙️ Creating environment file..."
-    if [ -f "scripts/create-env-file.sh" ]; then
-        ./scripts/create-env-file.sh development
-    else
-        cp .env.example "$ENV_FILE"
-        warning "Please edit $ENV_FILE with your development environment variables"
-    fi
+    cp .env.example "$ENV_FILE"
+    warning "Please edit $ENV_FILE with your development environment variables"
 fi
 
 # Stop existing containers
