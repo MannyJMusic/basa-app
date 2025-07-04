@@ -78,7 +78,7 @@ log "📋 Checking required files..."
 REQUIRED_FILES=(
     "docker-compose.dev.yml"
     "scripts/deploy-dev.sh"
-    ".env.local"
+    ".env.development"
     "package.json"
 )
 

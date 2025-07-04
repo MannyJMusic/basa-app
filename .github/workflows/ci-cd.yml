@@ -167,9 +167,21 @@ jobs:
             ./scripts/debug-deployment-issues.sh
           fi
           
-          # Deploy
+          # Create .env.development if it doesn't exist
+          if [ ! -f ".env.development" ]; then
+            echo "Creating .env.development file..."
+            cp .env.example .env.development
+            echo "⚠️ Please configure .env.development with your environment variables"
+          fi
+          
+          # Deploy as the correct user
           echo "Deploying development version..."
-          ./scripts/deploy-dev.sh
+          if [ "$(whoami)" = "root" ]; then
+            echo "Switching to basa user for deployment..."
+            su - basa -c "cd /opt/basa-app-dev && ./scripts/deploy-dev.sh"
+          else
+            ./scripts/deploy-dev.sh
+          fi
           echo "Development deployment completed"
         EOF
 
