@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Quote, Star, ArrowRight } from "lucide-react"
 import { useState } from "react"
+import Image from "next/image"
 
 interface Testimonial {
   id: string
@@ -50,9 +51,11 @@ const TestimonialCard = ({ testimonial, index }: { testimonial: Testimonial; ind
           <div className="flex items-start space-x-4 mb-6">
             <div className="w-16 h-16 bg-gradient-to-br from-basa-navy to-basa-teal rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
               {testimonial.image ? (
-                <img 
+                <Image 
                   src={testimonial.image} 
                   alt={testimonial.name}
+                  width={64}
+                  height={64}
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (

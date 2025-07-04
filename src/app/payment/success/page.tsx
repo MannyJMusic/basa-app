@@ -43,6 +43,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { DevControlPanel } from '@/components/dev/DevControlPanel'
+import Image from 'next/image'
 
 interface CartItem {
   tierId: string
@@ -413,7 +414,7 @@ export default function PaymentSuccessPage() {
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
         {/* Banner Header */}
         <div className="w-full bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 text-white flex items-center px-4 py-4 md:py-3 shadow-md">
-          <img src="/images/BASA-LOGO.png" alt="BASA Logo" className="h-12 w-auto mr-4" />
+          <Image src="/images/BASA-LOGO.png" alt="BASA Logo" width={48} height={48} className="h-12 w-auto mr-4" />
           <div className="flex items-center">
             <CheckCircle className="w-8 h-8 text-white mr-2" />
             <span className="text-2xl md:text-3xl font-bold">Payment Successful!</span>
