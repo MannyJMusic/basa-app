@@ -145,9 +145,10 @@ jobs:
           echo "Fixing Git ownership..."
           git config --global --add safe.directory /opt/basa-app-dev
           
-          # Pull latest changes
+          # Handle divergent branches and pull latest changes
           echo "Pulling latest changes..."
-          git pull origin dev
+          git fetch origin
+          git reset --hard origin/dev
           
           # Make scripts executable
           echo "Making scripts executable..."
@@ -250,9 +251,10 @@ jobs:
           echo "Fixing Git ownership..."
           git config --global --add safe.directory /opt/basa-app-prod
           
-          # Pull latest changes
+          # Handle divergent branches and pull latest changes
           echo "Pulling latest changes..."
-          git pull origin main
+          git fetch origin
+          git reset --hard origin/main
           
           # Make scripts executable
           echo "Making scripts executable..."
