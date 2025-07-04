@@ -48,6 +48,6 @@ next-env.d.ts
 # Sentry Config File
 .env.sentry-build-plugin
 .env.production
-.env.development
+.env.development*
 .env.development.backup.20250704_095235
 .env.development.backup.20250704_095414
