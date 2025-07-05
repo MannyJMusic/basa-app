@@ -16,20 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -53,10 +39,15 @@ jobs:
         pnpm install --frozen-lockfile
         echo "Dependencies installed successfully"
 
+    - name: Setup Testcontainers Cloud
+      run: |
+        echo "Setting up Testcontainers Cloud..."
+        echo "TC_CLOUD_TOKEN=${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}" >> $GITHUB_ENV
+        echo "Testcontainers Cloud environment configured"
+
     - name: Setup environment variables
       run: |
         cp .env.example .env.test
-        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/test_db" >> .env.test
         echo "NEXTAUTH_SECRET=test-secret-key" >> .env.test
         echo "NEXTAUTH_URL=http://localhost:3000" >> .env.test
         echo "NODE_ENV=test" >> .env.test
@@ -64,34 +55,26 @@ jobs:
     - name: Generate Prisma client
       run: pnpm prisma generate
 
-    - name: Run database migrations
-      run: |
-        pnpm prisma generate
-        pnpm prisma migrate deploy
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-
-    - name: Seed database
-      run: pnpm db:seed
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-        NODE_ENV: test
-        NEXTAUTH_SECRET: test-secret-key
-        NEXTAUTH_URL: http://localhost:3000
-
     - name: Run type check
       run: pnpm type-check
 
     - name: Run linting
       run: pnpm lint
 
-    - name: Run tests
-      run: pnpm test
+    - name: Run unit tests
+      run: pnpm test:unit
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         NODE_ENV: test
         NEXTAUTH_SECRET: test-secret-key
         NEXTAUTH_URL: http://localhost:3000
+
+    - name: Run integration tests with Testcontainers
+      run: pnpm test:integration
+      env:
+        NODE_ENV: test
+        NEXTAUTH_SECRET: test-secret-key
+        NEXTAUTH_URL: http://localhost:3000
+        TC_CLOUD_TOKEN: ${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}
 
     - name: Build application
       run: |
@@ -100,7 +83,6 @@ jobs:
         pnpm run lint
         pnpm build
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         NODE_ENV: test
         NEXTAUTH_SECRET: test-secret-key
         NEXTAUTH_URL: http://localhost:3000

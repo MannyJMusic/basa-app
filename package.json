@@ -16,9 +16,12 @@
     "db:studio": "prisma studio",
     "type-check": "npx tsc --noEmit",
     "postinstall": "prisma generate",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "jest --config jest.config.js",
+    "test:watch": "jest --watch --config jest.config.js",
+    "test:coverage": "jest --coverage --config jest.config.js",
+    "test:unit": "jest --config jest.config.js",
+    "test:integration": "jest --config jest.config.testcontainers.js",
+    "test:all": "pnpm test:unit && pnpm test:integration",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
     "e2e": "cypress run",
@@ -30,7 +33,8 @@
     "test:system": "node scripts/test-system.js",
     "test:health": "node scripts/test-system.js health",
     "test:api": "node scripts/test-system.js api",
-    "test:db": "node scripts/test-system.js db"
+    "test:db": "node scripts/test-system.js db",
+    "setup:testcontainers": "node scripts/setup-testcontainers-cloud.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -87,11 +91,12 @@
   },
   "devDependencies": {
     "@cypress/code-coverage": "^3.12.6",
+    "@testcontainers/postgresql": "^11.1.0",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.1",
     "@testing-library/user-event": "^14.5.2",
     "@types/bcryptjs": "^2.4.6",
-    "@types/jest": "^29.5.12",
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.11.16",
     "@types/nunjucks": "^3.2.6",
     "@types/react": "^18.2.55",
@@ -105,6 +110,8 @@
     "postcss": "^8.4.35",
     "prisma": "^5.9.1",
     "tailwindcss": "^3.4.1",
+    "testcontainers": "^11.1.0",
+    "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"

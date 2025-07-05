@@ -24,7 +24,18 @@ const customJestConfig = {
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
     '<rootDir>/cypress/',
+    '<rootDir>/src/__tests__/integration/',
   ],
+  // Handle ES modules from Testcontainers
+  transformIgnorePatterns: [
+    'node_modules/(?!(testcontainers|@testcontainers|yaml|docker-compose)/)',
+  ],
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  globals: {
+    'ts-jest': {
+      useESM: true,
+    },
+  },
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
