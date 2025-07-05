@@ -25,6 +25,7 @@ const customJestConfig = {
     '<rootDir>/node_modules/',
     '<rootDir>/cypress/',
     '<rootDir>/src/__tests__/integration/',
+    '<rootDir>/src/__tests__/helpers/',
   ],
   // Handle ES modules from Testcontainers
   transformIgnorePatterns: [

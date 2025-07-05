@@ -15,10 +15,10 @@ describe('UnitTestUtils Unit Tests', () => {
     it('should include timestamp in generated data', () => {
       const data = UnitTestUtils.generateRandomData();
       
-      expect(data.email).toMatch(/test-\d+@example\.com/);
-      expect(data.businessName).toMatch(/Test Business \d+/);
-      expect(data.eventTitle).toMatch(/Test Event \d+/);
-      expect(data.resourceTitle).toMatch(/Test Resource \d+/);
+      expect(data.email).toMatch(/test-\d+-\d+@example\.com/);
+      expect(data.businessName).toMatch(/Test Business \d+-\d+/);
+      expect(data.eventTitle).toMatch(/Test Event \d+-\d+/);
+      expect(data.resourceTitle).toMatch(/Test Resource \d+-\d+/);
     });
   });
 
