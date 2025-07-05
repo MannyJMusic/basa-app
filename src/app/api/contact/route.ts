@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
       'info@businessassociationsa.com',
       validatedData,
       {
-        siteUrl: process.env.NEXTAUTH_URL || 'https://businessassociationsa.com',
-        logoUrl: `${process.env.NEXTAUTH_URL || 'https://businessassociationsa.com'}/images/BASA-LOGO.png`,
+        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
+        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`,
         ipAddress,
         userAgent,
         referrer

@@ -191,9 +191,9 @@ POSTGRES_USER=basa_user
 POSTGRES_PASSWORD=basa_password
 
 # NextAuth Configuration
-NEXTAUTH_URL=https://yourdomain.com
+NEXTAUTH_URL=https://app.businessassociationsa.com
 NEXTAUTH_SECRET=your-production-secret-key-here
-NEXT_PUBLIC_APP_URL=https://yourdomain.com
+NEXT_PUBLIC_APP_URL=https://app.businessassociationsa.com
 
 # Stripe Configuration
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
@@ -233,9 +233,9 @@ POSTGRES_USER=basa_user
 POSTGRES_PASSWORD=basa_password
 
 # NextAuth Configuration
-NEXTAUTH_URL=https://dev.yourdomain.com
+NEXTAUTH_URL=https://dev.businessassociationsa.com
 NEXTAUTH_SECRET=your-development-secret-key-here
-NEXT_PUBLIC_APP_URL=https://dev.yourdomain.com
+NEXT_PUBLIC_APP_URL=https://dev.businessassociationsa.com
 
 # Stripe Configuration
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key

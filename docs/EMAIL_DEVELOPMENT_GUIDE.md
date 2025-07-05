@@ -72,7 +72,7 @@ curl -X POST http://localhost:3000/api/dev/test-email \
     "template": "welcome",
     "email": "your-email@example.com",
     "firstName": "John",
-    "activationUrl": "https://dev.businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com"
+    "activationUrl": "https://app.businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com"
   }'
 ```
 
@@ -184,7 +184,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 # Development vs Production URLs
 # Development: https://dev.businessassociationsa.com
-# Production: https://businessassociationsa.com
+# Production: https://app.businessassociationsa.com
 ```
 
 ## 🐛 Troubleshooting
@@ -253,7 +253,7 @@ curl -s --user "api:$MAILGUN_API_KEY" \
 
 ### BASA Brand Guidelines
 - **Organization**: Business Association of San Antonio
-- **Production Domain**: businessassociationsa.com
+- **Production Domain**: app.businessassociationsa.com
 - **Development Domain**: dev.businessassociationsa.com
 - **Primary Color**: #1B365D (Navy)
 - **Secondary Color**: #FFD700 (Gold)

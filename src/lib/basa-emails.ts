@@ -11,7 +11,7 @@ const mg = mailgun.client({
 const DOMAIN = process.env.MAILGUN_DOMAIN!
 const FROM_EMAIL = process.env.FROM_EMAIL || `noreply@${DOMAIN}`
 const FROM_NAME = process.env.FROM_NAME || 'BASA'
-const SITE_URL = process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'development' ? 'https://dev.businessassociationsa.com' : 'https://businessassociationsa.com')
+const SITE_URL = process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'development' ? 'https://dev.businessassociationsa.com' : 'https://app.businessassociationsa.com')
 
 // Base email sending function
 async function sendEmail(to: string, subject: string, html: string, options: {

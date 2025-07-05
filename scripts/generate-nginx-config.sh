@@ -53,7 +53,7 @@ else
     echo "DEV_DOMAIN=dev.yourdomain.com"
     echo ""
     echo "For example:"
-    echo "PRODUCTION_DOMAIN=businessassociationsa.com"
+    echo "PRODUCTION_DOMAIN=app.businessassociationsa.com"
     echo "DEV_DOMAIN=dev.businessassociationsa.com"
     exit 1
 fi

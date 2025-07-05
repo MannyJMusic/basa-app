@@ -11,22 +11,22 @@ export async function GET(request: NextRequest) {
   const template = searchParams.get('template') || 'welcome'
   const email = searchParams.get('email') || 'test@example.com'
   const firstName = searchParams.get('firstName') || 'John'
-  const activationUrl = searchParams.get('activationUrl') || 'https://dev.businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com'
-  const resetUrl = searchParams.get('resetUrl') || 'https://dev.businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com'
+  const activationUrl = searchParams.get('activationUrl') || 'https://app.businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com'
+  const resetUrl = searchParams.get('resetUrl') || 'https://app.businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com'
 
   let html = ''
 
   switch (template) {
     case 'welcome':
       html = generateWelcomeEmailHtml(firstName, activationUrl, {
-        siteUrl: process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com',
-        logoUrl: `${process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com'}/images/BASA-LOGO.png`
+        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
+        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`
       })
       break
     case 'password-reset':
       html = generatePasswordResetEmailHtml(firstName, resetUrl, {
-        siteUrl: process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com',
-        logoUrl: `${process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com'}/images/BASA-LOGO.png`
+        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
+        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`
       })
       break
     case 'event-invitation':
@@ -43,13 +43,13 @@ export async function GET(request: NextRequest) {
           { name: 'John Smith', title: 'CEO, Tech Solutions Inc.' },
           { name: 'Sarah Johnson', title: 'Director of Business Development' }
         ],
-        rsvpUrl: searchParams.get('rsvpUrl') || 'https://dev.businessassociationsa.com/events/mixer/rsvp',
-        calendarUrl: searchParams.get('calendarUrl') || 'https://dev.businessassociationsa.com/events/mixer/calendar',
-        shareUrl: searchParams.get('shareUrl') || 'https://dev.businessassociationsa.com/events/mixer'
+        rsvpUrl: searchParams.get('rsvpUrl') || 'https://app.businessassociationsa.com/events/mixer/rsvp',
+        calendarUrl: searchParams.get('calendarUrl') || 'https://app.businessassociationsa.com/events/mixer/calendar',
+        shareUrl: searchParams.get('shareUrl') || 'https://app.businessassociationsa.com/events/mixer'
       }
       html = generateEventInvitationEmailHtml(firstName, eventData, {
-        siteUrl: process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com',
-        logoUrl: `${process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com'}/images/BASA-LOGO.png`
+        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
+        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`
       })
       break
     case 'contact-form':
@@ -65,8 +65,8 @@ export async function GET(request: NextRequest) {
         membershipInterest: searchParams.get('membershipInterest') === 'true'
       }
       html = generateContactFormEmailHtml(contactData, {
-        siteUrl: process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com',
-        logoUrl: `${process.env.NEXTAUTH_URL || 'https://dev.businessassociationsa.com'}/images/BASA-LOGO.png`
+        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
+        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`
       })
       break
     default:

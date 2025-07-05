@@ -153,6 +153,7 @@ jobs:
           # Make scripts executable
           echo "Making scripts executable..."
           chmod +x scripts/*.sh
+          chmod +x scripts/*.js
           
           # Verify script exists
           echo "Current user: $(whoami)"
@@ -160,11 +161,10 @@ jobs:
           echo "Checking if deploy script exists..."
           ls -la scripts/deploy-dev.sh
           
-          # Run debug script if available
-          if [ -f "scripts/debug-deployment-issues.sh" ]; then
-            echo "Running debug script..."
-            chmod +x scripts/debug-deployment-issues.sh
-            ./scripts/debug-deployment-issues.sh
+          # Run system test if available
+          if [ -f "scripts/test-system.js" ]; then
+            echo "Running system test..."
+            node scripts/test-system.js health
           fi
           
           # Deploy
@@ -259,6 +259,7 @@ jobs:
           # Make scripts executable
           echo "Making scripts executable..."
           chmod +x scripts/*.sh
+          chmod +x scripts/*.js
           
           # Verify script exists
           echo "Current user: $(whoami)"
@@ -266,11 +267,10 @@ jobs:
           echo "Checking if deploy script exists..."
           ls -la scripts/deploy-prod.sh
           
-          # Run debug script if available
-          if [ -f "scripts/debug-deployment-issues.sh" ]; then
-            echo "Running debug script..."
-            chmod +x scripts/debug-deployment-issues.sh
-            ./scripts/debug-deployment-issues.sh
+          # Run system test if available
+          if [ -f "scripts/test-system.js" ]; then
+            echo "Running system test..."
+            node scripts/test-system.js health
           fi
           
           # Deploy
@@ -292,7 +292,7 @@ jobs:
           echo "🔍 Health check attempt $i/20..."
           
           # Try to connect with timeout
-          if timeout 5 curl -s -f "https://${{ secrets.PRODUCTION_DOMAIN }}/api/health" > /dev/null; then
+          if timeout 5 curl -s -f "https://app.businessassociationsa.com/api/health" > /dev/null; then
             echo "✅ Health check passed on attempt $i!"
             exit 0
           else

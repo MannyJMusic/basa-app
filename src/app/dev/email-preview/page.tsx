@@ -9,8 +9,8 @@ export default function EmailPreviewPage() {
   const [firstName, setFirstName] = useState('John')
   const [email, setEmail] = useState('test@example.com')
   const [fromName, setFromName] = useState('BASA')
-  const [activationUrl, setActivationUrl] = useState('https://dev.businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com')
-  const [resetUrl, setResetUrl] = useState('https://dev.businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com')
+  const [activationUrl, setActivationUrl] = useState('https://app.businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com')
+  const [resetUrl, setResetUrl] = useState('https://app.businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com')
   const [isSending, setIsSending] = useState(false)
   
   // Event invitation fields
@@ -22,7 +22,7 @@ export default function EmailPreviewPage() {
   const [eventCapacity, setEventCapacity] = useState('100')
   const [eventPrice, setEventPrice] = useState('25')
   const [eventDescription, setEventDescription] = useState('Join us for an evening of networking and professional development with fellow BASA members.')
-  const [rsvpUrl, setRsvpUrl] = useState('https://dev.businessassociationsa.com/events/mixer/rsvp')
+  const [rsvpUrl, setRsvpUrl] = useState('https://app.businessassociationsa.com/events/mixer/rsvp')
 
   // Contact form fields
   const [contactLastName, setContactLastName] = useState('Doe')

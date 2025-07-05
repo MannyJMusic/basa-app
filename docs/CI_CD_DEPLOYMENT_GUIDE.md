@@ -115,7 +115,7 @@ After the server setup, you need to configure your environment files:
    ```env
    NODE_ENV=production
    DATABASE_URL=postgresql://basa_user:basa_password@localhost:5432/basa_prod
-   NEXTAUTH_URL=https://yourdomain.com
+   NEXTAUTH_URL=https://app.businessassociationsa.com
    NEXTAUTH_SECRET=your-actual-secret-key
    STRIPE_SECRET_KEY=sk_live_your_actual_stripe_key
    MAILGUN_API_KEY=key-your_actual_mailgun_key
@@ -218,7 +218,7 @@ Add the following secrets to your GitHub repository (Settings → Secrets and va
 SSH_PRIVATE_KEY     - Your server's SSH private key
 SERVER_HOST         - Your server's IP address or domain
 SERVER_USER         - Username for SSH access (usually 'basa')
-PRODUCTION_DOMAIN   - Your production domain (e.g., businessassociationsa.com)
+PRODUCTION_DOMAIN   - Your production domain (e.g., app.businessassociationsa.com)
 ```
 
 ### 2. Branch Protection
@@ -250,7 +250,7 @@ nano .env.domains
 Add your domain configuration:
 ```env
 # Production domain (your main website)
-PRODUCTION_DOMAIN=businessassociationsa.com
+PRODUCTION_DOMAIN=app.businessassociationsa.com
 
 # Development domain (for testing)
 DEV_DOMAIN=dev.businessassociationsa.com
@@ -295,7 +295,7 @@ POSTGRES_USER="basa_user"
 POSTGRES_PASSWORD="secure_password"
 
 # Next.js & Auth
-NEXTAUTH_URL="https://yourdomain.com"
+NEXTAUTH_URL="https://app.businessassociationsa.com"
 NEXTAUTH_SECRET="your-secret-key"
 
 # Stripe
@@ -337,7 +337,7 @@ POSTGRES_USER="basa_user"
 POSTGRES_PASSWORD="secure_password"
 
 # Next.js & Auth
-NEXTAUTH_URL="http://dev.yourdomain.com"
+NEXTAUTH_URL="https://dev.businessassociationsa.com"
 NEXTAUTH_SECRET="your-dev-secret-key"
 
 # Stripe (use test keys)

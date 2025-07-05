@@ -23,10 +23,14 @@
     "cypress:run": "cypress run",
     "e2e": "cypress run",
     "webhook:test": "node scripts/test-webhooks.js",
-    "email:test": "node scripts/test-basa-email.js",
-    "email:quick": "node scripts/quick-email-test.js",
+    "email:test": "node scripts/test-system.js email",
+    "email:quick": "node scripts/test-system.js email",
     "email:preview": "echo 'Visit http://localhost:3000/dev/email-preview'",
-    "setup:dev": "node scripts/setup-dev.js"
+    "setup:dev": "node scripts/setup-dev.js",
+    "test:system": "node scripts/test-system.js",
+    "test:health": "node scripts/test-system.js health",
+    "test:api": "node scripts/test-system.js api",
+    "test:db": "node scripts/test-system.js db"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
