@@ -86,11 +86,16 @@ rollback() {
 
 # Check if running as root and switch to appropriate user
 if [ "$EUID" -eq 0 ]; then
-    warning "Running as root, switching to basa user..."
+    warning "Running as root, checking for appropriate user..."
     if id "basa" &>/dev/null; then
+        warning "Switching to basa user..."
         exec su - basa -c "$0 $*"
+    elif id "$SUDO_USER" &>/dev/null; then
+        warning "Switching to $SUDO_USER user..."
+        exec su - "$SUDO_USER" -c "$0 $*"
     else
-        error "Root user detected but 'basa' user not found. Please run as non-root user."
+        warning "Root user detected but no suitable user found. Continuing as root..."
+        # Continue as root but be careful
     fi
 fi
 
