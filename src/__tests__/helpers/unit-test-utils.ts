@@ -9,11 +9,12 @@ export class UnitTestUtils {
    */
   static generateRandomData() {
     const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000000);
     return {
-      email: `test-${timestamp}@example.com`,
-      businessName: `Test Business ${timestamp}`,
-      eventTitle: `Test Event ${timestamp}`,
-      resourceTitle: `Test Resource ${timestamp}`,
+      email: `test-${timestamp}-${random}@example.com`,
+      businessName: `Test Business ${timestamp}-${random}`,
+      eventTitle: `Test Event ${timestamp}-${random}`,
+      resourceTitle: `Test Resource ${timestamp}-${random}`,
       firstName: `Test${timestamp}`,
       lastName: `User${timestamp}`,
       phone: `+1${timestamp.toString().slice(-10)}`,

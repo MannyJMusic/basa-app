@@ -1,4 +1,4 @@
-import { UnitTestUtils } from './unit-test-utils';
+import { UnitTestUtils } from '../helpers/unit-test-utils';
 
 describe('UnitTestUtils Unit Tests', () => {
   describe('generateRandomData', () => {
