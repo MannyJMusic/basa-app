@@ -18,17 +18,18 @@ module.exports = {
   testTimeout: 120000, // 2 minutes for container startup
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
-      useESM: false,
+      useESM: true,
       tsconfig: {
         target: 'es2020',
-        module: 'commonjs',
+        module: 'esnext',
         esModuleInterop: true,
         allowSyntheticDefaultImports: true,
+        moduleResolution: 'node',
       },
     }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(next-auth|@auth|@prisma/client)/)',
+    'node_modules/(?!(next-auth|@auth|@prisma/client|testcontainers|@testcontainers|yaml|docker-compose)/)',
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -36,10 +37,10 @@ module.exports = {
     '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
     '^@/app/(.*)$': '<rootDir>/src/app/$1',
   },
-  extensionsToTreatAsEsm: [],
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
   globals: {
     'ts-jest': {
-      useESM: false,
+      useESM: true,
     },
   },
   testPathIgnorePatterns: [

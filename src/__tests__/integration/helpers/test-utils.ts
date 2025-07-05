@@ -190,19 +190,73 @@ export class TestUtils {
   }
 
   /**
+   * Set the mocked Prisma client for API testing
+   */
+  static setMockedPrismaClient(testPrisma: PrismaClient) {
+    const { prisma } = require('@/lib/db');
+    // Replace the mocked prisma with the test database client
+    Object.defineProperty(require('@/lib/db'), 'prisma', {
+      value: testPrisma,
+      writable: true,
+    });
+  }
+
+  /**
+   * Set the mocked auth user for API testing
+   */
+  static setMockedAuthUser(userId: string) {
+    // Replace the mocked auth user ID
+    Object.defineProperty(require('@/lib/auth'), 'auth', {
+      value: async () => ({
+        user: {
+          id: userId,
+          email: 'admin@example.com',
+          role: 'ADMIN',
+        },
+      }),
+      writable: true,
+    });
+  }
+
+  /**
    * Create a mock request object for API testing
    */
   static createMockRequest(data: any = {}) {
+    // Use a full URL for NextRequest compatibility
+    let url = data.url && data.url.startsWith('http')
+      ? data.url
+      : `http://localhost${data.url || '/api/test'}`;
+    
+    // Add query parameters to URL if provided
+    const query = data.query || {};
+    if (Object.keys(query).length > 0) {
+      const urlObj = new URL(url);
+      Object.entries(query).forEach(([key, value]) => {
+        urlObj.searchParams.set(key, String(value));
+      });
+      url = urlObj.toString();
+    }
+    
+    const method = data.method || 'GET';
+    const headers = {
+      'content-type': 'application/json',
+      ...data.headers,
+    };
+    const body = data.body || {};
+    
+    // Create the request object without spreading data to avoid overwriting url
     return {
-      method: 'GET',
-      url: '/api/test',
-      headers: {
-        'content-type': 'application/json',
-        ...data.headers,
-      },
-      body: data.body || {},
-      query: data.query || {},
-      ...data,
+      method,
+      url,
+      headers,
+      body,
+      json: async () => body,
+      // Add any other properties from data that aren't already set
+      ...Object.fromEntries(
+        Object.entries(data).filter(([key]) => 
+          !['method', 'url', 'headers', 'body', 'query'].includes(key)
+        )
+      ),
     };
   }
 

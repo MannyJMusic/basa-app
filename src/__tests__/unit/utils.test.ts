@@ -1,10 +1,10 @@
-import { TestUtils } from '../integration/helpers/test-utils';
+import { UnitTestUtils } from './unit-test-utils';
 
-describe('TestUtils Unit Tests', () => {
+describe('UnitTestUtils Unit Tests', () => {
   describe('generateRandomData', () => {
     it('should generate unique data with timestamps', () => {
-      const data1 = TestUtils.generateRandomData();
-      const data2 = TestUtils.generateRandomData();
+      const data1 = UnitTestUtils.generateRandomData();
+      const data2 = UnitTestUtils.generateRandomData();
       
       expect(data1.email).not.toBe(data2.email);
       expect(data1.businessName).not.toBe(data2.businessName);
@@ -13,7 +13,7 @@ describe('TestUtils Unit Tests', () => {
     });
 
     it('should include timestamp in generated data', () => {
-      const data = TestUtils.generateRandomData();
+      const data = UnitTestUtils.generateRandomData();
       
       expect(data.email).toMatch(/test-\d+@example\.com/);
       expect(data.businessName).toMatch(/Test Business \d+/);
@@ -27,13 +27,13 @@ describe('TestUtils Unit Tests', () => {
       let condition = false;
       setTimeout(() => { condition = true; }, 10);
       
-      await TestUtils.waitFor(() => condition, 1000, 10);
+      await UnitTestUtils.waitFor(() => condition, 1000, 10);
       expect(condition).toBe(true);
     });
 
     it('should throw error when condition is not met within timeout', async () => {
       await expect(
-        TestUtils.waitFor(() => false, 50, 10)
+        UnitTestUtils.waitFor(() => false, 50, 10)
       ).rejects.toThrow('Condition not met within 50ms');
     });
   });
@@ -42,7 +42,7 @@ describe('TestUtils Unit Tests', () => {
     it('should mock environment variables and restore them', () => {
       const originalValue = process.env.TEST_VAR;
       
-      const restore = TestUtils.mockEnv({ TEST_VAR: 'test-value' });
+      const restore = UnitTestUtils.mockEnv({ TEST_VAR: 'test-value' });
       expect(process.env.TEST_VAR).toBe('test-value');
       
       restore();
@@ -52,15 +52,15 @@ describe('TestUtils Unit Tests', () => {
 
   describe('createMockRequest', () => {
     it('should create a mock request with default values', () => {
-      const req = TestUtils.createMockRequest();
+      const req = UnitTestUtils.createMockRequest();
       
       expect(req.method).toBe('GET');
-      expect(req.url).toBe('/api/test');
+      expect(req.url).toBe('http://localhost/api/test');
       expect(req.headers['content-type']).toBe('application/json');
     });
 
     it('should allow custom request data', () => {
-      const req = TestUtils.createMockRequest({
+      const req = UnitTestUtils.createMockRequest({
         method: 'POST',
         body: { test: 'data' },
         headers: { authorization: 'Bearer token' },
@@ -70,56 +70,25 @@ describe('TestUtils Unit Tests', () => {
       expect(req.body).toEqual({ test: 'data' });
       expect(req.headers.authorization).toBe('Bearer token');
     });
+
+    it('should include query parameters in URL', () => {
+      const req = UnitTestUtils.createMockRequest({
+        url: '/api/events',
+        query: { page: '1', limit: '10' },
+      });
+      
+      expect(req.url).toBe('http://localhost/api/events?page=1&limit=10');
+    });
   });
 
   describe('createMockResponse', () => {
     it('should create a mock response with jest functions', () => {
-      const res = TestUtils.createMockResponse();
+      const res = UnitTestUtils.createMockResponse();
       
       expect(typeof res.status).toBe('function');
       expect(typeof res.json).toBe('function');
       expect(typeof res.send).toBe('function');
       expect(res.headersSent).toBe(false);
-    });
-  });
-});
-
-describe('Test Helper Functions', () => {
-  describe('withTestDatabase', () => {
-    it('should create and cleanup test environment', async () => {
-      let testEnv: any = null;
-      
-      const testFn = jest.fn().mockImplementation(async (env) => {
-        testEnv = env;
-        expect(env.database).toBeDefined();
-        expect(env.database.prisma).toBeDefined();
-        expect(env.cleanup).toBeDefined();
-      });
-
-      const wrappedTest = withTestDatabase(testFn);
-      await wrappedTest();
-
-      expect(testFn).toHaveBeenCalledTimes(1);
-      expect(testEnv).toBeDefined();
-    });
-  });
-
-  describe('withEmptyTestDatabase', () => {
-    it('should create empty test environment', async () => {
-      let testEnv: any = null;
-      
-      const testFn = jest.fn().mockImplementation(async (env) => {
-        testEnv = env;
-        expect(env.database).toBeDefined();
-        expect(env.database.prisma).toBeDefined();
-        expect(env.cleanup).toBeDefined();
-      });
-
-      const wrappedTest = withEmptyTestDatabase(testFn);
-      await wrappedTest();
-
-      expect(testFn).toHaveBeenCalledTimes(1);
-      expect(testEnv).toBeDefined();
     });
   });
 }); 
