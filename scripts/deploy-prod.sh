@@ -143,19 +143,32 @@ fi
 
 cd "$APP_DIR"
 
+# Fix Git ownership and permissions
+log "🔧 Fixing Git repository permissions..."
+if [ -d ".git" ]; then
+    # Fix Git ownership
+    sudo chown -R $USER:$USER .git
+    sudo chmod -R 755 .git
+    
+    # Ensure proper Git configuration
+    git config --global --add safe.directory "$APP_DIR"
+    
+    log "📥 Pulling latest changes from $BRANCH branch..."
+    git fetch origin
+    git reset --hard origin/$BRANCH
+else
+    log "📥 Cloning repository..."
+    git clone -b $BRANCH https://github.com/MannyJMusic/basa-app.git .
+    
+    # Set proper ownership after cloning
+    sudo chown -R $USER:$USER .
+    sudo chmod -R 755 .
+fi
+
 # Backup current environment file if it exists
 if [ -f "$ENV_FILE" ]; then
     log "💾 Backing up current environment file..."
     cp "$ENV_FILE" "${ENV_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
-fi
-
-# Pull latest changes
-log "📥 Pulling latest changes from $BRANCH branch..."
-if [ -d ".git" ]; then
-    git fetch origin
-    git reset --hard origin/$BRANCH
-else
-    git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git .
 fi
 
 # Check if environment file exists

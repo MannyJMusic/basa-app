@@ -276,9 +276,17 @@ jobs:
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-prod
           
-          # Fix Git ownership issue
-          echo "Fixing Git ownership..."
-          git config --global --add safe.directory /opt/basa-app-prod
+          # Fix Git ownership issue comprehensively
+          echo "Fixing Git ownership and permissions..."
+          if [ -f "scripts/fix-git-permissions.sh" ]; then
+            echo "Running Git permissions fix script..."
+            ./scripts/fix-git-permissions.sh
+          else
+            echo "Git permissions fix script not found, using manual fix..."
+            git config --global --add safe.directory /opt/basa-app-prod
+            sudo chown -R $(whoami):$(whoami) .git 2>/dev/null || true
+            sudo chmod -R 755 .git 2>/dev/null || true
+          fi
           
           # Handle divergent branches and pull latest changes
           echo "Pulling latest changes..."
