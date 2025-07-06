@@ -35,18 +35,6 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER:-basa_user}:${POSTGRES_PASSWORD:-basa_password}@postgres:5432/${POSTGRES_DB:-basa_prod}
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://app.businessassociationsa.com}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-      - MAILGUN_API_KEY=${MAILGUN_API_KEY}
-      - MAILGUN_DOMAIN=${MAILGUN_DOMAIN}
-      - MAILGUN_FROM_EMAIL=${MAILGUN_FROM_EMAIL}
-      - SENTRY_DSN=${SENTRY_DSN}
-      - SENTRY_ORG=${SENTRY_ORG}
-      - SENTRY_PROJECT=${SENTRY_PROJECT}
-      - SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN}
     networks:
       - basa-network
     depends_on:

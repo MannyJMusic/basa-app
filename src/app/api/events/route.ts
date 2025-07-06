@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
     } catch (parseError) {
       console.error('API /api/events POST - Failed to parse request body:', parseError)
       return NextResponse.json(
-        { error: "Invalid JSON in request body", details: parseError.message },
+        { error: "Invalid JSON in request body", details: parseError instanceof Error ? parseError.message : String(parseError) },
         { status: 400 }
       )
     }

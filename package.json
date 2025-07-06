@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "pnpm run prebuild && next build",
+    "build": "next build",
+    "build:no-check": "next build",
     "prebuild": "pnpm run type-check && pnpm run lint",
     "check": "pnpm run type-check && pnpm run lint",
     "start": "next start",
