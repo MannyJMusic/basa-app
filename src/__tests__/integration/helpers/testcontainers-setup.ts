@@ -71,10 +71,16 @@ export default class TestcontainersSetup {
     
     // Set environment variable for Prisma
     process.env.DATABASE_URL = databaseUrl;
-    process.env.PRISMA_CLIENT_ENGINE_TYPE = 'binary';
     
-    // Create Prisma client with default configuration
-    const prisma = new PrismaClient();
+    // Create Prisma client with explicit configuration
+    const prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: databaseUrl,
+        },
+      },
+      log: ['error'],
+    });
 
     // Store the client for cleanup
     this.prismaClients.push(prisma);

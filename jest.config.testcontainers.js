@@ -17,7 +17,12 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  setupFilesAfterEnv: ['<rootDir>/src/__tests__/integration/helpers/prisma-setup.ts'],
+  setupFilesAfterEnv: [
+    '<rootDir>/src/__tests__/integration/helpers/prisma-setup.ts'
+  ],
+  setupFiles: [
+    '<rootDir>/src/__tests__/integration/helpers/env-setup.ts'
+  ],
   globalSetup: '<rootDir>/src/__tests__/integration/helpers/global-setup.ts',
   globalTeardown: '<rootDir>/src/__tests__/integration/helpers/global-teardown.ts',
   testTimeout: 120000, // 2 minutes
