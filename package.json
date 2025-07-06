@@ -34,7 +34,9 @@
     "test:health": "node scripts/test-system.js health",
     "test:api": "node scripts/test-system.js api",
     "test:db": "node scripts/test-system.js db",
-    "setup:testcontainers": "node scripts/setup-testcontainers-cloud.js"
+    "setup:testcontainers": "node scripts/setup-testcontainers-cloud.js",
+    "db:setup": "node scripts/setup-database.js",
+    "db:fix": "./scripts/fix-database.sh"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

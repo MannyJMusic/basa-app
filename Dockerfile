@@ -75,8 +75,9 @@ COPY --from=base /app/.next ./.next
 COPY --from=base /app/public ./public
 COPY --from=base /app/next.config.js ./
 
-# Copy setup script
+# Copy setup scripts
 COPY scripts/setup-prod.js ./
+COPY scripts/setup-database.js ./
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
