@@ -6,19 +6,24 @@ import TestcontainersSetup, { TestEnvironment } from './testcontainers-setup';
  */
 export class TestUtils {
   private static setup = TestcontainersSetup.getInstance();
+  private static activeClients: PrismaClient[] = [];
 
   /**
    * Create a test environment with seeded data
    */
   static async createTestEnvironment(seedData = true): Promise<TestEnvironment> {
-    return await this.setup.createTestEnvironment(seedData);
+    const env = await this.setup.createTestEnvironment(seedData);
+    this.activeClients.push(env.database.prisma);
+    return env;
   }
 
   /**
    * Create a test environment without seeded data
    */
   static async createEmptyTestEnvironment(): Promise<TestEnvironment> {
-    return await this.setup.createTestEnvironment(false);
+    const env = await this.setup.createTestEnvironment(false);
+    this.activeClients.push(env.database.prisma);
+    return env;
   }
 
   /**
@@ -80,10 +85,11 @@ export class TestUtils {
     title: string = 'Test Event'
   ) {
     const timestamp = Date.now();
+    const randomNum = Math.floor(Math.random() * 1000);
     return await prisma.event.create({
       data: {
         title,
-        slug: `${title.toLowerCase().replace(/\s+/g, '-')}-${timestamp}`,
+        slug: `${title.toLowerCase().replace(/\s+/g, '-')}-${timestamp}-${randomNum}`,
         description: `A test event: ${title}`,
         shortDescription: title,
         startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -128,9 +134,22 @@ export class TestUtils {
   }
 
   /**
-   * Clean up all test containers
+   * Clean up all test containers and clients
    */
   static async cleanup(): Promise<void> {
+    // Disconnect all active clients first
+    const disconnectPromises = this.activeClients.map(async (client) => {
+      try {
+        await client.$disconnect();
+      } catch (error) {
+        console.warn('Error disconnecting Prisma client:', error);
+      }
+    });
+    
+    await Promise.all(disconnectPromises);
+    this.activeClients = [];
+    
+    // Then cleanup containers
     await this.setup.cleanup();
   }
 
@@ -146,11 +165,12 @@ export class TestUtils {
    */
   static generateRandomData() {
     const timestamp = Date.now();
+    const randomNum = Math.floor(Math.random() * 1000);
     return {
-      email: `test-${timestamp}@example.com`,
-      businessName: `Test Business ${timestamp}`,
-      eventTitle: `Test Event ${timestamp}`,
-      resourceTitle: `Test Resource ${timestamp}`,
+      email: `test-${timestamp}-${randomNum}@example.com`,
+      businessName: `Test Business ${timestamp}-${randomNum}`,
+      eventTitle: `Test Event ${timestamp}-${randomNum}`,
+      resourceTitle: `Test Resource ${timestamp}-${randomNum}`,
     };
   }
 
@@ -202,19 +222,17 @@ export class TestUtils {
   }
 
   /**
-   * Set the mocked auth user for API testing
+   * Mock authentication for API testing
    */
   static setMockedAuthUser(userId: string) {
-    // Replace the mocked auth user ID
-    Object.defineProperty(require('@/lib/auth'), 'auth', {
-      value: async () => ({
-        user: {
-          id: userId,
-          email: 'admin@example.com',
-          role: 'ADMIN',
-        },
-      }),
-      writable: true,
+    const { auth } = require('@/lib/auth');
+    // Mock the auth function to return a test user
+    jest.spyOn(require('@/lib/auth'), 'auth').mockResolvedValue({
+      user: {
+        id: userId,
+        email: 'test@example.com',
+        role: 'ADMIN',
+      },
     });
   }
 
@@ -222,41 +240,18 @@ export class TestUtils {
    * Create a mock request object for API testing
    */
   static createMockRequest(data: any = {}) {
-    // Use a full URL for NextRequest compatibility
-    let url = data.url && data.url.startsWith('http')
-      ? data.url
-      : `http://localhost${data.url || '/api/test'}`;
+    const url = new URL(data.url || 'http://localhost:3000/api/test');
     
-    // Add query parameters to URL if provided
-    const query = data.query || {};
-    if (Object.keys(query).length > 0) {
-      const urlObj = new URL(url);
-      Object.entries(query).forEach(([key, value]) => {
-        urlObj.searchParams.set(key, String(value));
-      });
-      url = urlObj.toString();
-    }
-    
-    const method = data.method || 'GET';
-    const headers = {
-      'content-type': 'application/json',
-      ...data.headers,
-    };
-    const body = data.body || {};
-    
-    // Create the request object without spreading data to avoid overwriting url
     return {
-      method,
-      url,
-      headers,
-      body,
-      json: async () => body,
-      // Add any other properties from data that aren't already set
-      ...Object.fromEntries(
-        Object.entries(data).filter(([key]) => 
-          !['method', 'url', 'headers', 'body', 'query'].includes(key)
-        )
-      ),
+      method: data.method || 'GET',
+      url: url.toString(),
+      headers: new Headers(data.headers || {}),
+      body: data.body ? JSON.stringify(data.body) : null,
+      json: async () => data.body || {},
+      nextUrl: {
+        pathname: url.pathname,
+        searchParams: url.searchParams,
+      },
     };
   }
 
@@ -264,45 +259,60 @@ export class TestUtils {
    * Create a mock response object for API testing
    */
   static createMockResponse() {
-    const res: any = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
-      send: jest.fn().mockReturnThis(),
-      end: jest.fn().mockReturnThis(),
-      setHeader: jest.fn().mockReturnThis(),
-      headersSent: false,
+    const headers = new Headers();
+    let status = 200;
+    let body: any = null;
+
+    return {
+      status: (code: number) => {
+        status = code;
+        return this;
+      },
+      json: (data: any) => {
+        body = data;
+        return this;
+      },
+      headers,
+      get statusCode() {
+        return status;
+      },
+      get body() {
+        return body;
+      },
     };
-    
-    return res;
   }
 
   /**
-   * Assert that a database record exists
+   * Assert that a record exists in the database
    */
   static async assertRecordExists(
     prisma: PrismaClient,
     model: string,
     where: any
   ) {
-    const record = await (prisma as any)[model].findUnique({ where });
-    expect(record).toBeTruthy();
-    return record;
+    const result = await (prisma as any)[model].findFirst({ where });
+    if (!result) {
+      throw new Error(`Record not found in ${model} with criteria: ${JSON.stringify(where)}`);
+    }
+    return result;
   }
 
   /**
-   * Assert that a database record does not exist
+   * Assert that a record does not exist in the database
    */
   static async assertRecordNotExists(
     prisma: PrismaClient,
     model: string,
     where: any
   ) {
-    const record = await (prisma as any)[model].findUnique({ where });
-    expect(record).toBeNull();
+    const result = await (prisma as any)[model].findFirst({ where });
+    if (result) {
+      throw new Error(`Record found in ${model} with criteria: ${JSON.stringify(where)}`);
+    }
   }
 
   /**
-   * Count records in a database table
+   * Count records in a model
    */
   static async countRecords(
     prisma: PrismaClient,
@@ -314,11 +324,11 @@ export class TestUtils {
 }
 
 /**
- * Jest test setup helper
+ * Higher-order function to run tests with a test database
  */
 export const withTestDatabase = (testFn: (env: TestEnvironment) => Promise<void>) => {
   return async () => {
-    const env = await TestUtils.createTestEnvironment();
+    const env = await TestUtils.createTestEnvironment(true);
     try {
       await testFn(env);
     } finally {
@@ -328,7 +338,7 @@ export const withTestDatabase = (testFn: (env: TestEnvironment) => Promise<void>
 };
 
 /**
- * Jest test setup helper for empty database
+ * Higher-order function to run tests with an empty test database
  */
 export const withEmptyTestDatabase = (testFn: (env: TestEnvironment) => Promise<void>) => {
   return async () => {

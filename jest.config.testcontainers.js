@@ -16,6 +16,10 @@ module.exports = {
   globalSetup: '<rootDir>/src/__tests__/integration/helpers/global-setup.ts',
   globalTeardown: '<rootDir>/src/__tests__/integration/helpers/global-teardown.ts',
   testTimeout: 120000, // 2 minutes for container startup
+  // Reduce concurrent workers to prevent "too many engines" error
+  maxWorkers: 1,
+  // Run tests serially to avoid Prisma client conflicts
+  runInBand: true,
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       useESM: true,
@@ -54,4 +58,6 @@ module.exports = {
   clearMocks: true,
   resetMocks: true,
   restoreMocks: true,
+  // Add environment variables for Prisma
+  setupFiles: ['<rootDir>/src/__tests__/integration/helpers/prisma-setup.ts'],
 }; 

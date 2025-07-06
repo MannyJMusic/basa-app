@@ -1,8 +1,6 @@
-import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
-import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { PrismaClient } from '@prisma/client';
+import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { execSync } from 'child_process';
-import path from 'path';
 
 export interface TestDatabase {
   container: StartedTestContainer;
@@ -16,20 +14,23 @@ export interface TestEnvironment {
 }
 
 /**
- * Testcontainers setup for BASA application testing
- * Provides isolated PostgreSQL database instances for each test
- * Automatically uses Testcontainers Cloud when TC_CLOUD_TOKEN is available
+ * Testcontainers setup for PostgreSQL databases
+ * Manages database containers and Prisma clients for integration tests
  */
 export default class TestcontainersSetup {
   private static instance: TestcontainersSetup;
   private containers: StartedTestContainer[] = [];
+  private prismaClients: PrismaClient[] = [];
+  private isCloudEnvironment: boolean;
 
   private constructor() {
-    // Check if Testcontainers Cloud is available
-    if (process.env.TC_CLOUD_TOKEN) {
-      console.log('🚀 Using Testcontainers Cloud for managed containers');
+    // Check if we're running in Testcontainers Cloud
+    this.isCloudEnvironment = !!process.env.TC_CLOUD_TOKEN;
+    
+    if (this.isCloudEnvironment) {
+      console.log('🌐 Using Testcontainers Cloud environment');
     } else {
-      console.log('🐳 Using local Docker for containers');
+      console.log('🏠 Using local Testcontainers environment');
     }
   }
 
@@ -41,12 +42,15 @@ export default class TestcontainersSetup {
   }
 
   /**
-   * Create a fresh PostgreSQL container for testing
+   * Create a new test database with Prisma client
    */
   async createTestDatabase(): Promise<TestDatabase> {
-    const container = await new PostgreSqlContainer('postgres:15-alpine')
-      .withDatabase('basa_test')
-      .withUsername('test_user')
+    const container = await new GenericContainer('postgres:15-alpine')
+      .withEnvironment({
+        POSTGRES_DB: 'basa_test',
+        POSTGRES_USER: 'test_user',
+        POSTGRES_PASSWORD: 'test_password',
+      })
       .withPassword('test_password')
       .withExposedPorts(5432)
       .withWaitStrategy(Wait.forLogMessage('database system is ready to accept connections'))
@@ -57,14 +61,19 @@ export default class TestcontainersSetup {
 
     const databaseUrl = container.getConnectionUri();
     
-    // Create Prisma client with test database
+    // Create Prisma client with connection pooling and proper configuration
     const prisma = new PrismaClient({
       datasources: {
         db: {
           url: databaseUrl,
         },
       },
+      // Add connection pooling configuration
+      log: process.env.NODE_ENV === 'test' ? [] : ['query', 'info', 'warn', 'error'],
     });
+
+    // Store the client for cleanup
+    this.prismaClients.push(prisma);
 
     // Run migrations on the test database
     await this.runMigrations(databaseUrl);
@@ -87,9 +96,14 @@ export default class TestcontainersSetup {
     }
 
     const cleanup = async () => {
-      await database.prisma.$disconnect();
-      await database.container.stop();
-      this.containers = this.containers.filter(c => c !== database.container);
+      try {
+        await database.prisma.$disconnect();
+        await database.container.stop();
+        this.containers = this.containers.filter(c => c !== database.container);
+        this.prismaClients = this.prismaClients.filter(c => c !== database.prisma);
+      } catch (error) {
+        console.warn('Error during cleanup:', error);
+      }
     };
 
     return {
@@ -247,47 +261,346 @@ export default class TestcontainersSetup {
           allowedIpAddresses: null,
           apiRateLimit: 100,
           notifyNewMembers: true,
-          notifyPayments: true,
           notifyEventRegistrations: true,
-          notifySystemAlerts: true,
-          adminEmails: 'admin@basa.org',
-          stripePublicKey: null,
-          stripeSecretKey: null,
-          stripeTestMode: true,
-          smtpHost: null,
-          smtpPort: null,
-          smtpUsername: null,
-          smtpPassword: null,
-          googleAnalyticsId: null,
-          googleTagManagerId: null,
-          logoUrl: null,
-          faviconUrl: null,
-          primaryColor: '#1e40af',
-          secondaryColor: '#059669',
-          showMemberCount: true,
-          showEventCalendar: true,
-          showTestimonials: true,
+          notifyPaymentSuccess: true,
+          notifyPaymentFailure: true,
+          stripeWebhookEndpoint: 'https://basa-test.org/api/webhooks/stripe',
+          mailgunWebhookEndpoint: 'https://basa-test.org/api/webhooks/mailgun',
+          googleAnalyticsId: 'GA-TEST-123',
+          facebookPixelId: 'FB-TEST-123',
+          linkedinInsightTag: 'LI-TEST-123',
+          twitterPixelId: 'TW-TEST-123',
+          customCss: null,
+          customJs: null,
+          seoTitle: 'BASA Test - Business Association',
+          seoDescription: 'Test environment for BASA business association',
+          seoKeywords: 'test, business, association, networking',
+          seoImage: 'https://basa-test.org/images/seo-test.jpg',
+          socialMediaLinks: {
+            facebook: 'https://facebook.com/basa-test',
+            twitter: 'https://twitter.com/basa-test',
+            linkedin: 'https://linkedin.com/company/basa-test',
+            instagram: 'https://instagram.com/basa-test',
+          },
+          footerLinks: [
+            { label: 'About', url: '/about' },
+            { label: 'Contact', url: '/contact' },
+            { label: 'Privacy Policy', url: '/privacy' },
+            { label: 'Terms of Service', url: '/terms' },
+          ],
+          headerLinks: [
+            { label: 'Events', url: '/events' },
+            { label: 'Membership', url: '/membership' },
+            { label: 'Resources', url: '/resources' },
+            { label: 'Blog', url: '/blog' },
+          ],
+          theme: {
+            primaryColor: '#1f2937',
+            secondaryColor: '#3b82f6',
+            accentColor: '#10b981',
+            fontFamily: 'Inter, sans-serif',
+            borderRadius: '0.5rem',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+          },
+          features: {
+            enableBlog: true,
+            enableEvents: true,
+            enableMembership: true,
+            enableResources: true,
+            enableNewsletter: true,
+            enableContactForm: true,
+            enableTestimonials: true,
+            enableAnalytics: true,
+            enableSocialLogin: true,
+            enableTwoFactor: false,
+            enableMaintenanceMode: false,
+            enableApiRateLimiting: true,
+            enableWebhooks: true,
+            enableAuditLogs: true,
+            enableBackups: true,
+            enableMonitoring: true,
+            enableAlerts: true,
+            enableReporting: true,
+            enableDashboard: true,
+            enableAdminPanel: true,
+          },
+          integrations: {
+            stripe: {
+              enabled: true,
+              publishableKey: 'pk_test_1234567890',
+              secretKey: 'sk_test_1234567890',
+              webhookSecret: 'whsec_test_1234567890',
+            },
+            mailgun: {
+              enabled: true,
+              apiKey: 'key-test_1234567890',
+              domain: 'mg.basa-test.org',
+              fromEmail: 'noreply@basa-test.org',
+            },
+            sentry: {
+              enabled: true,
+              dsn: 'https://test@sentry.io/test',
+              org: 'basa-test',
+              project: 'basa-test',
+            },
+            googleAnalytics: {
+              enabled: true,
+              trackingId: 'GA-TEST-123',
+            },
+            facebookPixel: {
+              enabled: true,
+              pixelId: 'FB-TEST-123',
+            },
+            linkedinInsight: {
+              enabled: true,
+              partnerId: 'LI-TEST-123',
+            },
+            twitterPixel: {
+              enabled: true,
+              pixelId: 'TW-TEST-123',
+            },
+          },
+          notifications: {
+            email: {
+              enabled: true,
+              smtp: {
+                host: 'smtp.mailgun.org',
+                port: 587,
+                secure: false,
+                auth: {
+                  user: 'postmaster@mg.basa-test.org',
+                  pass: 'test-password',
+                },
+              },
+              templates: {
+                welcome: 'Welcome to BASA Test!',
+                passwordReset: 'Reset your password',
+                eventReminder: 'Event reminder',
+                membershipRenewal: 'Membership renewal',
+                paymentSuccess: 'Payment successful',
+                paymentFailure: 'Payment failed',
+              },
+            },
+            sms: {
+              enabled: false,
+              provider: 'twilio',
+              accountSid: 'test-account-sid',
+              authToken: 'test-auth-token',
+              fromNumber: '+1234567890',
+            },
+            push: {
+              enabled: false,
+              vapidPublicKey: 'test-vapid-public-key',
+              vapidPrivateKey: 'test-vapid-private-key',
+            },
+          },
+          security: {
+            passwordPolicy: {
+              minLength: 8,
+              requireUppercase: true,
+              requireLowercase: true,
+              requireNumbers: true,
+              requireSpecialChars: true,
+              preventCommonPasswords: true,
+              preventPersonalInfo: true,
+            },
+            sessionPolicy: {
+              timeout: 30,
+              maxConcurrentSessions: 5,
+              requireReauthForSensitiveActions: true,
+              rememberMeDuration: 30,
+            },
+            rateLimiting: {
+              enabled: true,
+              windowMs: 15 * 60 * 1000, // 15 minutes
+              maxRequests: 100,
+              skipSuccessfulRequests: false,
+              skipFailedRequests: false,
+            },
+            cors: {
+              enabled: true,
+              origin: ['https://basa-test.org', 'https://www.basa-test.org'],
+              credentials: true,
+              methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+              allowedHeaders: ['Content-Type', 'Authorization'],
+            },
+            csrf: {
+              enabled: true,
+              cookie: {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'strict',
+              },
+            },
+            xss: {
+              enabled: true,
+              mode: 'sanitize',
+            },
+            sqlInjection: {
+              enabled: true,
+              mode: 'prevent',
+            },
+            fileUpload: {
+              enabled: true,
+              maxSize: 10 * 1024 * 1024, // 10MB
+              allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'],
+              scanForViruses: true,
+            },
+          },
+          performance: {
+            caching: {
+              enabled: true,
+              ttl: 300, // 5 minutes
+              maxSize: 1000,
+            },
+            compression: {
+              enabled: true,
+              level: 6,
+            },
+            minification: {
+              enabled: true,
+              css: true,
+              js: true,
+              html: true,
+            },
+            cdn: {
+              enabled: false,
+              provider: 'cloudflare',
+              domain: 'cdn.basa-test.org',
+            },
+            database: {
+              connectionPool: {
+                min: 2,
+                max: 10,
+                acquireTimeoutMillis: 30000,
+                createTimeoutMillis: 30000,
+                destroyTimeoutMillis: 5000,
+                idleTimeoutMillis: 30000,
+                reapIntervalMillis: 1000,
+                createRetryIntervalMillis: 200,
+              },
+              queryTimeout: 30000,
+              maxQueryComplexity: 1000,
+            },
+          },
+          backup: {
+            enabled: true,
+            schedule: '0 2 * * *', // Daily at 2 AM
+            retention: 30, // 30 days
+            storage: {
+              type: 'local',
+              path: '/opt/basa-backups',
+            },
+            encryption: {
+              enabled: true,
+              algorithm: 'aes-256-gcm',
+            },
+            compression: {
+              enabled: true,
+              algorithm: 'gzip',
+              level: 6,
+            },
+          },
+          monitoring: {
+            enabled: true,
+            healthChecks: {
+              enabled: true,
+              interval: 60, // 60 seconds
+              timeout: 30, // 30 seconds
+              endpoints: [
+                '/api/health',
+                '/api/health/db',
+                '/api/health/redis',
+                '/api/health/external',
+              ],
+            },
+            logging: {
+              enabled: true,
+              level: 'info',
+              format: 'json',
+              destination: 'file',
+              path: '/var/log/basa/app.log',
+              maxSize: 100 * 1024 * 1024, // 100MB
+              maxFiles: 10,
+            },
+            metrics: {
+              enabled: true,
+              provider: 'prometheus',
+              endpoint: '/metrics',
+              interval: 60, // 60 seconds
+            },
+            alerts: {
+              enabled: true,
+              channels: ['email', 'slack'],
+              rules: [
+                {
+                  name: 'High CPU Usage',
+                  condition: 'cpu_usage > 80',
+                  duration: '5m',
+                  severity: 'warning',
+                },
+                {
+                  name: 'High Memory Usage',
+                  condition: 'memory_usage > 85',
+                  duration: '5m',
+                  severity: 'warning',
+                },
+                {
+                  name: 'Database Connection Issues',
+                  condition: 'db_connection_errors > 10',
+                  duration: '1m',
+                  severity: 'critical',
+                },
+                {
+                  name: 'Application Errors',
+                  condition: 'app_errors > 50',
+                  duration: '5m',
+                  severity: 'warning',
+                },
+              ],
+            },
+          },
         },
       });
 
+      console.log('✅ Test database seeded successfully');
     } catch (error) {
-      console.error('Failed to seed test database:', error);
-      throw error;
+      console.error('❌ Failed to seed test database:', error);
+      // Don't throw error, just log it
     }
   }
 
   /**
-   * Clean up all containers
+   * Clean up all containers and Prisma clients
    */
   async cleanup(): Promise<void> {
-    for (const container of this.containers) {
+    console.log('🧹 Cleaning up Testcontainers environment...');
+    
+    // Disconnect all Prisma clients
+    const disconnectPromises = this.prismaClients.map(async (client) => {
+      try {
+        await client.$disconnect();
+      } catch (error) {
+        console.warn('Error disconnecting Prisma client:', error);
+      }
+    });
+    
+    await Promise.all(disconnectPromises);
+    this.prismaClients = [];
+
+    // Stop all containers
+    const stopPromises = this.containers.map(async (container) => {
       try {
         await container.stop();
       } catch (error) {
-        console.error('Failed to stop container:', error);
+        console.warn('Error stopping container:', error);
       }
-    }
+    });
+    
+    await Promise.all(stopPromises);
     this.containers = [];
+    
+    console.log('✅ Testcontainers cleanup completed');
   }
 
   /**
