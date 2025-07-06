@@ -33,6 +33,16 @@ export default function EmailPreviewPage() {
   const [contactPreferredContact, setContactPreferredContact] = useState('email')
   const [contactMembershipInterest, setContactMembershipInterest] = useState(true)
 
+  const [paymentId, setPaymentId] = useState('pi_test_123')
+  const [amount, setAmount] = useState('99.99')
+  const [currency, setCurrency] = useState('usd')
+  const [tierId, setTierId] = useState('premium-member')
+  const [tierName, setTierName] = useState('Premium Membership')
+  const [quantity, setQuantity] = useState('1')
+  const [price, setPrice] = useState('99.99')
+  const [businessName, setBusinessName] = useState('Test Company')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString())
+
   const [lastSendStatus, setLastSendStatus] = useState<'success' | 'error' | null>(null)
   const [lastSendMessage, setLastSendMessage] = useState<string>('')
   const [lastSentDetails, setLastSentDetails] = useState<{template: string, email: string, firstName: string} | null>(null)
@@ -68,6 +78,16 @@ export default function EmailPreviewPage() {
       params.append('message', contactMessage)
       params.append('preferredContact', contactPreferredContact)
       params.append('membershipInterest', contactMembershipInterest.toString())
+    } else if (template === 'payment-receipt') {
+      params.append('paymentId', paymentId)
+      params.append('amount', amount)
+      params.append('currency', currency)
+      params.append('tierId', tierId)
+      params.append('tierName', tierName)
+      params.append('quantity', quantity)
+      params.append('price', price)
+      params.append('businessName', businessName)
+      params.append('paymentDate', paymentDate)
     }
 
     return `/api/dev/email-preview?${params.toString()}`
@@ -124,6 +144,16 @@ export default function EmailPreviewPage() {
           preferredContact: contactPreferredContact,
           membershipInterest: contactMembershipInterest
         }
+      } else if (template === 'payment-receipt') {
+        emailData.paymentId = paymentId
+        emailData.amount = amount
+        emailData.currency = currency
+        emailData.tierId = tierId
+        emailData.tierName = tierName
+        emailData.quantity = quantity
+        emailData.price = price
+        emailData.businessName = businessName
+        emailData.paymentDate = paymentDate
       }
 
       const response = await fetch('/api/dev/test-email', {
@@ -185,6 +215,7 @@ export default function EmailPreviewPage() {
                   <option value="password-reset">Password Reset</option>
                   <option value="event-invitation">Event Invitation</option>
                   <option value="contact-form">Contact Form</option>
+                  <option value="payment-receipt">Payment Receipt</option>
                 </select>
               </div>
 
@@ -457,6 +488,53 @@ export default function EmailPreviewPage() {
                     </label>
                   </div>
                 </div>
+              )}
+
+              {template === 'payment-receipt' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment ID</label>
+                    <input type="text" value={paymentId} onChange={e => setPaymentId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+                      <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                      <input type="text" value={currency} onChange={e => setCurrency(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tier ID</label>
+                      <input type="text" value={tierId} onChange={e => setTierId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tier Name</label>
+                      <input type="text" value={tierName} onChange={e => setTierName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                      <input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
+                      <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Business Name</label>
+                    <input type="text" value={businessName} onChange={e => setBusinessName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Date</label>
+                    <input type="datetime-local" value={paymentDate.slice(0,16)} onChange={e => setPaymentDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </>
               )}
 
               <div className="pt-4">

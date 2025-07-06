@@ -50,28 +50,28 @@ export async function POST(request: NextRequest) {
         result = await sendEventInvitationEmail(email, firstName, event, { fromName })
         break
       case 'payment-receipt':
-        const paymentData = body.paymentData || {
-          paymentId: 'pi_test_' + Date.now(),
-          amount: 149.00,
-          currency: 'usd',
+        const paymentData = {
+          paymentId: body.paymentId || 'pi_test_123',
+          amount: parseFloat(body.amount || '99.99'),
+          currency: body.currency || 'usd',
           cart: [
             {
-              tierId: 'meeting-member',
-              name: 'Meeting Member',
-              price: 149.00,
-              quantity: 1
+              tierId: body.tierId || 'premium-member',
+              quantity: parseInt(body.quantity || '1'),
+              price: parseFloat(body.price || '99.99'),
+              name: body.tierName || 'Premium Membership'
             }
           ],
           customerInfo: {
-            name: firstName,
-            email: email
+            name: body.firstName || 'Test User',
+            email: body.email || 'test@example.com'
           },
           businessInfo: {
-            businessName: 'Test Business'
+            businessName: body.businessName || 'Test Company'
           },
-          paymentDate: new Date().toISOString()
+          paymentDate: body.paymentDate || new Date().toISOString()
         }
-        result = await sendPaymentReceiptEmail(email, firstName, paymentData, { fromName })
+        result = await sendPaymentReceiptEmail(body.email, body.firstName, paymentData, { fromName })
         break
       case 'contact-form':
         const contact = body.contact || {
