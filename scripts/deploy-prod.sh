@@ -89,10 +89,11 @@ if [ "$EUID" -eq 0 ]; then
     warning "Running as root, checking for appropriate user..."
     if id "basa" &>/dev/null; then
         warning "Switching to basa user..."
-        exec su - basa -c "$0 $*"
+        # Pass the full path to the script when switching users
+        exec su - basa -c "cd $APP_DIR && $0 $*"
     elif id "$SUDO_USER" &>/dev/null; then
         warning "Switching to $SUDO_USER user..."
-        exec su - "$SUDO_USER" -c "$0 $*"
+        exec su - "$SUDO_USER" -c "cd $APP_DIR && $0 $*"
     else
         warning "Root user detected but no suitable user found. Continuing as root..."
         # Continue as root but be careful

@@ -144,15 +144,15 @@ jobs:
           ls -la scripts/deploy-dev.sh
           
           # Run system test if available (with error handling)
-          if [ -f "scripts/test-system.js" ]; then
-            echo "Running system test..."
-            if node scripts/test-system.js health; then
-              echo "System test passed"
+          if [ -f "scripts/check-deployment.sh" ]; then
+            echo "Running deployment check..."
+            if ./scripts/check-deployment.sh; then
+              echo "Deployment check passed"
             else
-              echo "System test failed, but continuing with deployment..."
+              echo "Deployment check failed, but continuing with deployment..."
             fi
           else
-            echo "System test script not found, skipping..."
+            echo "Deployment check script not found, skipping..."
           fi
           
           # Deploy
@@ -256,15 +256,15 @@ jobs:
           ls -la scripts/deploy-prod.sh
           
           # Run system test if available (with error handling)
-          if [ -f "scripts/test-system.js" ]; then
-            echo "Running system test..."
-            if node scripts/test-system.js health; then
-              echo "System test passed"
+          if [ -f "scripts/check-deployment.sh" ]; then
+            echo "Running deployment check..."
+            if ./scripts/check-deployment.sh; then
+              echo "Deployment check passed"
             else
-              echo "System test failed, but continuing with deployment..."
+              echo "Deployment check failed, but continuing with deployment..."
             fi
           else
-            echo "System test script not found, skipping..."
+            echo "Deployment check script not found, skipping..."
           fi
           
           # Deploy

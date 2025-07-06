@@ -9,7 +9,36 @@
 const http = require('http');
 const https = require('https');
 const url = require('url');
-require('dotenv').config({ path: '.env.local' });
+const fs = require('fs');
+const path = require('path');
+
+// Simple environment variable loading without dotenv dependency
+function loadEnvFile(filePath) {
+  try {
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const lines = content.split('\n');
+      
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#')) {
+          const [key, ...valueParts] = trimmed.split('=');
+          if (key && valueParts.length > 0) {
+            const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+            process.env[key] = value;
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.warn(`Warning: Could not load ${filePath}:`, error.message);
+  }
+}
+
+// Try to load environment files
+loadEnvFile('.env.local');
+loadEnvFile('.env.production');
+loadEnvFile('.env');
 
 // Colors for console output
 const colors = {
