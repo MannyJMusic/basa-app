@@ -37,6 +37,7 @@
     "test:db": "node scripts/test-system.js db",
     "setup:testcontainers": "node scripts/setup-testcontainers-cloud.js",
     "verify:testcontainers": "node scripts/verify-testcontainers-cloud.js",
+    "verify:prisma": "node scripts/verify-prisma-engine.js",
     "db:setup": "node scripts/setup-database.js",
     "db:fix": "./scripts/fix-database.sh"
   },

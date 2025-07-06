@@ -12,12 +12,17 @@ const TestcontainersSetup = require('./testcontainers-setup').default;
 module.exports = async function globalSetup() {
   console.log('🚀 Setting up Testcontainers global environment...');
   try {
-    // Initialize the Testcontainers setup
+    // Initialize the Testcontainers setup and create shared container
     const setup = TestcontainersSetup.getInstance();
-    // Set up any global test environment variables
-    process.env.NODE_ENV = 'test';
-    process.env.JEST_WORKER_ID = '1';
+    
+    // Create the shared container that will be reused across all tests
+    console.log('🔧 Initializing shared test database...');
+    await setup.getSharedTestDatabase();
+    
     console.log('✅ Testcontainers global setup completed');
+    console.log('   - Shared container created and ready');
+    console.log('   - Database migrations applied');
+    console.log('   - All tests will reuse this container');
   } catch (error) {
     console.error('❌ Testcontainers global setup failed:', error);
     throw error;

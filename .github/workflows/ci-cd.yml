@@ -83,6 +83,9 @@ jobs:
 
     - name: Generate Prisma client
       run: pnpm prisma generate
+      env:
+        PRISMA_CLIENT_ENGINE_TYPE: binary
+        PRISMA_QUERY_ENGINE_TYPE: binary
 
     - name: Run type check and linting
       run: |
@@ -93,6 +96,8 @@ jobs:
         NODE_ENV: test
         NEXTAUTH_SECRET: test-secret-key
         NEXTAUTH_URL: http://localhost:3000
+        PRISMA_CLIENT_ENGINE_TYPE: binary
+        PRISMA_QUERY_ENGINE_TYPE: binary
 
     - name: Run comprehensive integration tests
       run: |
@@ -111,6 +116,8 @@ jobs:
         NEXTAUTH_SECRET: test-secret-key
         NEXTAUTH_URL: http://localhost:3000
         TC_CLOUD_TOKEN: ${{ secrets.TC_CLOUD_TOKEN }}
+        PRISMA_CLIENT_ENGINE_TYPE: binary
+        PRISMA_QUERY_ENGINE_TYPE: binary
 
     - name: Build application
       run: |

@@ -20,8 +20,8 @@ export interface TestEnvironment {
  */
 export default class TestcontainersSetup {
   private static instance: TestcontainersSetup;
-  private containers: StartedTestContainer[] = [];
-  private prismaClients: PrismaClient[] = [];
+  private sharedContainer: StartedTestContainer | null = null;
+  private sharedPrisma: PrismaClient | null = null;
   private isCloudEnvironment: boolean;
 
   private constructor() {
@@ -48,58 +48,83 @@ export default class TestcontainersSetup {
   }
 
   /**
-   * Create a new test database with Prisma client
+   * Get or create a shared test database
    */
-  async createTestDatabase(): Promise<TestDatabase> {
-    console.log(`🚀 Creating ${this.isCloudEnvironment ? 'cloud' : 'local'} PostgreSQL container...`);
-    
-    const container = await new PostgreSqlContainer('postgres:15-alpine')
-      .withDatabase('basa_test')
-      .withUsername('test_user')
-      .withPassword('test_password')
-      .withExposedPorts(5432)
-      .withWaitStrategy(Wait.forLogMessage('database system is ready to accept connections'))
-      .withStartupTimeout(120000) // 2 minutes
-      .start();
+  async getSharedTestDatabase(): Promise<TestDatabase> {
+    if (!this.sharedContainer || !this.sharedPrisma) {
+      console.log('🚀 Creating shared PostgreSQL container...');
+      
+      const container = await new PostgreSqlContainer('postgres:15-alpine')
+        .withDatabase('basa_test')
+        .withUsername('test_user')
+        .withPassword('test_password')
+        .withExposedPorts(5432)
+        .withWaitStrategy(Wait.forLogMessage('database system is ready to accept connections'))
+        .withStartupTimeout(120000) // 2 minutes
+        .start();
 
-    console.log(`✅ PostgreSQL container started successfully (${this.isCloudEnvironment ? 'cloud' : 'local'})`);
-    console.log(`   - Database URL: ${container.getConnectionUri()}`);
+      console.log(`✅ Shared PostgreSQL container started successfully (${this.isCloudEnvironment ? 'cloud' : 'local'})`);
+      console.log(`   - Database URL: ${container.getConnectionUri()}`);
 
-    this.containers.push(container);
+      this.sharedContainer = container;
 
-    const databaseUrl = container.getConnectionUri();
-    
-    // Set environment variable for Prisma
-    process.env.DATABASE_URL = databaseUrl;
-    
-    // Create Prisma client with explicit configuration
-    const prisma = new PrismaClient({
-      datasources: {
-        db: {
-          url: databaseUrl,
+      const databaseUrl = container.getConnectionUri();
+      
+      // Set environment variable for Prisma
+      process.env.DATABASE_URL = databaseUrl;
+      process.env.PRISMA_CLIENT_ENGINE_TYPE = 'binary';
+      process.env.PRISMA_QUERY_ENGINE_TYPE = 'binary';
+      
+      // Regenerate Prisma client to ensure correct engine type
+      try {
+        execSync('npx prisma generate', {
+          stdio: 'inherit',
+          env: { 
+            ...process.env, 
+            DATABASE_URL: databaseUrl,
+            PRISMA_CLIENT_ENGINE_TYPE: 'binary',
+            PRISMA_QUERY_ENGINE_TYPE: 'binary'
+          },
+          cwd: process.cwd(),
+        });
+      } catch (error) {
+        console.warn('Failed to regenerate Prisma client:', error);
+      }
+      
+      // Create Prisma client with explicit configuration
+      this.sharedPrisma = new PrismaClient({
+        datasources: {
+          db: {
+            url: databaseUrl,
+          },
         },
-      },
-      log: ['error'],
-    });
+        log: ['error'],
+      });
 
-    // Store the client for cleanup
-    this.prismaClients.push(prisma);
-
-    // Run migrations on the test database
-    await this.runMigrations(databaseUrl);
+      // Run migrations on the shared database
+      await this.runMigrations(databaseUrl);
+    }
 
     return {
-      container,
-      prisma,
-      databaseUrl,
+      container: this.sharedContainer,
+      prisma: this.sharedPrisma,
+      databaseUrl: this.sharedContainer.getConnectionUri(),
     };
+  }
+
+  /**
+   * Create a new test database with Prisma client (for isolated tests)
+   */
+  async createTestDatabase(): Promise<TestDatabase> {
+    // For most tests, use the shared container
+    return this.getSharedTestDatabase();
   }
 
   /**
    * Create a complete test environment with database and seed data
    */
   async createTestEnvironment(seedData = true): Promise<TestEnvironment> {
-    const database = await this.createTestDatabase();
+    const database = await this.getSharedTestDatabase();
 
     if (seedData) {
       await this.seedTestDatabase(database.prisma);
@@ -107,10 +132,8 @@ export default class TestcontainersSetup {
 
     const cleanup = async () => {
       try {
-        await database.prisma.$disconnect();
-        await database.container.stop();
-        this.containers = this.containers.filter(c => c !== database.container);
-        this.prismaClients = this.prismaClients.filter(c => c !== database.prisma);
+        // Clean the database instead of disconnecting
+        await this.cleanDatabase(database.prisma);
       } catch (error) {
         console.warn('Error during cleanup:', error);
       }
@@ -120,6 +143,36 @@ export default class TestcontainersSetup {
       database,
       cleanup,
     };
+  }
+
+  /**
+   * Clean the database by truncating all tables (faster than recreating)
+   */
+  private async cleanDatabase(prisma: PrismaClient): Promise<void> {
+    try {
+      // Disable foreign key checks temporarily
+      await prisma.$executeRaw`SET session_replication_role = replica;`;
+      
+      // Get all table names
+      const tables = await prisma.$queryRaw<Array<{ tablename: string }>>`
+        SELECT tablename FROM pg_tables 
+        WHERE schemaname = 'public' 
+        AND tablename NOT IN ('_prisma_migrations', 'schema_migrations')
+      `;
+      
+      // Truncate all tables
+      for (const table of tables) {
+        await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table.tablename}" CASCADE;`);
+      }
+      
+      // Re-enable foreign key checks
+      await prisma.$executeRaw`SET session_replication_role = DEFAULT;`;
+      
+      console.log(`🧹 Cleaned ${tables.length} tables in shared database`);
+    } catch (error) {
+      console.warn('Error cleaning database:', error);
+      // If cleaning fails, we can continue - the next test will handle it
+    }
   }
 
   /**
@@ -308,28 +361,22 @@ export default class TestcontainersSetup {
     console.log('🧹 Cleaning up Testcontainers environment...');
     
     // Disconnect all Prisma clients
-    const disconnectPromises = this.prismaClients.map(async (client) => {
-      try {
-        await client.$disconnect();
-      } catch (error) {
-        console.warn('Error disconnecting Prisma client:', error);
-      }
-    });
+    const disconnectPromises = [];
+    if (this.sharedPrisma) {
+      disconnectPromises.push(this.sharedPrisma.$disconnect());
+    }
     
     await Promise.all(disconnectPromises);
-    this.prismaClients = [];
+    this.sharedPrisma = null;
 
     // Stop all containers
-    const stopPromises = this.containers.map(async (container) => {
-      try {
-        await container.stop();
-      } catch (error) {
-        console.warn('Error stopping container:', error);
-      }
-    });
+    const stopPromises = [];
+    if (this.sharedContainer) {
+      stopPromises.push(this.sharedContainer.stop());
+    }
     
     await Promise.all(stopPromises);
-    this.containers = [];
+    this.sharedContainer = null;
     
     console.log('✅ Testcontainers cleanup completed');
   }
@@ -339,8 +386,8 @@ export default class TestcontainersSetup {
    */
   getContainerStats(): { total: number; running: number } {
     return {
-      total: this.containers.length,
-      running: this.containers.filter(c => c.isRunning()).length,
+      total: this.sharedContainer ? 1 : 0,
+      running: this.sharedContainer ? (this.sharedContainer.isRunning() ? 1 : 0) : 0,
     };
   }
 }
