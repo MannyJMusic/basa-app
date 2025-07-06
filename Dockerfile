@@ -10,9 +10,8 @@ RUN npm install -g pnpm
 # Set working directory
 WORKDIR /app
 
-# Set Prisma to use OpenSSL 3.x for Alpine compatibility
+# Set Prisma to use binary engine (let Prisma auto-detect the correct binary)
 ENV PRISMA_QUERY_ENGINE_TYPE=binary
-ENV PRISMA_QUERY_ENGINE_BINARY=linux-musl-openssl-3.0.x
 
 # Copy package files first for better layer caching
 COPY package.json pnpm-lock.yaml ./
@@ -51,9 +50,8 @@ RUN npm install -g pnpm
 # Set working directory
 WORKDIR /app
 
-# Set Prisma to use OpenSSL 3.x for Alpine compatibility
+# Set Prisma to use binary engine (let Prisma auto-detect the correct binary)
 ENV PRISMA_QUERY_ENGINE_TYPE=binary
-ENV PRISMA_QUERY_ENGINE_BINARY=linux-musl-openssl-3.0.x
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
