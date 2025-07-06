@@ -87,6 +87,23 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) to view the application.
 
+### 5. Testing Setup (Optional)
+
+For comprehensive testing with Testcontainers Cloud:
+
+```bash
+# Set up Testcontainers Cloud (recommended for CI/CD)
+pnpm setup:testcontainers
+
+# Verify Testcontainers Cloud setup
+pnpm verify:testcontainers
+
+# Run integration tests
+pnpm test:integration
+```
+
+**Note**: Testcontainers Cloud provides managed containers for testing, eliminating the need for Docker on CI/CD runners. See [Testcontainers Cloud Setup Guide](./docs/TESTCONTAINERS_CLOUD_SETUP.md) for detailed instructions.
+
 ## 📚 Quick Reference
 
 ### Essential Commands

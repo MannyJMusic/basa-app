@@ -44,15 +44,15 @@ jobs:
         echo "Setting up Testcontainers Cloud..."
         
         # Check if token is available
-        if [ -n "${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}" ]; then
-          echo "TC_CLOUD_TOKEN=${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}" >> $GITHUB_ENV
+        if [ -n "${{ secrets.TC_CLOUD_TOKEN }}" ]; then
+          echo "TC_CLOUD_TOKEN=${{ secrets.TC_CLOUD_TOKEN }}" >> $GITHUB_ENV
           echo "✅ Testcontainers Cloud token is configured"
         else
           echo "⚠️  Testcontainers Cloud token is not configured"
           echo "   Tests will run using local Testcontainers (if Docker is available)"
           echo "   To use Testcontainers Cloud:"
           echo "   1. Get your token from: https://app.testcontainers.cloud/"
-          echo "   2. Add it as a GitHub secret: TESTCONTAINERS_CLOUD_TOKEN"
+          echo "   2. Add it as a GitHub secret: TC_CLOUD_TOKEN"
           echo "   3. Re-run this workflow"
           echo ""
           echo "   Continuing with local Testcontainers..."
@@ -71,7 +71,7 @@ jobs:
         fi
         echo "NODE_ENV: $NODE_ENV"
       env:
-        TC_CLOUD_TOKEN: ${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}
+        TC_CLOUD_TOKEN: ${{ secrets.TC_CLOUD_TOKEN }}
         NODE_ENV: test
 
     - name: Setup environment variables
@@ -110,7 +110,7 @@ jobs:
         NODE_ENV: test
         NEXTAUTH_SECRET: test-secret-key
         NEXTAUTH_URL: http://localhost:3000
-        TC_CLOUD_TOKEN: ${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}
+        TC_CLOUD_TOKEN: ${{ secrets.TC_CLOUD_TOKEN }}
 
     - name: Build application
       run: |
