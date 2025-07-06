@@ -140,6 +140,11 @@ export default function DevToolsPage() {
           <p className="text-xl text-gray-600">
             Development, testing, and debugging tools for the BASA application
           </p>
+          <div className="mt-4 p-3 bg-green-100 border border-green-300 rounded-lg">
+            <p className="text-green-800 text-sm">
+              ✅ Dev deployment test - Last updated: {new Date().toLocaleString()}
+            </p>
+          </div>
         </div>
 
         {/* Category Navigation */}
