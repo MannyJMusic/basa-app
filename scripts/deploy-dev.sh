@@ -42,8 +42,9 @@ warning() {
 if [ "$EUID" -eq 0 ]; then
     warning "Running as root, checking for appropriate user..."
     if id "basa" &>/dev/null; then
-        warning "Switching to basa user..."
-        exec su - basa -c "$0 $*"
+        # Get the full path to this script and the app directory
+        SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+        exec su - basa -c "cd $APP_DIR && $SCRIPT_PATH $*"
     elif id "$SUDO_USER" &>/dev/null; then
         warning "Switching to $SUDO_USER user..."
         exec su - "$SUDO_USER" -c "$0 $*"
