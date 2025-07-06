@@ -284,8 +284,22 @@ jobs:
           echo "🔧 Making scripts executable..."
           chmod +x scripts/*.sh 2>/dev/null || echo "⚠️  Could not make all scripts executable"
           
-          echo "🚀 Running deployment without Git requirements..."
-          ./scripts/deploy-without-git.sh
+          echo "🔧 Fixing Prisma environment variables..."
+          if [ -f "scripts/fix-production-prisma.sh" ]; then
+            ./scripts/fix-production-prisma.sh
+          else
+            echo "⚠️  Prisma fix script not found, continuing..."
+          fi
+          
+          echo "🚀 Running simple deployment..."
+          if [ -f "scripts/deploy-simple.sh" ]; then
+            ./scripts/deploy-simple.sh
+          else
+            echo "❌ Simple deployment script not found"
+            echo "📋 Available scripts:"
+            ls -la scripts/
+            exit 1
+          fi
         EOF
 
     - name: Health check production
