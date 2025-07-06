@@ -161,9 +161,57 @@ fi
 # Check if environment file exists
 if [ ! -f "$ENV_FILE" ]; then
     error "Production environment file $ENV_FILE not found!"
-    echo "Please create $ENV_FILE with your production environment variables"
+    echo ""
+    echo "To fix this issue:"
+    echo "1. Copy the example file: cp .env.production.example .env.production"
+    echo "2. Edit .env.production with your actual production values"
+    echo "3. Make sure to set these REQUIRED variables:"
+    echo "   - DATABASE_URL"
+    echo "   - NEXTAUTH_URL"
+    echo "   - NEXTAUTH_SECRET"
+    echo "   - STRIPE_SECRET_KEY"
+    echo "   - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"
+    echo "   - MAILGUN_API_KEY"
+    echo "   - MAILGUN_DOMAIN"
+    echo "   - MAILGUN_FROM_EMAIL"
+    echo ""
+    echo "You can generate a secure NEXTAUTH_SECRET with:"
+    echo "openssl rand -base64 32"
+    echo ""
     exit 1
 fi
+
+# Validate that required environment variables are set
+log "🔍 Validating environment variables..."
+required_vars=(
+    "DATABASE_URL"
+    "NEXTAUTH_URL"
+    "NEXTAUTH_SECRET"
+    "STRIPE_SECRET_KEY"
+    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"
+    "MAILGUN_API_KEY"
+    "MAILGUN_DOMAIN"
+    "MAILGUN_FROM_EMAIL"
+)
+
+missing_vars=()
+for var in "${required_vars[@]}"; do
+    if ! grep -q "^${var}=" "$ENV_FILE" || grep -q "^${var}=\"\"$" "$ENV_FILE" || grep -q "^${var}=your-" "$ENV_FILE"; then
+        missing_vars+=("$var")
+    fi
+done
+
+if [ ${#missing_vars[@]} -gt 0 ]; then
+    error "Missing or invalid required environment variables:"
+    for var in "${missing_vars[@]}"; do
+        echo "  - $var"
+    done
+    echo ""
+    echo "Please update $ENV_FILE with valid values for these variables."
+    exit 1
+fi
+
+success "Environment variables validated successfully"
 
 # Stop existing containers
 log "🛑 Stopping existing containers..."
