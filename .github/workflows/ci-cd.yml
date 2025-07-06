@@ -42,23 +42,34 @@ jobs:
     - name: Setup Testcontainers Cloud
       run: |
         echo "Setting up Testcontainers Cloud..."
-        echo "TC_CLOUD_TOKEN=${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}" >> $GITHUB_ENV
-        echo "Testcontainers Cloud environment configured"
         
-        # Verify Testcontainers Cloud token is set
+        # Check if token is available
         if [ -n "${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}" ]; then
+          echo "TC_CLOUD_TOKEN=${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}" >> $GITHUB_ENV
           echo "✅ Testcontainers Cloud token is configured"
         else
-          echo "❌ Testcontainers Cloud token is not configured"
-          exit 1
+          echo "⚠️  Testcontainers Cloud token is not configured"
+          echo "   Tests will run using local Testcontainers (if Docker is available)"
+          echo "   To use Testcontainers Cloud:"
+          echo "   1. Get your token from: https://app.testcontainers.cloud/"
+          echo "   2. Add it as a GitHub secret: TESTCONTAINERS_CLOUD_TOKEN"
+          echo "   3. Re-run this workflow"
+          echo ""
+          echo "   Continuing with local Testcontainers..."
         fi
 
     - name: Verify Testcontainers Cloud Setup
       run: |
-        echo "🔍 Verifying Testcontainers Cloud setup..."
-        echo "TC_CLOUD_TOKEN present: $([ -n "$TC_CLOUD_TOKEN" ] && echo "YES" || echo "NO")"
+        echo "🔍 Verifying Testcontainers setup..."
+        if [ -n "$TC_CLOUD_TOKEN" ]; then
+          echo "✅ Testcontainers Cloud token is present"
+          echo "🌐 Tests will use Testcontainers Cloud"
+        else
+          echo "⚠️  Testcontainers Cloud token is not present"
+          echo "🏠 Tests will use local Testcontainers (if available)"
+          echo "   Note: GitHub Actions runners may not have Docker available"
+        fi
         echo "NODE_ENV: $NODE_ENV"
-        echo "Testcontainers Cloud will be used automatically when TC_CLOUD_TOKEN is present"
       env:
         TC_CLOUD_TOKEN: ${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}
         NODE_ENV: test
@@ -86,8 +97,14 @@ jobs:
     - name: Run comprehensive integration tests
       run: |
         echo "🧪 Starting comprehensive integration tests..."
-        echo "🌐 Testcontainers Cloud enabled: $([ -n "$TC_CLOUD_TOKEN" ] && echo "YES" || echo "NO")"
-        echo "📊 Running tests with Testcontainers..."
+        if [ -n "$TC_CLOUD_TOKEN" ]; then
+          echo "🌐 Testcontainers Cloud enabled: YES"
+          echo "📊 Running tests with Testcontainers Cloud..."
+        else
+          echo "🌐 Testcontainers Cloud enabled: NO"
+          echo "📊 Running tests with local Testcontainers..."
+          echo "   Note: This may fail if Docker is not available on the runner"
+        fi
         pnpm test:integration
       env:
         NODE_ENV: test
