@@ -14,7 +14,7 @@ services:
     networks:
       - basa-local-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U basa_user -d basa_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,8 +31,8 @@ services:
     env_file:
       - .env.development
     environment:
-      # Override DATABASE_URL to use the Docker PostgreSQL service
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # Use hardcoded DATABASE_URL for local
+      - DATABASE_URL=postgresql://basa_user:basa_password@postgres:5432/basa_dev
       # Override NEXTAUTH_URL for local development
       - NEXTAUTH_URL=http://localhost:3000
       # Override NEXT_PUBLIC_APP_URL for local development
