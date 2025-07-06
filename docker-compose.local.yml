@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for local development
+  postgres:
+    image: postgres:15-alpine
+    container_name: basa-postgres-local
+    env_file:
+      - .env.development
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+    networks:
+      - basa-local-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # BASA Application (Local Development)
+  basa-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    container_name: basa-app-local
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.development
+    environment:
+      # Override DATABASE_URL to use the Docker PostgreSQL service
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # Override NEXTAUTH_URL for local development
+      - NEXTAUTH_URL=http://localhost:3000
+      # Override NEXT_PUBLIC_APP_URL for local development
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      # Ensure we're in development mode
+      - NODE_ENV=development
+    volumes:
+      # Mount the entire project for live development
+      - .:/app
+      # Exclude node_modules to avoid conflicts
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - basa-local-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # No restart policy for local development - we want to control it manually
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres_data_local:
+
+networks:
+  basa-local-network:
+    driver: bridge 
