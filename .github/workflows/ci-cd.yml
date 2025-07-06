@@ -55,11 +55,15 @@ jobs:
     - name: Generate Prisma client
       run: pnpm prisma generate
 
-    - name: Run type check
-      run: pnpm type-check
-
-    - name: Run linting
-      run: pnpm lint
+    - name: Run type check and linting
+      run: |
+        echo "Running type check and linting..."
+        pnpm type-check
+        pnpm lint
+      env:
+        NODE_ENV: test
+        NEXTAUTH_SECRET: test-secret-key
+        NEXTAUTH_URL: http://localhost:3000
 
     - name: Run unit tests
       run: pnpm test:unit
@@ -79,8 +83,6 @@ jobs:
     - name: Build application
       run: |
         echo "Building application..."
-        pnpm run type-check
-        pnpm run lint
         pnpm build
       env:
         NODE_ENV: test

@@ -237,15 +237,29 @@ export class TestUtils {
   }
 
   /**
-   * Create a mock request object for API testing
+   * Create a mock request object that simulates Next.js API route request
    */
   static createMockRequest(data: any = {}) {
-    const url = new URL(data.url || 'http://localhost:3000/api/test');
+    let url: URL;
+    try {
+      url = new URL(data.url || 'http://localhost:3000/api/test');
+    } catch {
+      url = new URL('http://localhost:3000/api/test');
+    }
+
+    // Add query parameters to URL if provided
+    if (data.query) {
+      Object.entries(data.query).forEach(([key, value]) => {
+        url.searchParams.set(key, String(value));
+      });
+    }
+
+    const headers = new Headers(data.headers || {});
     
     return {
       method: data.method || 'GET',
       url: url.toString(),
-      headers: new Headers(data.headers || {}),
+      headers,
       body: data.body ? JSON.stringify(data.body) : null,
       json: async () => data.body || {},
       nextUrl: {
@@ -256,30 +270,15 @@ export class TestUtils {
   }
 
   /**
-   * Create a mock response object for API testing
+   * Create a mock response object that simulates Next.js API route response
    */
   static createMockResponse() {
-    const headers = new Headers();
-    let status = 200;
-    let body: any = null;
-
-    return {
-      status: (code: number) => {
-        status = code;
-        return this;
-      },
-      json: (data: any) => {
-        body = data;
-        return this;
-      },
-      headers,
-      get statusCode() {
-        return status;
-      },
-      get body() {
-        return body;
-      },
+    const response = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis(),
+      headers: new Headers(),
     };
+    return response;
   }
 
   /**

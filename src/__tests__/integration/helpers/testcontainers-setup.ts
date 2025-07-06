@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
+import { PostgreSqlContainer } from '@testcontainers/postgresql';
+import { StartedTestContainer, Wait } from 'testcontainers';
 import { execSync } from 'child_process';
 
 export interface TestDatabase {
@@ -45,12 +46,9 @@ export default class TestcontainersSetup {
    * Create a new test database with Prisma client
    */
   async createTestDatabase(): Promise<TestDatabase> {
-    const container = await new GenericContainer('postgres:15-alpine')
-      .withEnvironment({
-        POSTGRES_DB: 'basa_test',
-        POSTGRES_USER: 'test_user',
-        POSTGRES_PASSWORD: 'test_password',
-      })
+    const container = await new PostgreSqlContainer('postgres:15-alpine')
+      .withDatabase('basa_test')
+      .withUsername('test_user')
       .withPassword('test_password')
       .withExposedPorts(5432)
       .withWaitStrategy(Wait.forLogMessage('database system is ready to accept connections'))
@@ -61,16 +59,12 @@ export default class TestcontainersSetup {
 
     const databaseUrl = container.getConnectionUri();
     
-    // Create Prisma client with connection pooling and proper configuration
-    const prisma = new PrismaClient({
-      datasources: {
-        db: {
-          url: databaseUrl,
-        },
-      },
-      // Add connection pooling configuration
-      log: process.env.NODE_ENV === 'test' ? [] : ['query', 'info', 'warn', 'error'],
-    });
+    // Set environment variable for Prisma
+    process.env.DATABASE_URL = databaseUrl;
+    process.env.PRISMA_CLIENT_ENGINE_TYPE = 'binary';
+    
+    // Create Prisma client with default configuration
+    const prisma = new PrismaClient();
 
     // Store the client for cleanup
     this.prismaClients.push(prisma);
@@ -262,8 +256,6 @@ export default class TestcontainersSetup {
           apiRateLimit: 100,
           notifyNewMembers: true,
           notifyEventRegistrations: true,
-          notifyPaymentSuccess: true,
-          notifyPaymentFailure: true,
           stripeWebhookEndpoint: 'https://basa-test.org/api/webhooks/stripe',
           mailgunWebhookEndpoint: 'https://basa-test.org/api/webhooks/mailgun',
           googleAnalyticsId: 'GA-TEST-123',
