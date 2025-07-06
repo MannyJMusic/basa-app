@@ -171,8 +171,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = await request.json()
+    // Debug: Log request details
+    console.log('API /api/events POST - Request details:')
+    console.log('  Content-Type:', request.headers.get('content-type'))
+    console.log('  Method:', request.method)
+    console.log('  URL:', request.url)
+
+    let body;
+    try {
+      body = await request.json()
+      console.log('API /api/events POST - Request body:', JSON.stringify(body, null, 2))
+    } catch (parseError) {
+      console.error('API /api/events POST - Failed to parse request body:', parseError)
+      return NextResponse.json(
+        { error: "Invalid JSON in request body", details: parseError.message },
+        { status: 400 }
+      )
+    }
+
+    if (!body || typeof body !== 'object') {
+      console.error('API /api/events POST - Request body is not an object:', body)
+      return NextResponse.json(
+        { error: "Request body must be a JSON object" },
+        { status: 400 }
+      )
+    }
+
     const validatedData = createEventSchema.parse(body)
+    console.log('API /api/events POST - Validated data:', JSON.stringify(validatedData, null, 2))
 
     // Check if event slug already exists
     const existingEvent = await prisma.event.findUnique({
@@ -259,6 +285,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error creating event:", error)
     if (error instanceof z.ZodError) {
+      console.error("Validation errors:", JSON.stringify(error.errors, null, 2))
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
         { status: 400 }

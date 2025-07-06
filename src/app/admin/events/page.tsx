@@ -106,7 +106,37 @@ export default function AdminEventsPage() {
     setCreateLoading(true)
     setCreateError(null)
 
+    // Client-side validation
+    const requiredFields = {
+      title: createFormData.title,
+      slug: createFormData.slug,
+      description: createFormData.description,
+      startDate: createFormData.startDate,
+      endDate: createFormData.endDate,
+      location: createFormData.location,
+      category: createFormData.category,
+      organizerId: createFormData.organizerId,
+    }
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([_, value]) => !value || value.trim() === '')
+      .map(([field]) => field)
+
+    if (missingFields.length > 0) {
+      setCreateError(`Missing required fields: ${missingFields.join(', ')}`)
+      setCreateLoading(false)
+      return
+    }
+
+    // Validate dates
+    if (new Date(createFormData.startDate) >= new Date(createFormData.endDate)) {
+      setCreateError('End date must be after start date')
+      setCreateLoading(false)
+      return
+    }
+
     try {
+      console.log('Submitting event data:', createFormData)
       await createEvent(createFormData)
       setShowCreateDialog(false)
       setCreateFormData({
