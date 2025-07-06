@@ -53,13 +53,38 @@ log "👤 Current user: $CURRENT_USER"
 
 # Fix Git ownership
 log "🔧 Fixing Git repository ownership..."
-sudo chown -R $CURRENT_USER:$CURRENT_USER .git
-sudo chown -R $CURRENT_USER:$CURRENT_USER .
+if [ -w ".git" ]; then
+    log "📝 Git directory is writable, proceeding without sudo..."
+    # Try without sudo first
+    chmod -R 755 .git 2>/dev/null || log "⚠️  Could not change .git permissions"
+    chmod -R 755 . 2>/dev/null || log "⚠️  Could not change file permissions"
+else
+    log "⚠️  Git directory not writable, attempting with sudo..."
+    # Try sudo with error handling
+    if sudo -n chown -R $CURRENT_USER:$CURRENT_USER .git 2>/dev/null; then
+        sudo chmod -R 755 .git
+        sudo chown -R $CURRENT_USER:$CURRENT_USER .
+        sudo chmod -R 755 .
+        success "✅ Git permissions fixed with sudo"
+    else
+        warning "⚠️  Cannot use sudo - attempting alternative fixes..."
+        # Try alternative approaches
+        git config --global --add safe.directory "$APP_DIR"
+        log "📝 Set Git safe directory configuration"
+    fi
+fi
 
 # Fix Git permissions
 log "🔧 Fixing Git repository permissions..."
-sudo chmod -R 755 .git
-sudo chmod -R 755 .
+# Try without sudo first
+if [ -w ".git" ]; then
+    chmod -R 755 .git 2>/dev/null || log "⚠️  Could not change .git permissions"
+    chmod -R 755 . 2>/dev/null || log "⚠️  Could not change file permissions"
+else
+    # Try with sudo if available
+    sudo -n chmod -R 755 .git 2>/dev/null || log "⚠️  Could not change .git permissions with sudo"
+    sudo -n chmod -R 755 . 2>/dev/null || log "⚠️  Could not change file permissions with sudo"
+fi
 
 # Configure Git safe directory
 log "🔧 Configuring Git safe directory..."

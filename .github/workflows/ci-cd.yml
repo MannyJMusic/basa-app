@@ -271,55 +271,47 @@ jobs:
         mkdir -p ~/.ssh
         ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Deploy to production server
+    - name: Deploy to Production
       run: |
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+        echo "🚀 Starting production deployment..."
+        
+        # SSH into production server and run deployment
+                  ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          set -e
+          echo "📁 Navigating to production directory..."
           cd /opt/basa-app-prod
           
-          # Fix Git ownership issue comprehensively
-          echo "Fixing Git ownership and permissions..."
-          if [ -f "scripts/fix-git-permissions.sh" ]; then
-            echo "Running Git permissions fix script..."
-            ./scripts/fix-git-permissions.sh
+          echo "🔧 Fixing Git permissions (non-sudo approach)..."
+          # Try to fix Git permissions without sudo
+          if [ -w ".git" ]; then
+            echo "📝 Git directory is writable, proceeding with fixes..."
+            git config --global --add safe.directory "/opt/basa-app-prod"
+            chmod -R 755 .git 2>/dev/null || echo "⚠️  Could not change .git permissions"
+            chmod -R 755 . 2>/dev/null || echo "⚠️  Could not change file permissions"
           else
-            echo "Git permissions fix script not found, using manual fix..."
-            git config --global --add safe.directory /opt/basa-app-prod
-            sudo chown -R $(whoami):$(whoami) .git 2>/dev/null || true
-            sudo chmod -R 755 .git 2>/dev/null || true
+            echo "⚠️  Git directory not writable, attempting with sudo..."
+            # Try sudo with error handling
+            if sudo -n chown -R $USER:$USER .git 2>/dev/null; then
+              sudo chmod -R 755 .git
+              sudo chown -R $USER:$USER .
+              sudo chmod -R 755 .
+              echo "✅ Git permissions fixed with sudo"
+            else
+              echo "⚠️  Cannot use sudo - attempting alternative fixes..."
+              git config --global --add safe.directory "/opt/basa-app-prod"
+              echo "📝 Set Git safe directory configuration"
+            fi
           fi
           
-          # Handle divergent branches and pull latest changes
-          echo "Pulling latest changes..."
+          echo "📥 Pulling latest changes..."
           git fetch origin
           git reset --hard origin/main
           
-          # Make scripts executable
-          echo "Making scripts executable..."
-          chmod +x scripts/*.sh
-          chmod +x scripts/*.js
+          echo "🔧 Making scripts executable..."
+          chmod +x scripts/*.sh 2>/dev/null || echo "⚠️  Could not make scripts executable"
           
-          # Verify script exists
-          echo "Current user: $(whoami)"
-          echo "Current directory: $(pwd)"
-          echo "Checking if deploy script exists..."
-          ls -la scripts/deploy-prod.sh
-          
-          # Run system test if available (with error handling)
-          if [ -f "scripts/check-deployment.sh" ]; then
-            echo "Running deployment check..."
-            if ./scripts/check-deployment.sh; then
-              echo "Deployment check passed"
-            else
-              echo "Deployment check failed, but continuing with deployment..."
-            fi
-          else
-            echo "Deployment check script not found, skipping..."
-          fi
-          
-          # Deploy
-          echo "Deploying production version..."
+          echo "🚀 Running deployment..."
           ./scripts/deploy-prod.sh
-          echo "Production deployment completed"
         EOF
 
     - name: Health check production

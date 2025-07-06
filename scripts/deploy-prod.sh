@@ -146,23 +146,46 @@ cd "$APP_DIR"
 # Fix Git ownership and permissions
 log "🔧 Fixing Git repository permissions..."
 if [ -d ".git" ]; then
-    # Fix Git ownership
-    sudo chown -R $USER:$USER .git
-    sudo chmod -R 755 .git
-    
-    # Ensure proper Git configuration
-    git config --global --add safe.directory "$APP_DIR"
-    
-    log "📥 Pulling latest changes from $BRANCH branch..."
-    git fetch origin
-    git reset --hard origin/$BRANCH
+    # Try to fix Git ownership without sudo first
+    if [ -w ".git" ]; then
+        log "📝 Git directory is writable, proceeding with fixes..."
+        # Ensure proper Git configuration
+        git config --global --add safe.directory "$APP_DIR"
+        
+        # Try to fix permissions without sudo
+        chmod -R 755 .git 2>/dev/null || log "⚠️  Could not change .git permissions (may need sudo)"
+        chmod -R 755 . 2>/dev/null || log "⚠️  Could not change file permissions (may need sudo)"
+        
+        log "📥 Pulling latest changes from $BRANCH branch..."
+        git fetch origin
+        git reset --hard origin/$BRANCH
+    else
+        log "⚠️  Git directory not writable, attempting to fix with sudo..."
+        # Try sudo with error handling
+        if sudo -n chown -R $USER:$USER .git 2>/dev/null; then
+            sudo chmod -R 755 .git
+            git config --global --add safe.directory "$APP_DIR"
+            log "📥 Pulling latest changes from $BRANCH branch..."
+            git fetch origin
+            git reset --hard origin/$BRANCH
+        else
+            log "❌ Cannot fix Git permissions - sudo access required"
+            log "📝 Attempting to continue with current permissions..."
+            git config --global --add safe.directory "$APP_DIR"
+            git fetch origin
+            git reset --hard origin/$BRANCH
+        fi
+    fi
 else
     log "📥 Cloning repository..."
     git clone -b $BRANCH https://github.com/MannyJMusic/basa-app.git .
     
-    # Set proper ownership after cloning
-    sudo chown -R $USER:$USER .
-    sudo chmod -R 755 .
+    # Try to set proper ownership after cloning (without sudo if possible)
+    if [ -w "." ]; then
+        chmod -R 755 . 2>/dev/null || log "⚠️  Could not set file permissions"
+    else
+        sudo -n chown -R $USER:$USER . 2>/dev/null && sudo chmod -R 755 . || log "⚠️  Could not set ownership/permissions"
+    fi
 fi
 
 # Backup current environment file if it exists
