@@ -1,8 +1,8 @@
 # Development Dockerfile
-FROM node:18-alpine AS base
+FROM node:18-alpine
 
 # Install pnpm and OpenSSL dependencies for Prisma
-RUN apk add --no-cache openssl postgresql-client
+RUN apk add --no-cache openssl
 
 # Install pnpm
 RUN npm install -g pnpm
@@ -10,27 +10,26 @@ RUN npm install -g pnpm
 # Set working directory
 WORKDIR /app
 
-# Copy package files first
+# Set Prisma to use binary engine (let Prisma auto-detect the correct binary)
+ENV PRISMA_QUERY_ENGINE_TYPE=binary
+
+# Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Copy prisma schema (needed for postinstall script)
+# Copy prisma schema
 COPY prisma ./prisma
 
-# Set Prisma to use OpenSSL 3.x for Alpine compatibility
-ENV PRISMA_QUERY_ENGINE_TYPE=binary
-ENV PRISMA_QUERY_ENGINE_BINARY=linux-musl-openssl-3.0.x
-
-# Install dependencies (postinstall will now find the schema)
+# Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# Copy the rest of the application
-COPY . .
+# Generate Prisma client
+RUN pnpm prisma generate
 
-# Make the startup script executable
-RUN chmod +x scripts/docker-start.sh
+# Copy source code
+COPY . .
 
 # Expose port
 EXPOSE 3000
 
-# Start with the script that handles seeding
-CMD ["/bin/sh", "scripts/docker-start.sh"] 
+# Start development server
+CMD ["pnpm", "dev"] 

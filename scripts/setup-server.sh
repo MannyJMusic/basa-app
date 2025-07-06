@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # BASA Server Setup Script
-# This script sets up the Ubuntu server for BASA application deployment
+# This script sets up a fresh Ubuntu server for BASA application deployment
+# Run this on a fresh Ubuntu server to provision infrastructure and clone repositories
 
 set -e
 
@@ -12,6 +13,7 @@ PROD_DIR="/opt/basa-app-prod"
 DEV_DIR="/opt/basa-app-dev"
 BACKUP_DIR="/opt/basa-backups"
 NGINX_CONF="/etc/nginx/sites-available/basa-app"
+GITHUB_REPO="https://github.com/MannyJMusic/basa-app.git"
 
 # Colors for output
 RED='\033[0;31m'
@@ -43,7 +45,7 @@ if [ "$EUID" -ne 0 ]; then
     error "This script must be run as root (use sudo)"
 fi
 
-log "🚀 Starting BASA Server Setup..."
+log "🚀 Starting BASA Server Setup on Fresh Ubuntu Server..."
 
 # Update system packages
 log "📦 Updating system packages..."
@@ -126,24 +128,148 @@ systemctl enable fail2ban
 systemctl start fail2ban
 success "Fail2ban configured successfully"
 
-# Configure Nginx
-log "🌐 Configuring Nginx..."
-# Generate Nginx configuration from template
-if [ -f ".env.domains" ]; then
-    log "📄 Using domain configuration from .env.domains"
-    ./scripts/generate-nginx-config.sh
-    cp nginx/basa-app.conf "$NGINX_CONF"
+# Clone repositories
+log "📥 Cloning BASA repositories from GitHub..."
+
+# Clone production repository
+log "📥 Cloning production repository to $PROD_DIR..."
+if [ -d "$PROD_DIR/.git" ]; then
+    warning "Production directory already contains a git repository"
+    log "Updating existing repository..."
+    cd "$PROD_DIR"
+    sudo -u "$APP_USER" git pull origin main
 else
-    warning "Domain configuration file .env.domains not found!"
-    echo "Please create .env.domains with your domain configuration:"
-    echo "PRODUCTION_DOMAIN=yourdomain.com"
-    echo "DEV_DOMAIN=dev.yourdomain.com"
-    echo ""
-    echo "Then run: ./scripts/generate-nginx-config.sh"
-    echo "And copy the generated config: sudo cp nginx/basa-app.conf $NGINX_CONF"
+    sudo -u "$APP_USER" git clone "$GITHUB_REPO" "$PROD_DIR"
 fi
 
-# Create symbolic link
+# Clone development repository
+log "📥 Cloning development repository to $DEV_DIR..."
+if [ -d "$DEV_DIR/.git" ]; then
+    warning "Development directory already contains a git repository"
+    log "Updating existing repository..."
+    cd "$DEV_DIR"
+    sudo -u "$APP_USER" git pull origin main
+else
+    sudo -u "$APP_USER" git clone "$GITHUB_REPO" "$DEV_DIR"
+fi
+
+# Set up environment files
+log "⚙️ Setting up environment files..."
+
+# Create .env.domains template
+if [ ! -f "$PROD_DIR/.env.domains" ]; then
+    log "📄 Creating .env.domains template..."
+    cat > "$PROD_DIR/.env.domains" << 'DOMAINEOF'
+# Domain Configuration for BASA Application
+# Replace with your actual domains
+
+# Production domain
+PRODUCTION_DOMAIN=yourdomain.com
+
+# Development domain
+DEV_DOMAIN=dev.yourdomain.com
+
+# Optional: Additional domains
+# WWW_DOMAIN=www.yourdomain.com
+# API_DOMAIN=api.yourdomain.com
+DOMAINEOF
+    chown "$APP_USER:$APP_USER" "$PROD_DIR/.env.domains"
+    warning "Please edit $PROD_DIR/.env.domains with your actual domain names"
+fi
+
+# Create production environment template
+if [ ! -f "$PROD_DIR/.env.production" ]; then
+    log "📄 Creating production environment template..."
+    cat > "$PROD_DIR/.env.production" << 'PRODENVEOF'
+# Production Environment Configuration
+# Replace with your actual credentials
+
+NODE_ENV=production
+DATABASE_URL=postgresql://basa_user:basa_password@localhost:5432/basa_prod
+POSTGRES_DB=basa_prod
+POSTGRES_USER=basa_user
+POSTGRES_PASSWORD=basa_password
+
+# NextAuth Configuration
+NEXTAUTH_URL=https://app.businessassociationsa.com
+NEXTAUTH_SECRET=your-production-secret-key-here
+NEXT_PUBLIC_APP_URL=https://app.businessassociationsa.com
+
+# Stripe Configuration
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+
+# Mailgun Configuration
+MAILGUN_API_KEY=key-your_mailgun_api_key
+MAILGUN_DOMAIN=yourdomain.com
+MAILGUN_FROM_EMAIL=noreply@yourdomain.com
+
+# Sentry Configuration (optional)
+SENTRY_DSN=your_sentry_dsn_here
+
+# Database Configuration
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=basa_prod
+DATABASE_USER=basa_user
+DATABASE_PASSWORD=basa_password
+PRODENVEOF
+    chown "$APP_USER:$APP_USER" "$PROD_DIR/.env.production"
+    warning "Please edit $PROD_DIR/.env.production with your actual credentials"
+fi
+
+# Create development environment template
+if [ ! -f "$DEV_DIR/.env.development" ]; then
+    log "📄 Creating development environment template..."
+    cat > "$DEV_DIR/.env.development" << 'DEVENVEOF'
+# Development Environment Configuration
+# Replace with your actual credentials
+
+NODE_ENV=development
+DATABASE_URL=postgresql://basa_user:basa_password@localhost:5432/basa_dev
+POSTGRES_DB=basa_dev
+POSTGRES_USER=basa_user
+POSTGRES_PASSWORD=basa_password
+
+# NextAuth Configuration
+NEXTAUTH_URL=https://dev.businessassociationsa.com
+NEXTAUTH_SECRET=your-development-secret-key-here
+NEXT_PUBLIC_APP_URL=https://dev.businessassociationsa.com
+
+# Stripe Configuration
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+
+# Mailgun Configuration
+MAILGUN_API_KEY=key-your_mailgun_api_key
+MAILGUN_DOMAIN=yourdomain.com
+MAILGUN_FROM_EMAIL=noreply@yourdomain.com
+
+# Sentry Configuration (optional)
+SENTRY_DSN=your_sentry_dsn_here
+
+# Database Configuration
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=basa_dev
+DATABASE_USER=basa_user
+DATABASE_PASSWORD=basa_password
+DEVENVEOF
+    chown "$APP_USER:$APP_USER" "$DEV_DIR/.env.development"
+    warning "Please edit $DEV_DIR/.env.development with your actual credentials"
+fi
+
+# Set proper permissions on scripts
+log "🔧 Setting up script permissions..."
+chmod +x "$PROD_DIR/scripts/"*.sh 2>/dev/null || true
+chmod +x "$DEV_DIR/scripts/"*.sh 2>/dev/null || true
+
+# Configure Nginx (basic setup - will be configured after cloning)
+log "🌐 Configuring Nginx..."
+
+# Create symbolic link (will be updated after cloning)
 ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/
 
 # Remove default site
@@ -155,32 +281,46 @@ if nginx -t; then
     systemctl restart nginx
     success "Nginx configured successfully"
 else
-    error "Nginx configuration test failed"
+    warning "Nginx configuration test failed - will need manual configuration"
 fi
-
-# Set up SSL certificates (optional - requires domain)
-log "🔒 SSL Certificate Setup"
-echo "To set up SSL certificates, run:"
-echo "  certbot --nginx -d yourdomain.com -d www.yourdomain.com"
-echo "  certbot --nginx -d dev.yourdomain.com"
-echo ""
-echo "Replace 'yourdomain.com' with your actual domain from .env.domains"
 
 # Create deployment scripts
 log "📝 Creating deployment scripts..."
 cat > /usr/local/bin/deploy-basa-dev << 'EOF'
 #!/bin/bash
 cd /opt/basa-app-dev
-./scripts/deploy-dev.sh
+if [ -f ".env.development" ]; then
+    docker-compose -f docker-compose.dev.yml --env-file .env.development up -d --build
+else
+    echo "Error: .env.development file not found. Please create it first."
+    exit 1
+fi
 EOF
 
 cat > /usr/local/bin/deploy-basa-prod << 'EOF'
 #!/bin/bash
 cd /opt/basa-app-prod
-./scripts/deploy-prod.sh
+if [ -f ".env.production" ]; then
+    docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+else
+    echo "Error: .env.production file not found. Please create it first."
+    exit 1
+fi
 EOF
 
-chmod +x /usr/local/bin/deploy-basa-dev /usr/local/bin/deploy-basa-prod
+cat > /usr/local/bin/stop-basa-dev << 'EOF'
+#!/bin/bash
+cd /opt/basa-app-dev
+docker-compose -f docker-compose.dev.yml down
+EOF
+
+cat > /usr/local/bin/stop-basa-prod << 'EOF'
+#!/bin/bash
+cd /opt/basa-app-prod
+docker-compose -f docker-compose.prod.yml down
+EOF
+
+chmod +x /usr/local/bin/deploy-basa-dev /usr/local/bin/deploy-basa-prod /usr/local/bin/stop-basa-dev /usr/local/bin/stop-basa-prod
 
 # Set up log rotation
 log "📋 Setting up log rotation..."
@@ -205,10 +345,10 @@ cat > /usr/local/bin/monitor-basa << 'EOF'
 #!/bin/bash
 echo "=== BASA Application Status ==="
 echo "Production:"
-docker-compose -f /opt/basa-app-prod/docker-compose.prod.yml ps
+docker-compose -f /opt/basa-app-prod/docker-compose.prod.yml ps 2>/dev/null || echo "Production not running"
 echo ""
 echo "Development:"
-docker-compose -f /opt/basa-app-dev/docker-compose.dev.yml ps
+docker-compose -f /opt/basa-app-dev/docker-compose.dev.yml ps 2>/dev/null || echo "Development not running"
 echo ""
 echo "=== System Resources ==="
 df -h
@@ -227,30 +367,65 @@ log "💾 Setting up automatic backups..."
 cat > /etc/cron.daily/basa-backup << 'EOF'
 #!/bin/bash
 cd /opt/basa-app-prod
-./scripts/deploy-prod.sh backup
+if [ -f "scripts/deploy-prod.sh" ]; then
+    ./scripts/deploy-prod.sh backup
+fi
 EOF
 
 chmod +x /etc/cron.daily/basa-backup
+
+# Configure Nginx after repositories are cloned
+log "🌐 Configuring Nginx with cloned repositories..."
+
+# Generate Nginx configuration if .env.domains exists and has real domains
+if [ -f "$PROD_DIR/.env.domains" ]; then
+    source "$PROD_DIR/.env.domains"
+    if [ "$PRODUCTION_DOMAIN" != "yourdomain.com" ] && [ "$DEV_DOMAIN" != "dev.yourdomain.com" ]; then
+        log "📄 Generating Nginx configuration with domains: $PRODUCTION_DOMAIN, $DEV_DOMAIN"
+        cd "$PROD_DIR"
+        sudo -u "$APP_USER" ./scripts/generate-nginx-config.sh
+        cp "$PROD_DIR/nginx/basa-app.conf" "$NGINX_CONF"
+        
+        # Test and reload Nginx
+        if nginx -t; then
+            systemctl reload nginx
+            success "Nginx configured successfully with domains"
+        else
+            warning "Nginx configuration test failed - will need manual configuration"
+        fi
+    else
+        warning "Please update $PROD_DIR/.env.domains with your actual domain names before generating Nginx config"
+    fi
+else
+    warning "Domain configuration file not found at $PROD_DIR/.env.domains"
+fi
 
 # Final setup instructions
 success "🎉 Server setup completed successfully!"
 echo ""
 echo "📋 Next steps:"
 echo "1. Configure your domain DNS to point to this server"
-echo "2. Create .env.domains with your domain configuration"
-echo "3. Generate Nginx config: ./scripts/generate-nginx-config.sh"
-echo "4. Set up SSL certificates: certbot --nginx -d yourdomain.com"
-echo "5. Clone your repository to /opt/basa-app-prod and /opt/basa-app-dev"
-echo "6. Create .env.production and .env.local files"
-echo "7. Run initial deployment: deploy-basa-prod"
+echo "2. Edit $PROD_DIR/.env.domains with your actual domain names"
+echo "3. Edit $PROD_DIR/.env.production with your actual service credentials"
+echo "4. Edit $DEV_DIR/.env.development with your actual service credentials"
+echo "5. Generate Nginx config: cd $PROD_DIR && ./scripts/generate-nginx-config.sh"
+echo "6. Set up SSL certificates: certbot --nginx -d yourdomain.com -d dev.yourdomain.com"
+echo "7. Deploy applications when ready:"
+echo "   - Production: deploy-basa-prod"
+echo "   - Development: deploy-basa-dev"
 echo ""
 echo "🔧 Useful commands:"
 echo "  deploy-basa-prod    - Deploy production version"
 echo "  deploy-basa-dev     - Deploy development version"
+echo "  stop-basa-prod      - Stop production version"
+echo "  stop-basa-dev       - Stop development version"
 echo "  monitor-basa        - Check application status"
 echo "  docker system prune - Clean up Docker resources"
 echo ""
 echo "📁 Application directories:"
 echo "  Production: $PROD_DIR"
 echo "  Development: $DEV_DIR"
-echo "  Backups: $BACKUP_DIR" 
+echo "  Backups: $BACKUP_DIR"
+echo ""
+echo "⚠️  IMPORTANT: Applications are NOT started automatically."
+echo "   Configure your environment files first, then deploy manually." 

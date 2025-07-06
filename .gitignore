@@ -33,11 +33,12 @@ yarn-error.log*
 # env files
 .env
 .env.local
-.env.development.local
+.env.development*
 .env.test.local
 .env.production.local
 .env.domains
-
+.env.development
+.env.production.backup*
 # vercel
 .vercel
 
@@ -48,6 +49,6 @@ next-env.d.ts
 # Sentry Config File
 .env.sentry-build-plugin
 .env.production
-.env.development*
-.env.development.backup.20250704_095235
-.env.development.backup.20250704_095414
+.env.development.backup*
+.env.production.backup.20250706_020513
+.env.production.backup.20250706_021616

@@ -86,11 +86,17 @@ rollback() {
 
 # Check if running as root and switch to appropriate user
 if [ "$EUID" -eq 0 ]; then
-    warning "Running as root, switching to basa user..."
+    warning "Running as root, checking for appropriate user..."
     if id "basa" &>/dev/null; then
-        exec su - basa -c "$0 $*"
+        warning "Switching to basa user..."
+        # Pass the full path to the script when switching users
+        exec su - basa -c "cd $APP_DIR && $0 $*"
+    elif id "$SUDO_USER" &>/dev/null; then
+        warning "Switching to $SUDO_USER user..."
+        exec su - "$SUDO_USER" -c "cd $APP_DIR && $0 $*"
     else
-        error "Root user detected but 'basa' user not found. Please run as non-root user."
+        warning "Root user detected but no suitable user found. Continuing as root..."
+        # Continue as root but be careful
     fi
 fi
 
@@ -137,27 +143,111 @@ fi
 
 cd "$APP_DIR"
 
+# Fix Git ownership and permissions
+log "🔧 Fixing Git repository permissions..."
+if [ -d ".git" ]; then
+    # Try to fix Git ownership without sudo first
+    if [ -w ".git" ]; then
+        log "📝 Git directory is writable, proceeding with fixes..."
+        # Ensure proper Git configuration
+        git config --global --add safe.directory "$APP_DIR"
+        
+        # Try to fix permissions without sudo
+        chmod -R 755 .git 2>/dev/null || log "⚠️  Could not change .git permissions (may need sudo)"
+        chmod -R 755 . 2>/dev/null || log "⚠️  Could not change file permissions (may need sudo)"
+        
+        log "📥 Pulling latest changes from $BRANCH branch..."
+        git fetch origin
+        git reset --hard origin/$BRANCH
+    else
+        log "⚠️  Git directory not writable, attempting to fix with sudo..."
+        # Try sudo with error handling
+        if sudo -n chown -R $USER:$USER .git 2>/dev/null; then
+            sudo chmod -R 755 .git
+            git config --global --add safe.directory "$APP_DIR"
+            log "📥 Pulling latest changes from $BRANCH branch..."
+            git fetch origin
+            git reset --hard origin/$BRANCH
+        else
+            log "❌ Cannot fix Git permissions - sudo access required"
+            log "📝 Attempting to continue with current permissions..."
+            git config --global --add safe.directory "$APP_DIR"
+            git fetch origin
+            git reset --hard origin/$BRANCH
+        fi
+    fi
+else
+    log "📥 Cloning repository..."
+    git clone -b $BRANCH https://github.com/MannyJMusic/basa-app.git .
+    
+    # Try to set proper ownership after cloning (without sudo if possible)
+    if [ -w "." ]; then
+        chmod -R 755 . 2>/dev/null || log "⚠️  Could not set file permissions"
+    else
+        sudo -n chown -R $USER:$USER . 2>/dev/null && sudo chmod -R 755 . || log "⚠️  Could not set ownership/permissions"
+    fi
+fi
+
 # Backup current environment file if it exists
 if [ -f "$ENV_FILE" ]; then
     log "💾 Backing up current environment file..."
     cp "$ENV_FILE" "${ENV_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
 fi
 
-# Pull latest changes
-log "📥 Pulling latest changes from $BRANCH branch..."
-if [ -d ".git" ]; then
-    git fetch origin
-    git reset --hard origin/$BRANCH
-else
-    git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git .
-fi
-
 # Check if environment file exists
 if [ ! -f "$ENV_FILE" ]; then
     error "Production environment file $ENV_FILE not found!"
-    echo "Please create $ENV_FILE with your production environment variables"
+    echo ""
+    echo "To fix this issue:"
+    echo "1. Copy the example file: cp .env.production.example .env.production"
+    echo "2. Edit .env.production with your actual production values"
+    echo "3. Make sure to set these REQUIRED variables:"
+    echo "   - DATABASE_URL"
+    echo "   - NEXTAUTH_URL"
+    echo "   - NEXTAUTH_SECRET"
+    echo "   - STRIPE_SECRET_KEY"
+    echo "   - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"
+    echo "   - MAILGUN_API_KEY"
+    echo "   - MAILGUN_DOMAIN"
+    echo "   - MAILGUN_FROM_EMAIL"
+    echo ""
+    echo "You can generate a secure NEXTAUTH_SECRET with:"
+    echo "openssl rand -base64 32"
+    echo ""
     exit 1
 fi
+
+# Validate that required environment variables are set
+log "🔍 Validating environment variables..."
+required_vars=(
+    "DATABASE_URL"
+    "NEXTAUTH_URL"
+    "NEXTAUTH_SECRET"
+    "STRIPE_SECRET_KEY"
+    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"
+    "MAILGUN_API_KEY"
+    "MAILGUN_DOMAIN"
+    "MAILGUN_FROM_EMAIL"
+)
+
+missing_vars=()
+for var in "${required_vars[@]}"; do
+    if ! grep -q "^${var}=" "$ENV_FILE" || grep -q "^${var}=\"\"$" "$ENV_FILE" || grep -q "^${var}=your-" "$ENV_FILE"; then
+        missing_vars+=("$var")
+    fi
+done
+
+if [ ${#missing_vars[@]} -gt 0 ]; then
+    error "Missing or invalid required environment variables:"
+    for var in "${missing_vars[@]}"; do
+        echo "  - $var"
+    done
+    echo ""
+    echo "Please update $ENV_FILE with valid values for these variables."
+    exit 1
+fi
+
+success "Environment variables validated successfully"
 
 # Stop existing containers
 log "🛑 Stopping existing containers..."

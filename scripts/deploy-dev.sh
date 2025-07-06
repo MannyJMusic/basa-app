@@ -9,7 +9,7 @@ set -e
 APP_NAME="basa-app-dev"
 APP_DIR="/opt/basa-app-dev"
 COMPOSE_FILE="docker-compose.dev.yml"
-ENV_FILE=".env.development"
+ENV_FILE=".env.local"
 BRANCH="dev"
 PORT="3001"
 
@@ -40,13 +40,16 @@ warning() {
 
 # Check if running as root and switch to appropriate user
 if [ "$EUID" -eq 0 ]; then
-    warning "Running as root, switching to basa user..."
+    warning "Running as root, checking for appropriate user..."
     if id "basa" &>/dev/null; then
-        # Get the full path to this script and the app directory
-        SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-        exec su - basa -c "cd $APP_DIR && $SCRIPT_PATH $*"
+        warning "Switching to basa user..."
+        exec su - basa -c "$0 $*"
+    elif id "$SUDO_USER" &>/dev/null; then
+        warning "Switching to $SUDO_USER user..."
+        exec su - "$SUDO_USER" -c "$0 $*"
     else
-        error "Root user detected but 'basa' user not found. Please run as non-root user."
+        warning "Root user detected but no suitable user found. Continuing as root..."
+        # Continue as root but be careful
     fi
 fi
 

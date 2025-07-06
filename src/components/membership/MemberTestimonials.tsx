@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 const testimonials = [
   {
@@ -63,9 +64,11 @@ const MemberTestimonials = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
         {testimonials.map((t, idx) => (
           <div key={idx} className="bg-gray-50 rounded-xl shadow-lg p-8 flex flex-col items-center text-center transition-transform hover:scale-105">
-            <img
+            <Image
               src={t.img}
               alt={`Headshot of ${t.name}`}
+              width={80}
+              height={80}
               className="w-20 h-20 rounded-full object-cover mb-4 border-4 border-blue-100 shadow"
               loading="lazy"
             />

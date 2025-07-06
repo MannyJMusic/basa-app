@@ -59,22 +59,17 @@ Run the dedicated fix script:
 **Causes:**
 - Git pull failed due to ownership issues
 - Git pull failed due to divergent branches
-- Missing `.env.development` file
 - Script file doesn't exist in the repository
 - Script permissions are incorrect
 
 **Solutions:**
 1. **Fix Git ownership first** (see above)
 2. **Fix divergent branches** (see above)
-3. **Create .env.development file:**
-   ```bash
-   cp .env.example .env.development
-   ```
-4. **Verify script exists:**
+3. **Verify script exists:**
    ```bash
    ls -la scripts/deploy-dev.sh
    ```
-5. **Make script executable:**
+4. **Make script executable:**
    ```bash
    chmod +x scripts/*.sh
    ```

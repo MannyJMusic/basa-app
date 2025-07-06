@@ -67,7 +67,7 @@ MAILGUN_FROM_EMAIL=noreply@your-domain.com
 
 # Optional
 NEXTAUTH_URL=https://dev.businessassociationsa.com  # Development
-# NEXTAUTH_URL=https://businessassociationsa.com   # Production
+# NEXTAUTH_URL=https://app.businessassociationsa.com   # Production
 ```
 
 ### Mailgun Setup
@@ -86,7 +86,7 @@ Sends welcome email with activation link.
 const result = await sendWelcomeEmail(
   'user@example.com',
   'John',
-  'https://dev.businessassociationsa.com/api/auth/activate?token=abc123&email=user@example.com'
+  'https://app.businessassociationsa.com/api/auth/activate?token=abc123&email=user@example.com'
 )
 ```
 
@@ -97,7 +97,7 @@ Sends password reset email.
 const result = await sendPasswordResetEmail(
   'user@example.com',
   'John',
-  'https://dev.businessassociationsa.com/auth/reset-password?token=reset123&email=user@example.com'
+  'https://app.businessassociationsa.com/auth/reset-password?token=reset123&email=user@example.com'
 )
 ```
 

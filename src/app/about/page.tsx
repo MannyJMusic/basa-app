@@ -27,6 +27,7 @@ import {
   Users2,
   Sparkles
 } from "lucide-react"
+import Image from "next/image"
 
 // TypeScript Interfaces
 interface AnimatedCounterProps {
@@ -468,9 +469,11 @@ export default function AboutPage() {
               viewport={{ once: true }}
               className="prose prose-lg max-w-none text-gray-700 leading-relaxed space-y-6"
             >
-              <img 
+              <Image 
                 src="/images/profile/Jen-Bio.jpg" 
                 alt="Jennifer Bonomo, Founder of BASA" 
+                width={160}
+                height={160}
                 className="float-left w-40 h-40 object-cover aspect-square rounded-full mr-8 mb-4 shadow-lg border-2 border-basa-gold max-sm:float-none max-sm:mx-auto max-sm:mb-6" 
               />
               <p>
@@ -562,7 +565,13 @@ export default function AboutPage() {
                 <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
                   <CardContent className="p-8 text-center">
                     <div className="w-20 h-20 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                      <img src={leader.image} alt={leader.name + ' profile photo'} className="w-20 h-20 rounded-full object-cover border-2 border-basa-gold shadow" />
+                      <Image 
+                        src={leader.image} 
+                        alt={leader.name + ' profile photo'} 
+                        width={80}
+                        height={80}
+                        className="w-20 h-20 rounded-full object-cover border-2 border-basa-gold shadow" 
+                      />
                     </div>
                     <h3 className="text-xl font-bold text-basa-navy mb-2">{leader.name}</h3>
                     <p className="text-basa-teal font-medium mb-2">{leader.title}</p>

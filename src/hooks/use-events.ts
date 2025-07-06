@@ -183,6 +183,8 @@ export function useEvents() {
   const createEvent = useCallback(async (data: CreateEventData) => {
     setLoading(true)
     try {
+      console.log('useEvents: creating event with data:', JSON.stringify(data, null, 2))
+      
       const response = await fetch('/api/events', {
         method: 'POST',
         headers: {
@@ -191,12 +193,17 @@ export function useEvents() {
         body: JSON.stringify(data),
       })
 
+      console.log('useEvents: create event response status:', response.status, response.ok)
+
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('useEvents: create event error:', errorData)
         throw new Error(errorData.error || 'Failed to create event')
       }
 
       const event: Event = await response.json()
+      console.log('useEvents: created event successfully:', event.id)
+      
       toast({
         title: "Success",
         description: "Event created successfully",
