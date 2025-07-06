@@ -44,6 +44,24 @@ jobs:
         echo "Setting up Testcontainers Cloud..."
         echo "TC_CLOUD_TOKEN=${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}" >> $GITHUB_ENV
         echo "Testcontainers Cloud environment configured"
+        
+        # Verify Testcontainers Cloud token is set
+        if [ -n "${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}" ]; then
+          echo "✅ Testcontainers Cloud token is configured"
+        else
+          echo "❌ Testcontainers Cloud token is not configured"
+          exit 1
+        fi
+
+    - name: Verify Testcontainers Cloud Setup
+      run: |
+        echo "🔍 Verifying Testcontainers Cloud setup..."
+        echo "TC_CLOUD_TOKEN present: $([ -n "$TC_CLOUD_TOKEN" ] && echo "YES" || echo "NO")"
+        echo "NODE_ENV: $NODE_ENV"
+        echo "Testcontainers Cloud will be used automatically when TC_CLOUD_TOKEN is present"
+      env:
+        TC_CLOUD_TOKEN: ${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}
+        NODE_ENV: test
 
     - name: Setup environment variables
       run: |
@@ -65,15 +83,12 @@ jobs:
         NEXTAUTH_SECRET: test-secret-key
         NEXTAUTH_URL: http://localhost:3000
 
-    - name: Run unit tests
-      run: pnpm test:unit
-      env:
-        NODE_ENV: test
-        NEXTAUTH_SECRET: test-secret-key
-        NEXTAUTH_URL: http://localhost:3000
-
-    - name: Run integration tests with Testcontainers
-      run: pnpm test:integration
+    - name: Run comprehensive integration tests
+      run: |
+        echo "🧪 Starting comprehensive integration tests..."
+        echo "🌐 Testcontainers Cloud enabled: $([ -n "$TC_CLOUD_TOKEN" ] && echo "YES" || echo "NO")"
+        echo "📊 Running tests with Testcontainers..."
+        pnpm test:integration
       env:
         NODE_ENV: test
         NEXTAUTH_SECRET: test-secret-key

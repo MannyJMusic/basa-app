@@ -30,8 +30,13 @@ export default class TestcontainersSetup {
     
     if (this.isCloudEnvironment) {
       console.log('🌐 Using Testcontainers Cloud environment');
+      console.log('   - Containers will be created in the cloud');
+      console.log('   - No local Docker required');
+      console.log('   - Faster container startup');
     } else {
       console.log('🏠 Using local Testcontainers environment');
+      console.log('   - Containers will be created locally');
+      console.log('   - Requires local Docker installation');
     }
   }
 
@@ -46,6 +51,8 @@ export default class TestcontainersSetup {
    * Create a new test database with Prisma client
    */
   async createTestDatabase(): Promise<TestDatabase> {
+    console.log(`🚀 Creating ${this.isCloudEnvironment ? 'cloud' : 'local'} PostgreSQL container...`);
+    
     const container = await new PostgreSqlContainer('postgres:15-alpine')
       .withDatabase('basa_test')
       .withUsername('test_user')
@@ -54,6 +61,9 @@ export default class TestcontainersSetup {
       .withWaitStrategy(Wait.forLogMessage('database system is ready to accept connections'))
       .withStartupTimeout(120000) // 2 minutes
       .start();
+
+    console.log(`✅ PostgreSQL container started successfully (${this.isCloudEnvironment ? 'cloud' : 'local'})`);
+    console.log(`   - Database URL: ${container.getConnectionUri()}`);
 
     this.containers.push(container);
 

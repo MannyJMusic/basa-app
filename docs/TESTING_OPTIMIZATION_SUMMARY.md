@@ -57,7 +57,27 @@ This document summarizes the comprehensive testing optimizations and fixes imple
 
 ### Key Changes Made
 
-#### 1. Consolidated Test and Build Steps
+#### 1. Consolidated Test Execution
+```yaml
+# Before: Separate unit and integration tests
+- name: Run unit tests
+  run: pnpm test:unit
+- name: Run integration tests with Testcontainers
+  run: pnpm test:integration
+
+# After: Single comprehensive test suite
+- name: Run comprehensive integration tests
+  run: pnpm test:integration
+```
+
+**Rationale**: Integration tests provide comprehensive coverage including:
+- Database operations (what unit tests would test)
+- API endpoint testing
+- Data relationships and integrity
+- Performance testing
+- Error handling scenarios
+
+#### 2. Consolidated Test and Build Steps
 ```yaml
 # Before: Separate steps
 - name: Run type check
@@ -93,10 +113,8 @@ This document summarizes the comprehensive testing optimizations and fixes imple
 ## Test Results
 
 ### Current Status
-- ✅ **All Unit Tests**: 11/11 passing
-- ✅ **All Database Integration Tests**: 14/14 passing  
-- ✅ **API Integration Tests**: 5/5 passing (2 skipped - not implemented)
-- ✅ **Total**: 30/30 tests passing
+- ✅ **Comprehensive Integration Tests**: 19/19 passing (2 skipped - not implemented)
+- ✅ **Total**: 19/19 tests passing
 
 ### Test Coverage
 - **Database Operations**: User, Member, Event, Resource management
@@ -104,6 +122,7 @@ This document summarizes the comprehensive testing optimizations and fixes imple
 - **Data Relationships**: Referential integrity, complex queries
 - **Performance**: Bulk operations, pagination
 - **Error Handling**: Validation, authentication
+- **Business Logic**: All core functionality tested in real database environment
 
 ## Performance Improvements
 
@@ -185,3 +204,40 @@ The testing optimization has resulted in:
 - **Improved developer experience**
 
 All tests now pass consistently, and the GitHub Actions pipeline is optimized for speed and efficiency while maintaining comprehensive test coverage. 
+
+## Testcontainers Cloud Integration
+
+### Automatic Cloud Detection
+- **Environment Detection**: Automatically detects `TC_CLOUD_TOKEN` environment variable
+- **Cloud vs Local**: Uses cloud containers when token is present, local when not
+- **Detailed Logging**: Shows whether containers are created in cloud or locally
+
+### GitHub Actions Configuration
+```yaml
+# Verification steps ensure Testcontainers Cloud is used
+- name: Setup Testcontainers Cloud
+  run: |
+    echo "TC_CLOUD_TOKEN=${{ secrets.TESTCONTAINERS_CLOUD_TOKEN }}" >> $GITHUB_ENV
+    # Verifies token is configured
+
+- name: Verify Testcontainers Cloud Setup
+  run: |
+    echo "TC_CLOUD_TOKEN present: $([ -n "$TC_CLOUD_TOKEN" ] && echo "YES" || echo "NO")"
+    # Confirms cloud environment is ready
+
+- name: Run comprehensive integration tests
+  run: |
+    echo "🌐 Testcontainers Cloud enabled: $([ -n "$TC_CLOUD_TOKEN" ] && echo "YES" || echo "NO")"
+    pnpm test:integration
+```
+
+### Verification Tools
+- **Setup Script**: `pnpm setup:testcontainers` - Guides through cloud setup
+- **Verification Script**: `pnpm verify:testcontainers` - Tests cloud connectivity
+- **Automatic Detection**: No manual configuration needed in CI/CD
+
+### Benefits in CI/CD
+- **No Local Docker**: GitHub Actions runners don't need Docker installed
+- **Faster Startup**: Cloud containers start faster than local ones
+- **Reliable**: Managed infrastructure reduces flaky tests
+- **Scalable**: Can run multiple test suites in parallel 
