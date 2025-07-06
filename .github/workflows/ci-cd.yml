@@ -276,42 +276,16 @@ jobs:
         echo "🚀 Starting production deployment..."
         
         # SSH into production server and run deployment
-                  ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           set -e
           echo "📁 Navigating to production directory..."
           cd /opt/basa-app-prod
           
-          echo "🔧 Fixing Git permissions (non-sudo approach)..."
-          # Try to fix Git permissions without sudo
-          if [ -w ".git" ]; then
-            echo "📝 Git directory is writable, proceeding with fixes..."
-            git config --global --add safe.directory "/opt/basa-app-prod"
-            chmod -R 755 .git 2>/dev/null || echo "⚠️  Could not change .git permissions"
-            chmod -R 755 . 2>/dev/null || echo "⚠️  Could not change file permissions"
-          else
-            echo "⚠️  Git directory not writable, attempting with sudo..."
-            # Try sudo with error handling
-            if sudo -n chown -R $USER:$USER .git 2>/dev/null; then
-              sudo chmod -R 755 .git
-              sudo chown -R $USER:$USER .
-              sudo chmod -R 755 .
-              echo "✅ Git permissions fixed with sudo"
-            else
-              echo "⚠️  Cannot use sudo - attempting alternative fixes..."
-              git config --global --add safe.directory "/opt/basa-app-prod"
-              echo "📝 Set Git safe directory configuration"
-            fi
-          fi
-          
-          echo "📥 Pulling latest changes..."
-          git fetch origin
-          git reset --hard origin/main
-          
           echo "🔧 Making scripts executable..."
-          chmod +x scripts/*.sh 2>/dev/null || echo "⚠️  Could not make scripts executable"
+          chmod +x scripts/*.sh 2>/dev/null || echo "⚠️  Could not make all scripts executable"
           
-          echo "🚀 Running deployment..."
-          ./scripts/deploy-prod.sh
+          echo "🚀 Running deployment without Git requirements..."
+          ./scripts/deploy-without-git.sh
         EOF
 
     - name: Health check production
