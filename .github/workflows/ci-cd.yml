@@ -164,24 +164,6 @@ jobs:
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-dev
           
-          # Fix all permissions for the entire directory
-          echo "Fixing directory permissions..."
-          if sudo chown -R $USER:$USER /opt/basa-app-dev 2>/dev/null; then
-            echo "Directory ownership fixed"
-          else
-            echo "Could not change ownership, trying alternative permissions..."
-            sudo chmod -R 777 /opt/basa-app-dev 2>/dev/null || true
-          fi
-          
-          # Fix Git permissions more thoroughly
-          sudo chown -R $USER:$USER . 2>/dev/null || true
-          sudo chmod -R 755 . 2>/dev/null || true
-          sudo chmod -R 644 .git/* 2>/dev/null || true
-          sudo chmod 755 .git 2>/dev/null || true
-          
-          # Clean up problematic Git state files
-          sudo rm -f .git/FETCH_HEAD .git/MERGE_HEAD .git/REBASE_HEAD 2>/dev/null || true
-          
           # Pull latest changes
           git fetch origin
           git reset --hard origin/dev
