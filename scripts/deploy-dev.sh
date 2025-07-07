@@ -95,10 +95,17 @@ if [ -d ".git" ]; then
     log "🔍 Checking .git directory contents..."
     ls -la .git/
     
-    # Fix Git configuration
-    log "🔧 Fixing Git configuration..."
+    # Fix Git configuration and permissions
+    log "🔧 Fixing Git configuration and permissions..."
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
     git config --global --add safe.directory "/opt/basa-app-dev" 2>/dev/null || true
+    
+    # Fix permissions on .git directory if needed
+    if [ ! -w ".git/objects" ]; then
+        log "🔧 Fixing .git permissions..."
+        sudo chown -R $(whoami):$(whoami) .git/ 2>/dev/null || true
+        chmod -R u+w .git/ 2>/dev/null || true
+    fi
     
     # Try to use the existing repository directly
     log "🔄 Using existing Git repository..."
@@ -110,13 +117,23 @@ if [ -d ".git" ]; then
     
     # Check if we have local changes that need to be handled
     if ! git diff-index --quiet HEAD --; then
-        log "⚠️ Local changes detected, stashing them..."
-        git stash
+        log "⚠️ Local changes detected, attempting to stash them..."
+        # Try to stash, but if it fails due to permissions, just reset
+        if ! git stash; then
+            log "⚠️ Stash failed, resetting to clean state..."
+            git reset --hard HEAD
+        fi
     fi
     
     # Reset to match remote branch exactly
     log "🔄 Resetting to match remote branch..."
-    git reset --hard origin/$BRANCH
+    if ! git reset --hard origin/$BRANCH; then
+        log "⚠️ Git reset failed, attempting alternative approach..."
+        # Try to clean and reset
+        git clean -fd 2>/dev/null || true
+        git reset --hard HEAD 2>/dev/null || true
+        git pull origin $BRANCH 2>/dev/null || true
+    fi
 else
     log "❌ .git directory not found"
     log "🔍 Current directory contents:"
