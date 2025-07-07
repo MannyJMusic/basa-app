@@ -198,7 +198,8 @@ export async function POST(request: NextRequest) {
 
     // Send welcome email with generated password
     try {
-      const activationUrl = `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${verificationToken}&email=${user.email}`
+      const siteUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+      const activationUrl = `${siteUrl}/auth/verify-email?token=${verificationToken}&email=${user.email}`
       
       await sendAdminCreatedWelcomeEmail(
         user.email,
@@ -206,8 +207,8 @@ export async function POST(request: NextRequest) {
         randomPassword,
         activationUrl,
         {
-          siteUrl: process.env.NEXTAUTH_URL,
-          logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`,
+          siteUrl: siteUrl,
+          logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
           fromName: 'BASA Admin'
         }
       )
@@ -220,6 +221,7 @@ export async function POST(request: NextRequest) {
     if (paymentRecord) {
       try {
         const membershipTier = MEMBERSHIP_TIERS[memberData.membershipTier as keyof typeof MEMBERSHIP_TIERS]
+        const siteUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
         
         await sendPaymentReceiptEmail(
           user.email,
@@ -244,8 +246,8 @@ export async function POST(request: NextRequest) {
             paymentDate: new Date().toISOString()
           },
           {
-            siteUrl: process.env.NEXTAUTH_URL,
-            logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`,
+            siteUrl: siteUrl,
+            logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
             fromName: 'BASA Admin'
           }
         )
