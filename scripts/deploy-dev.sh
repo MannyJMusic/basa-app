@@ -75,6 +75,11 @@ fi
 
 cd "$APP_DIR"
 
+# Fix all permissions for the entire directory
+log "🔧 Fixing directory permissions..."
+sudo chown -R $USER:$USER "$APP_DIR" 2>/dev/null || true
+sudo chmod -R 755 "$APP_DIR" 2>/dev/null || true
+
 # Verify we're in the right directory
 log "📍 Current directory: $(pwd)"
 log "👤 Current user: $(whoami)"

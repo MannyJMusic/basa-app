@@ -164,6 +164,10 @@ jobs:
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-dev
           
+          # Fix all permissions for the entire directory
+          sudo chown -R $USER:$USER /opt/basa-app-dev 2>/dev/null || true
+          sudo chmod -R 755 /opt/basa-app-dev 2>/dev/null || true
+          
           # Fix Git permissions more thoroughly
           sudo chown -R $USER:$USER . 2>/dev/null || true
           sudo chmod -R 755 . 2>/dev/null || true
