@@ -117,6 +117,14 @@ const devTools = [
     href: '/api/events?status=PUBLISHED&sortBy=startDate&sortOrder=asc',
     category: 'Testing',
     badge: 'API'
+  },
+  {
+    title: 'Database Browser',
+    description: 'Browse and interact with database tables',
+    icon: Database,
+    href: '/dev/database',
+    category: 'Database',
+    badge: 'Demo'
   }
 ]
 

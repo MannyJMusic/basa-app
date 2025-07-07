@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateWelcomeEmailHtml, generatePasswordResetEmailHtml, generateEventInvitationEmailHtml, generateContactFormEmailHtml } from '@/lib/basa-emails'
+import { generateWelcomeEmailHtml, generatePasswordResetEmailHtml, generateEventInvitationEmailHtml, generateContactFormEmailHtml, generatePaymentReceiptEmailHtml } from '@/lib/basa-emails'
 
 export async function GET(request: NextRequest) {
   // Only allow in development
@@ -69,6 +69,33 @@ export async function GET(request: NextRequest) {
         logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`
       })
       break
+    case 'payment-receipt':
+      const paymentData = {
+        paymentId: searchParams.get('paymentId') || 'pi_test_123',
+        amount: parseFloat(searchParams.get('amount') || '99.99'),
+        currency: searchParams.get('currency') || 'usd',
+        cart: [
+          {
+            tierId: searchParams.get('tierId') || 'premium-member',
+            quantity: parseInt(searchParams.get('quantity') || '1'),
+            price: parseFloat(searchParams.get('price') || '99.99'),
+            name: searchParams.get('tierName') || 'Premium Membership'
+          }
+        ],
+        customerInfo: {
+          name: firstName,
+          email
+        },
+        businessInfo: {
+          businessName: searchParams.get('businessName') || 'Test Company'
+        },
+        paymentDate: searchParams.get('paymentDate') || new Date().toISOString()
+      }
+      html = generatePaymentReceiptEmailHtml(firstName, paymentData, {
+        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
+        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`
+      })
+      break;
     default:
       html = '<h1>Template not found</h1>'
   }

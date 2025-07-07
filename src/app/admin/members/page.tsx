@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Users, Search, Edit, Trash2, Eye, Plus, Download, Filter, X, Upload, FileText, CheckCircle, AlertCircle } from "lucide-react"
-import { useMembers, type Member, type MemberFilters, type CreateMemberData, type BulkUploadResult } from "@/hooks/use-members"
+import { Users, Search, Edit, Trash2, Eye, Download, Filter, X, Upload, FileText, CheckCircle, AlertCircle, UserPlus } from "lucide-react"
+import { useMembers, type Member, type MemberFilters, type BulkUploadResult } from "@/hooks/use-members"
 import { MemberDetailDialog } from "@/components/members/member-detail-dialog"
+import { EnhancedMemberForm } from "@/components/admin/enhanced-member-form"
 import { formatDate } from "@/lib/utils"
 
 export default function MembersPage() {
@@ -30,7 +31,7 @@ export default function MembersPage() {
     sortOrder: "desc",
   })
   const [searchTerm, setSearchTerm] = useState("")
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEnhancedCreateDialogOpen, setIsEnhancedCreateDialogOpen] = useState(false)
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false)
   const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null)
@@ -38,15 +39,7 @@ export default function MembersPage() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [createFormData, setCreateFormData] = useState<CreateMemberData>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    businessName: "",
-    membershipTier: "BASIC",
-    role: "MEMBER",
-  })
+
 
   // Load members on component mount and when filters change
   useEffect(() => {
@@ -81,25 +74,7 @@ export default function MembersPage() {
     setFilters(prev => ({ ...prev, page }))
   }
 
-  const handleCreateMember = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      await createMember(createFormData)
-      setIsCreateDialogOpen(false)
-      setCreateFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "",
-        businessName: "",
-        membershipTier: "BASIC",
-        role: "MEMBER",
-      })
-      loadMembers() // Refresh the list
-    } catch (error) {
-      // Error handling is done via toast notifications in the hook
-    }
-  }
+
 
   const handleUpdateMember = async (id: string, data: any) => {
     try {
@@ -213,6 +188,13 @@ export default function MembersPage() {
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
+          <Button 
+            onClick={() => setIsEnhancedCreateDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add Member
+          </Button>
           <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2">
@@ -321,112 +303,7 @@ export default function MembersPage() {
               </div>
             </DialogContent>
           </Dialog>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Add Member
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Add New Member</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateMember} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">First Name *</label>
-                    <Input
-                      value={createFormData.firstName}
-                      onChange={(e) => setCreateFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Last Name *</label>
-                    <Input
-                      value={createFormData.lastName}
-                      onChange={(e) => setCreateFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Email *</label>
-                    <Input
-                      type="email"
-                      value={createFormData.email}
-                      onChange={(e) => setCreateFormData(prev => ({ ...prev, email: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Password *</label>
-                    <Input
-                      type="password"
-                      value={createFormData.password}
-                      onChange={(e) => setCreateFormData(prev => ({ ...prev, password: e.target.value }))}
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Business Name</label>
-                  <Input
-                    value={createFormData.businessName}
-                    onChange={(e) => setCreateFormData(prev => ({ ...prev, businessName: e.target.value }))}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Membership Tier</label>
-                    <Select
-                      value={createFormData.membershipTier}
-                      onValueChange={(value: "BASIC" | "PREMIUM" | "VIP") => 
-                        setCreateFormData(prev => ({ ...prev, membershipTier: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BASIC">Basic</SelectItem>
-                        <SelectItem value="PREMIUM">Premium</SelectItem>
-                        <SelectItem value="VIP">VIP</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Role</label>
-                    <Select
-                      value={createFormData.role}
-                      onValueChange={(value: "MEMBER" | "MODERATOR" | "ADMIN") => 
-                        setCreateFormData(prev => ({ ...prev, role: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="MEMBER">Member</SelectItem>
-                        <SelectItem value="MODERATOR">Moderator</SelectItem>
-                        <SelectItem value="ADMIN">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={loading}>
-                    {loading ? "Creating..." : "Create Member"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+
         </div>
       </div>
 
@@ -578,6 +455,16 @@ export default function MembersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Enhanced Member Creation Dialog */}
+      <EnhancedMemberForm
+        isOpen={isEnhancedCreateDialogOpen}
+        onClose={() => setIsEnhancedCreateDialogOpen(false)}
+        onSuccess={() => {
+          setIsEnhancedCreateDialogOpen(false)
+          loadMembers()
+        }}
+      />
 
       {/* Member Detail Dialog */}
       <MemberDetailDialog

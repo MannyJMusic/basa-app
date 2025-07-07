@@ -79,17 +79,37 @@ cd "$APP_DIR"
 log "📍 Current directory: $(pwd)"
 log "👤 Current user: $(whoami)"
 
-# Backup current environment file if it exists
+# Clean up old backups (older than 1 week)
 if [ -f "$ENV_FILE" ]; then
-    log "💾 Backing up current environment file..."
-    cp "$ENV_FILE" "${ENV_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
+    log "🧹 Cleaning up old backups..."
+    find . -name "${ENV_FILE}.backup.*" -type f -mtime +7 -delete 2>/dev/null || true
 fi
 
 # Pull latest changes
 log "📥 Pulling latest changes from $BRANCH branch..."
+log "🔍 Checking directory contents..."
+ls -la
+
 if [ -d ".git" ]; then
-    # Ensure Git ownership is properly configured
+    log "✅ .git directory found"
+    log "🔍 Checking .git directory contents..."
+    ls -la .git/
+    
+    # Fix Git configuration and permissions
+    log "🔧 Fixing Git configuration and permissions..."
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+    git config --global --add safe.directory "/opt/basa-app-dev" 2>/dev/null || true
+    
+    # Fix permissions on .git directory if needed
+    if [ ! -w ".git/objects" ]; then
+        log "🔧 Fixing .git permissions..."
+        sudo chown -R $(whoami):$(whoami) .git/ 2>/dev/null || true
+        chmod -R u+w .git/ 2>/dev/null || true
+    fi
+    
+    # Try to use the existing repository directly
+    log "🔄 Using existing Git repository..."
+    git remote add origin https://github.com/MannyJMusic/basa-app.git 2>/dev/null || git remote set-url origin https://github.com/MannyJMusic/basa-app.git
     
     # Handle any local changes or divergent branches
     log "🔄 Fetching latest changes..."
@@ -97,15 +117,29 @@ if [ -d ".git" ]; then
     
     # Check if we have local changes that need to be handled
     if ! git diff-index --quiet HEAD --; then
-        log "⚠️ Local changes detected, stashing them..."
-        git stash
+        log "⚠️ Local changes detected, attempting to stash them..."
+        # Try to stash, but if it fails due to permissions, just reset
+        if ! git stash; then
+            log "⚠️ Stash failed, resetting to clean state..."
+            git reset --hard HEAD
+        fi
     fi
     
     # Reset to match remote branch exactly
     log "🔄 Resetting to match remote branch..."
-    git reset --hard origin/$BRANCH
+    if ! git reset --hard origin/$BRANCH; then
+        log "⚠️ Git reset failed, attempting alternative approach..."
+        # Try to clean and reset
+        git clean -fd 2>/dev/null || true
+        git reset --hard HEAD 2>/dev/null || true
+        git pull origin $BRANCH 2>/dev/null || true
+    fi
 else
-    git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git .
+    log "❌ .git directory not found"
+    log "🔍 Current directory contents:"
+    ls -la
+    log "❌ Git repository not found. Please ensure the repository is properly cloned."
+    exit 1
 fi
 
 

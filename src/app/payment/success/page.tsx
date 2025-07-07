@@ -407,10 +407,15 @@ export default function PaymentSuccessPage() {
   }
 
   return (
-    <DevControlPanel
-      paymentData={checkoutData}
-      emailStatus={{ active: true, paymentId, customerEmail: checkoutData?.customerInfo?.email || checkoutData?.contactInfo?.email }}
-    >
+            <DevControlPanel
+          paymentData={checkoutData}
+          emailStatus={{ 
+            active: true, 
+            paymentId, 
+            customerEmail: checkoutData?.customerInfo?.email || checkoutData?.contactInfo?.email,
+            showEmailDebug: true
+          }}
+        >
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
         {/* Banner Header */}
         <div className="w-full bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 text-white flex items-center px-4 py-4 md:py-3 shadow-md">

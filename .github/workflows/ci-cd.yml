@@ -161,88 +161,40 @@ jobs:
 
     - name: Deploy to development server
       run: |
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+        ssh -A ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-dev
           
-          # Fix Git ownership issue
-          echo "Fixing Git ownership..."
-          git config --global --add safe.directory /opt/basa-app-dev
+          # Set up Git to use HTTPS
+          git remote set-url origin https://github.com/MannyJMusic/basa-app.git
           
-          # Handle divergent branches and pull latest changes
-          echo "Pulling latest changes..."
+          # Pull latest changes
           git fetch origin
           git reset --hard origin/dev
           
           # Make scripts executable
-          echo "Making scripts executable..."
-          chmod +x scripts/*.sh
-          chmod +x scripts/*.js
-          
-          # Verify script exists
-          echo "Current user: $(whoami)"
-          echo "Current directory: $(pwd)"
-          echo "Checking if deploy script exists..."
-          ls -la scripts/deploy-dev.sh
-          
-          # Run system test if available (with error handling)
-          if [ -f "scripts/check-deployment.sh" ]; then
-            echo "Running deployment check..."
-            if ./scripts/check-deployment.sh; then
-              echo "Deployment check passed"
-            else
-              echo "Deployment check failed, but continuing with deployment..."
-            fi
-          else
-            echo "Deployment check script not found, skipping..."
-          fi
+          chmod +x scripts/*.sh scripts/*.js
           
           # Deploy
-          echo "Deploying development version..."
           ./scripts/deploy-dev.sh
-          echo "Development deployment completed"
         EOF
 
     - name: Health check development
       run: |
-        echo "🚀 Starting efficient health check..."
+        sleep 15
         
-        # Quick initial check after 10 seconds
-        echo "⏳ Initial check in 10 seconds..."
-        sleep 10
-        
-        # Progressive health check with shorter intervals
-        for i in {1..20}; do
-          echo "🔍 Health check attempt $i/20..."
-          
-          # Try to connect with timeout
+        for i in {1..10}; do
           if timeout 5 curl -s -f "http://${{ secrets.SERVER_HOST }}:3001/api/health" > /dev/null; then
-            echo "✅ Health check passed on attempt $i!"
+            echo "✅ Health check passed"
             exit 0
-          else
-            echo "❌ Health check failed on attempt $i"
-            
-            # Show progress every 5 attempts
-            if [ $((i % 5)) -eq 0 ]; then
-              echo "📊 Progress: $i/20 attempts completed"
-              echo "🔍 Checking container status..."
-              ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-dev && docker-compose -f docker-compose.dev.yml ps"
-            fi
-            
-            # Shorter intervals: 5 seconds for first 10 attempts, then 10 seconds
-            if [ $i -lt 10 ]; then
-              sleep 5
-            else
-              sleep 10
-            fi
           fi
+          
+          if [ $i -eq 10 ]; then
+            echo "❌ Health check failed"
+            exit 1
+          fi
+          
+          sleep 10
         done
-        
-        echo "❌ Health check failed after 20 attempts"
-        echo "📋 Final container status:"
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-dev && docker-compose -f docker-compose.dev.yml ps"
-        echo "📋 Recent container logs:"
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-dev && docker-compose -f docker-compose.dev.yml logs --tail=50"
-        exit 1
 
   # Production Deployment
   deploy-prod:
