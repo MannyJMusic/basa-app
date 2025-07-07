@@ -87,7 +87,7 @@ fi
 
 # Pull latest changes
 log "📥 Pulling latest changes from $BRANCH branch..."
-if [ -d ".git" ] && git rev-parse --git-dir > /dev/null 2>&1; then
+if [ -d ".git" ]; then
     # Ensure Git ownership is properly configured
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
     
@@ -105,27 +105,8 @@ if [ -d ".git" ] && git rev-parse --git-dir > /dev/null 2>&1; then
     log "🔄 Resetting to match remote branch..."
     git reset --hard origin/$BRANCH
 else
-    log "📥 Git repository not found or corrupted, attempting to fix..."
-    # Try to fix the repository without removing everything
-    if [ -d ".git" ]; then
-        log "🔧 Attempting to fix existing Git repository..."
-        rm -rf .git/objects/* 2>/dev/null || true
-        rm -rf .git/refs/* 2>/dev/null || true
-        rm -f .git/index 2>/dev/null || true
-        rm -f .git/HEAD 2>/dev/null || true
-        rm -f .git/FETCH_HEAD 2>/dev/null || true
-        rm -f .git/MERGE_HEAD 2>/dev/null || true
-        rm -f .git/REBASE_HEAD 2>/dev/null || true
-        
-        # Try to reinitialize the repository
-        git init
-        git remote add origin git@github.com:MannyJMusic/basa-app.git
-        git fetch origin
-        git checkout -b $BRANCH origin/$BRANCH
-    else
-        log "❌ Git repository not found. Please ensure the repository is properly cloned."
-        exit 1
-    fi
+    log "❌ Git repository not found. Please ensure the repository is properly cloned."
+    exit 1
 fi
 
 
