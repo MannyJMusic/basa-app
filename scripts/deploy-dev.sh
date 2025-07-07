@@ -114,7 +114,7 @@ else
     
     # Remove everything and clone fresh
     cd /opt
-    rm -rf basa-app-dev
+    sudo rm -rf basa-app-dev
     git clone -b $BRANCH git@github.com:MannyJMusic/basa-app.git basa-app-dev
     
     # Move back to the app directory
