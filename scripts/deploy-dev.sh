@@ -107,37 +107,49 @@ fi
 
 # Pull latest changes
 log "📥 Pulling latest changes from $BRANCH branch..."
-if [ -d ".git" ]; then
+if [ -d ".git" ] && [ -f ".git/config" ]; then
     # Fix Git permissions and ownership more thoroughly
     log "🔧 Fixing Git permissions..."
     sudo chown -R $USER:$USER . 2>/dev/null || true
     sudo chmod -R 755 . 2>/dev/null || true
-    sudo chmod -R 644 .git/* 2>/dev/null || true
-    sudo chmod 755 .git 2>/dev/null || true
     
-    # Ensure Git ownership is properly configured
-    git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
-    
-    # Try to clean up any problematic Git state
-    log "🧹 Cleaning Git state..."
-    rm -f .git/FETCH_HEAD 2>/dev/null || true
-    rm -f .git/MERGE_HEAD 2>/dev/null || true
-    rm -f .git/REBASE_HEAD 2>/dev/null || true
-    
-    # Handle any local changes or divergent branches
-    log "🔄 Fetching latest changes..."
-    git fetch origin
-    
-    # Check if we have local changes that need to be handled
-    if ! git diff-index --quiet HEAD --; then
-        log "⚠️ Local changes detected, resetting them..."
-        git reset --hard HEAD
+    # Only try to fix Git-specific permissions if .git directory still exists
+    if [ -d ".git" ]; then
+        sudo chmod -R 644 .git/* 2>/dev/null || true
+        sudo chmod 755 .git 2>/dev/null || true
+        
+        # Ensure Git ownership is properly configured
+        git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+        
+        # Try to clean up any problematic Git state
+        log "🧹 Cleaning Git state..."
+        rm -f .git/FETCH_HEAD 2>/dev/null || true
+        rm -f .git/MERGE_HEAD 2>/dev/null || true
+        rm -f .git/REBASE_HEAD 2>/dev/null || true
     fi
     
-    # Reset to match remote branch exactly
-    log "🔄 Resetting to match remote branch..."
-    git reset --hard origin/$BRANCH
+    # Check if Git repository is still valid
+    if [ -d ".git" ] && git rev-parse --git-dir > /dev/null 2>&1; then
+        # Handle any local changes or divergent branches
+        log "🔄 Fetching latest changes..."
+        git fetch origin
+        
+        # Check if we have local changes that need to be handled
+        if ! git diff-index --quiet HEAD --; then
+            log "⚠️ Local changes detected, resetting them..."
+            git reset --hard HEAD
+        fi
+        
+        # Reset to match remote branch exactly
+        log "🔄 Resetting to match remote branch..."
+        git reset --hard origin/$BRANCH
+    else
+        log "⚠️ Git repository corrupted, re-cloning..."
+        rm -rf .git
+        git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git .
+    fi
 else
+    log "📥 Cloning repository..."
     git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git .
 fi
 
