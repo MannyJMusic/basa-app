@@ -28,6 +28,19 @@ export default class TestcontainersSetup {
     // Check if we're running in Testcontainers Cloud
     this.isCloudEnvironment = !!process.env.TC_CLOUD_TOKEN;
     
+    // Clear any existing global Prisma client
+    const globalForPrisma = globalThis as unknown as {
+      prisma: any | undefined
+    };
+    if (globalForPrisma.prisma) {
+      try {
+        globalForPrisma.prisma.$disconnect();
+      } catch (error) {
+        // Ignore disconnect errors
+      }
+      globalForPrisma.prisma = undefined;
+    }
+    
     if (this.isCloudEnvironment) {
       console.log('🌐 Using Testcontainers Cloud environment');
       console.log('   - Containers will be created in the cloud');
@@ -86,7 +99,7 @@ export default class TestcontainersSetup {
       
       // Clear Node.js module cache to ensure fresh Prisma client
       Object.keys(require.cache).forEach(key => {
-        if (key.includes('@prisma/client')) {
+        if (key.includes('@prisma/client') || key.includes('@/lib/db')) {
           delete require.cache[key];
         }
       });
@@ -99,6 +112,13 @@ export default class TestcontainersSetup {
         },
         log: ['error'],
       });
+      
+      // Update the global Prisma client instance
+      const globalForPrisma = globalThis as unknown as {
+        prisma: PrismaClient | undefined
+      };
+      globalForPrisma.prisma = this.sharedPrisma;
+      
       console.log('✅ Prisma client created successfully');
     }
 

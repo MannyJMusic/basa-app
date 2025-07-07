@@ -212,12 +212,18 @@ export class TestUtils {
    * Set the mocked Prisma client for API testing
    */
   static setMockedPrismaClient(testPrisma: any) {
-    const { prisma } = require('@/lib/db');
-    // Replace the mocked prisma with the test database client
-    Object.defineProperty(require('@/lib/db'), 'prisma', {
-      value: testPrisma,
-      writable: true,
+    // Clear the module cache for @/lib/db
+    Object.keys(require.cache).forEach(key => {
+      if (key.includes('@/lib/db')) {
+        delete require.cache[key];
+      }
     });
+    
+    // Update the global Prisma client instance
+    const globalForPrisma = globalThis as unknown as {
+      prisma: any | undefined
+    };
+    globalForPrisma.prisma = testPrisma;
   }
 
   /**
