@@ -112,6 +112,11 @@ else
         cp "$ENV_FILE" /tmp/env_backup
     fi
     
+    # Add GitHub to known hosts
+    log "🔑 Adding GitHub to known hosts..."
+    mkdir -p ~/.ssh
+    ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+    
     # Clone to temporary location
     cd /tmp
     git clone -b $BRANCH git@github.com:MannyJMusic/basa-app.git temp_repo
