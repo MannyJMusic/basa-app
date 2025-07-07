@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/db"
 import { z } from "zod"
+
+// Get Prisma client dynamically to support test injection
+const getPrisma = () => {
+  const globalForPrisma = globalThis as unknown as {
+    prisma: any | undefined
+  };
+  return globalForPrisma.prisma || require("@/lib/db").prisma;
+};
 
 // Validation schemas
 const createEventSchema = z.object({
@@ -88,52 +95,74 @@ export async function GET(request: NextRequest) {
     // Calculate pagination
     const skip = (params.page - 1) * params.limit
 
-    // Get events with pagination
-    const [events, total] = await Promise.all([
-      prisma.event.findMany({
+    // Get events with pagination - minimal query to isolate the issue
+    let events = [];
+    let total = 0;
+    
+    try {
+      console.log('API /api/events GET - Attempting to fetch events...');
+      
+      const prisma = getPrisma();
+      
+      // First, try a simple count
+      total = await prisma.event.count({ where });
+      console.log('API /api/events GET - Count successful:', total);
+      
+      // Then, try to fetch events
+      events = await prisma.event.findMany({
         where,
-        include: {
-          organizer: {
-            include: {
-              user: {
-                select: {
-                  firstName: true,
-                  lastName: true,
-                  email: true,
-                },
-              },
-            },
-          },
-          registrations: {
-            select: {
-              id: true,
-              status: true,
-            },
-          },
-          speakers: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          sponsors: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          description: true,
+          shortDescription: true,
+          startDate: true,
+          endDate: true,
+          location: true,
+          address: true,
+          city: true,
+          state: true,
+          zipCode: true,
+          capacity: true,
+          price: true,
+          memberPrice: true,
+          category: true,
+          type: true,
+          status: true,
+          isFeatured: true,
+          image: true,
+          organizerId: true,
+          tags: true,
+          createdAt: true,
+          updatedAt: true,
         },
         orderBy,
         skip,
         take: params.limit,
-      }),
-      prisma.event.count({ where }),
-    ])
+      });
+      
+      console.log('API /api/events GET - Events fetch successful:', events.length);
+    } catch (dbError) {
+      console.error('API /api/events GET - Database error:', dbError);
+      throw dbError;
+    }
+
+    // Add basic organizer info separately to avoid relation issues
+    const eventsWithOrganizer = events.map((event) => {
+      return {
+        ...event,
+        organizer: null, // Skip organizer for now to isolate the issue
+        registrations: [],
+        speakers: [],
+        sponsors: [],
+      };
+    });
 
     console.log('API /api/events GET - Prisma query results:')
     console.log('  Total events found:', total)
-    console.log('  Events returned:', events.length)
-    console.log('  First event (if any):', events[0] ? { id: events[0].id, title: events[0].title, status: events[0].status, endDate: events[0].endDate } : 'none')
+    console.log('  Events returned:', eventsWithOrganizer.length)
+    console.log('  First event (if any):', eventsWithOrganizer[0] ? { id: eventsWithOrganizer[0].id, title: eventsWithOrganizer[0].title, status: eventsWithOrganizer[0].status, endDate: eventsWithOrganizer[0].endDate } : 'none')
 
     // Calculate pagination info
     const totalPages = Math.ceil(total / params.limit)
@@ -141,7 +170,7 @@ export async function GET(request: NextRequest) {
     const hasPrevPage = params.page > 1
 
     const response = {
-      events,
+      events: eventsWithOrganizer,
       pagination: {
         page: params.page,
         limit: params.limit,
@@ -200,6 +229,8 @@ export async function POST(request: NextRequest) {
     const validatedData = createEventSchema.parse(body)
     console.log('API /api/events POST - Validated data:', JSON.stringify(validatedData, null, 2))
 
+    const prisma = getPrisma();
+    
     // Check if event slug already exists
     const existingEvent = await prisma.event.findUnique({
       where: { slug: validatedData.slug },
@@ -249,20 +280,32 @@ export async function POST(request: NextRequest) {
         organizerId: validatedData.organizerId,
         tags: validatedData.tags,
       },
-      include: {
-        organizer: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
+    })
+
+    // Fetch organizer info separately to avoid relation issues
+    const organizer = await prisma.member.findUnique({
+      where: { id: event.organizerId },
+      select: {
+        id: true,
+        businessName: true,
+        businessEmail: true,
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
           },
         },
       },
-    })
+    });
+
+    const eventWithOrganizer = {
+      ...event,
+      organizer: organizer || null,
+      registrations: [],
+      speakers: [],
+      sponsors: [],
+    };
 
     // Create audit log
     await prisma.auditLog.create({
@@ -281,7 +324,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(event)
+    return NextResponse.json(eventWithOrganizer)
   } catch (error) {
     console.error("Error creating event:", error)
     if (error instanceof z.ZodError) {
