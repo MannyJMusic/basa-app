@@ -456,6 +456,34 @@ export async function sendWelcomeEmail(
   }
 }
 
+export async function sendAdminCreatedWelcomeEmail(
+  email: string, 
+  firstName: string, 
+  password: string,
+  activationUrl: string,
+  options: { 
+    siteUrl?: string
+    logoUrl?: string
+    fromName?: string
+  } = {}
+) {
+  try {
+    const html = generateAdminCreatedWelcomeEmailHtml(firstName, email, password, activationUrl, options)
+    const response = await sendEmail(email, 'Welcome to BASA - Your Account Has Been Created', html, {
+      fromName: options.fromName
+    })
+    return {
+      success: true,
+      messageId: response.id
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
 export async function sendPasswordResetEmail(
   email: string, 
   firstName: string, 
@@ -1913,6 +1941,221 @@ export function generateContactFormEmailHtml(contact: {
                 </p>
                 <p style="color: #64748b; line-height: 1.6; margin: 0 0 8px 0; font-size: 12px;">
                   This email was sent from the BASA contact form. Reply directly to respond to the sender.
+                </p>
+                <p style="color: #64748b; line-height: 1.6; margin: 0; font-size: 12px;">
+                  &copy; ${new Date().getFullYear()} Business Association of San Antonio. All rights reserved.
+                </p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+}
+
+// BASA Admin Created Welcome Email Template
+export function generateAdminCreatedWelcomeEmailHtml(firstName: string, email: string, password: string, activationUrl: string, options: { 
+  siteUrl?: string
+  logoUrl?: string
+} = {}) {
+  const siteUrl = options.siteUrl || SITE_URL
+  const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
+  
+  return `
+<!DOCTYPE html>
+<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Welcome to BASA - Your Account Has Been Created</title>
+  
+  <style>
+    /* BASA Email Styles */
+    .basa-gradient-primary {
+      background: linear-gradient(135deg, #1B365D 0%, #15294d 100%);
+    }
+    .basa-gradient-secondary {
+      background: linear-gradient(135deg, #FFD700 0%, #FFC300 100%);
+    }
+    .basa-gradient-accent {
+      background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%);
+    }
+    .basa-text-navy {
+      color: #1B365D;
+    }
+    .basa-text-gold {
+      color: #FFD700;
+    }
+    .basa-text-teal {
+      color: #17A2B8;
+    }
+    .basa-text-white {
+      color: #ffffff;
+    }
+    .basa-bg-navy {
+      background-color: #1B365D;
+    }
+    .basa-bg-gold {
+      background-color: #FFD700;
+    }
+    .basa-bg-teal {
+      background-color: #17A2B8;
+    }
+    .basa-bg-warm {
+      background-color: #fefbf7;
+    }
+    .basa-bg-light-navy {
+      background-color: #f8fafc;
+    }
+    .basa-border-navy {
+      border-color: #1B365D;
+    }
+    .basa-border-gold {
+      border-color: #FFD700;
+    }
+    .basa-border-teal {
+      border-color: #17A2B8;
+    }
+    .basa-hover-underline:hover {
+      text-decoration: underline !important;
+    }
+    .basa-button {
+      display: inline-block;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .basa-button:hover {
+      background: linear-gradient(135deg, #1391a5 0%, #117a8a 100%);
+    }
+    .basa-card {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .basa-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, #e2e8f0 50%, transparent 100%);
+      margin: 24px 0;
+    }
+    .login-credentials {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .credential-field {
+      margin-bottom: 12px;
+    }
+    .credential-label {
+      font-weight: 600;
+      color: #1B365D;
+      font-size: 14px;
+    }
+    .credential-value {
+      background: #ffffff;
+      border: 1px solid #d1fae5;
+      border-radius: 4px;
+      padding: 8px 12px;
+      color: #059669;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 4px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table class="wrapper" style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+    <tr>
+      <td align="center" style="background-color: #f8fafc; padding: 20px 0;">
+        <table class="sm-w-full" style="width: 600px; max-width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td class="basa-card" style="padding: 40px;">
+              <!-- Header -->
+              <div style="text-align: center; margin-bottom: 32px;">
+                <img src="${logoUrl}" alt="BASA Logo" style="height: 60px; width: auto; margin-bottom: 16px;">
+                <h1 class="basa-text-navy" style="margin: 0; font-size: 24px; font-weight: 700;">Welcome to BASA!</h1>
+                <p class="basa-text-teal" style="margin: 8px 0 0 0; font-size: 16px;">Your account has been created by our admin team</p>
+              </div>
+
+              <!-- Welcome Message -->
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <h2 class="basa-text-navy" style="margin: 0 0 8px 0; font-size: 18px;">🎉 Welcome, ${firstName}!</h2>
+                <p style="color: #64748b; line-height: 1.6; margin: 0;">
+                  Your BASA membership account has been successfully created by our administrative team. 
+                  You're now part of the Business Association of San Antonio community!
+                </p>
+              </div>
+
+              <!-- Login Credentials -->
+              <div class="login-credentials">
+                <h3 class="basa-text-navy" style="margin: 0 0 16px 0; font-size: 16px;">🔐 Your Login Credentials</h3>
+                <p style="color: #64748b; line-height: 1.6; margin: 0 0 16px 0; font-size: 14px;">
+                  Please save these credentials securely. You can change your password after your first login.
+                </p>
+                
+                <div class="credential-field">
+                  <div class="credential-label">Email Address:</div>
+                  <div class="credential-value">${email}</div>
+                </div>
+                
+                <div class="credential-field">
+                  <div class="credential-label">Temporary Password:</div>
+                  <div class="credential-value">${password}</div>
+                </div>
+              </div>
+
+              <!-- Next Steps -->
+              <div class="basa-card" style="background: #fefbf7; border-left: 4px solid #FFD700; padding: 16px; margin-bottom: 24px;">
+                <h3 class="basa-text-navy" style="margin: 0 0 12px 0; font-size: 16px;">🚀 What's Next?</h3>
+                <ol style="color: #64748b; line-height: 1.6; margin: 0; font-size: 14px; padding-left: 20px;">
+                  <li><strong>Activate your account</strong> by clicking the button below</li>
+                  <li><strong>Log in</strong> with your email and temporary password</li>
+                  <li><strong>Complete your profile</strong> with your business information</li>
+                  <li><strong>Change your password</strong> to something secure and memorable</li>
+                  <li><strong>Explore</strong> upcoming events and networking opportunities</li>
+                </ol>
+              </div>
+
+              <!-- Action Button -->
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${activationUrl}" class="basa-button" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  Activate Your Account
+                </a>
+              </div>
+
+              <!-- Security Notice -->
+              <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <h3 class="basa-text-navy" style="margin: 0 0 8px 0; font-size: 14px;">🔒 Security Notice</h3>
+                <p style="color: #64748b; line-height: 1.6; margin: 0; font-size: 12px;">
+                  For your security, please change your password immediately after your first login. 
+                  Never share your login credentials with anyone.
+                </p>
+              </div>
+
+              <!-- Footer -->
+              <div class="basa-divider"></div>
+              <div style="text-align: center;">
+                <p style="color: #64748b; line-height: 1.6; margin: 0 0 8px 0; font-size: 14px;">
+                  Connecting, growing, and giving back to the San Antonio business community
+                </p>
+                <p style="color: #64748b; line-height: 1.6; margin: 0 0 8px 0; font-size: 12px;">
+                  If you have any questions, reply to this email or contact us at
+                  <a href="mailto:info@businessassociationsa.com" class="basa-text-teal basa-hover-underline" style="text-decoration: none;">info@businessassociationsa.com</a>
                 </p>
                 <p style="color: #64748b; line-height: 1.6; margin: 0; font-size: 12px;">
                   &copy; ${new Date().getFullYear()} Business Association of San Antonio. All rights reserved.
