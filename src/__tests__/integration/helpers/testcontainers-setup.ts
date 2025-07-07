@@ -224,10 +224,10 @@ export default class TestcontainersSetup {
         update: {},
         create: {
           email: 'test@example.com',
-          name: 'Test User',
           firstName: 'Test',
           lastName: 'User',
           role: 'ADMIN',
+          hashedPassword: 'test-hashed-password',
           isActive: true,
         },
       });
@@ -237,10 +237,10 @@ export default class TestcontainersSetup {
         update: {},
         create: {
           email: 'member@example.com',
-          name: 'Member User',
           firstName: 'Member',
           lastName: 'User',
           role: 'MEMBER',
+          hashedPassword: 'test-hashed-password',
           isActive: true,
         },
       });

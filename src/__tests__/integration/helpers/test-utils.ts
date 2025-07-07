@@ -40,10 +40,10 @@ export class TestUtils {
       update: { role, isActive },
       create: {
         email,
-        name: `${role} User`,
         firstName: role,
         lastName: 'User',
         role,
+        hashedPassword: 'test-hashed-password',
         isActive,
       },
     });
