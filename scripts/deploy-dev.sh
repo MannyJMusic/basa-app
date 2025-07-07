@@ -88,6 +88,11 @@ fi
 # Pull latest changes
 log "📥 Pulling latest changes from $BRANCH branch..."
 if [ -d ".git" ]; then
+    # Fix Git permissions and ownership
+    log "🔧 Fixing Git permissions..."
+    sudo chown -R $USER:$USER .git 2>/dev/null || true
+    sudo chmod -R 755 .git 2>/dev/null || true
+    
     # Ensure Git ownership is properly configured
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
     
@@ -97,8 +102,8 @@ if [ -d ".git" ]; then
     
     # Check if we have local changes that need to be handled
     if ! git diff-index --quiet HEAD --; then
-        log "⚠️ Local changes detected, stashing them..."
-        git stash
+        log "⚠️ Local changes detected, resetting them..."
+        git reset --hard HEAD
     fi
     
     # Reset to match remote branch exactly

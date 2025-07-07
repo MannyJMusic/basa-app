@@ -164,6 +164,10 @@ jobs:
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-dev
           
+          # Fix Git permissions first
+          sudo chown -R $USER:$USER .git 2>/dev/null || true
+          sudo chmod -R 755 .git 2>/dev/null || true
+          
           # Pull latest changes
           git fetch origin
           git reset --hard origin/dev
