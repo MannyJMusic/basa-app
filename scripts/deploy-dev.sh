@@ -114,7 +114,7 @@ else
     
     # Clone to temporary location
     cd /tmp
-    git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git temp_repo
+    git clone -b $BRANCH git@github.com:MannyJMusic/basa-app.git temp_repo
     
     # Move back and replace everything except important files
     cd "$APP_DIR"
