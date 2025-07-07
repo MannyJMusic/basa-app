@@ -5,6 +5,13 @@ on:
     branches: [main, dev]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests and deploy directly'
+        required: false
+        default: false
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
@@ -202,16 +209,52 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     environment: production
+
+  # Direct Production Deployment (Skip Tests)
+  deploy-prod-direct:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true) ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[skip-tests]'))
+    environment: production
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
       with:
-        name: build-files
-        path: ./
+        version: 9.12.2
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: |
+        echo "Node version: $(node --version)"
+        echo "PNPM version: $(pnpm --version)"
+        echo "Installing dependencies..."
+        pnpm install --frozen-lockfile
+        echo "Dependencies installed successfully"
+
+    - name: Generate Prisma client
+      run: pnpm prisma generate
+      env:
+        PRISMA_CLIENT_ENGINE_TYPE: binary
+        PRISMA_QUERY_ENGINE_TYPE: binary
+
+    - name: Build application
+      run: |
+        echo "Building application..."
+        pnpm build
+      env:
+        NODE_ENV: production
+        NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+        NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
 
     - name: Setup SSH
       uses: webfactory/ssh-agent@v0.8.0
@@ -225,7 +268,7 @@ jobs:
 
     - name: Deploy to Production
       run: |
-        echo "🚀 Starting production deployment..."
+        echo "🚀 Starting direct production deployment (tests skipped)..."
         
         # SSH into production server and run deployment
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
