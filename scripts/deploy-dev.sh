@@ -95,8 +95,15 @@ if [ -d ".git" ]; then
     log "🔍 Checking .git directory contents..."
     ls -la .git/
     
-    # Ensure Git ownership is properly configured
+    # Fix Git configuration
+    log "🔧 Fixing Git configuration..."
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+    git config --global --add safe.directory "/opt/basa-app-dev" 2>/dev/null || true
+    
+    # Try to reinitialize the repository
+    log "🔄 Reinitializing Git repository..."
+    git init
+    git remote add origin git@github.com:MannyJMusic/basa-app.git 2>/dev/null || git remote set-url origin git@github.com:MannyJMusic/basa-app.git
     
     # Handle any local changes or divergent branches
     log "🔄 Fetching latest changes..."
