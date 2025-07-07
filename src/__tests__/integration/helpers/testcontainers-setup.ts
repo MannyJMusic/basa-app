@@ -225,7 +225,6 @@ export default class TestcontainersSetup {
           });
         }
       }
-      }
 
       // Generate Prisma client
       execSync('npx prisma generate', {
