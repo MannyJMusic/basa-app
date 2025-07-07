@@ -79,10 +79,10 @@ cd "$APP_DIR"
 log "📍 Current directory: $(pwd)"
 log "👤 Current user: $(whoami)"
 
-# Backup current environment file if it exists
+# Clean up old backups (older than 1 week)
 if [ -f "$ENV_FILE" ]; then
-    log "💾 Backing up current environment file..."
-    cp "$ENV_FILE" "${ENV_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
+    log "🧹 Cleaning up old backups..."
+    find . -name "${ENV_FILE}.backup.*" -type f -mtime +7 -delete 2>/dev/null || true
 fi
 
 # Pull latest changes
