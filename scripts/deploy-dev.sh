@@ -87,7 +87,7 @@ fi
 
 # Pull latest changes
 log "📥 Pulling latest changes from $BRANCH branch..."
-if [ -d ".git" ]; then
+if [ -d ".git" ] && git rev-parse --git-dir > /dev/null 2>&1; then
     # Ensure Git ownership is properly configured
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
     
@@ -105,6 +105,8 @@ if [ -d ".git" ]; then
     log "🔄 Resetting to match remote branch..."
     git reset --hard origin/$BRANCH
 else
+    log "📥 Git repository not found or corrupted, cloning fresh..."
+    rm -rf .git 2>/dev/null || true
     git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git .
 fi
 
