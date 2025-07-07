@@ -112,9 +112,18 @@ else
         cp "$ENV_FILE" /tmp/env_backup
     fi
     
-    # Remove corrupted git and clone fresh
+    # Clone to temporary location
+    cd /tmp
+    git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git temp_repo
+    
+    # Move back and replace everything except important files
+    cd "$APP_DIR"
     rm -rf .git 2>/dev/null || true
-    git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git .
+    cp -r /tmp/temp_repo/* .
+    cp -r /tmp/temp_repo/.git .
+    
+    # Clean up temp directory
+    rm -rf /tmp/temp_repo
     
     # Restore important files
     if [ -f /tmp/env_backup ]; then
