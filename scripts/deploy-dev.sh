@@ -105,26 +105,26 @@ if [ -d ".git" ] && git rev-parse --git-dir > /dev/null 2>&1; then
     log "🔄 Resetting to match remote branch..."
     git reset --hard origin/$BRANCH
 else
-    log "📥 Git repository not found or corrupted, re-cloning..."
-    # Save important files
-    if [ -f "$ENV_FILE" ]; then
-        log "💾 Preserving environment file..."
-        cp "$ENV_FILE" /tmp/env_backup
-    fi
-    
-    # Remove everything and clone fresh
-    cd /opt
-    sudo rm -rf basa-app-dev
-    git clone -b $BRANCH git@github.com:MannyJMusic/basa-app.git basa-app-dev
-    
-    # Move back to the app directory
-    cd "$APP_DIR"
-    
-    # Restore important files
-    if [ -f /tmp/env_backup ]; then
-        log "💾 Restoring environment file..."
-        cp /tmp/env_backup "$ENV_FILE"
-        rm /tmp/env_backup
+    log "📥 Git repository not found or corrupted, attempting to fix..."
+    # Try to fix the repository without removing everything
+    if [ -d ".git" ]; then
+        log "🔧 Attempting to fix existing Git repository..."
+        rm -rf .git/objects/* 2>/dev/null || true
+        rm -rf .git/refs/* 2>/dev/null || true
+        rm -f .git/index 2>/dev/null || true
+        rm -f .git/HEAD 2>/dev/null || true
+        rm -f .git/FETCH_HEAD 2>/dev/null || true
+        rm -f .git/MERGE_HEAD 2>/dev/null || true
+        rm -f .git/REBASE_HEAD 2>/dev/null || true
+        
+        # Try to reinitialize the repository
+        git init
+        git remote add origin git@github.com:MannyJMusic/basa-app.git
+        git fetch origin
+        git checkout -b $BRANCH origin/$BRANCH
+    else
+        log "❌ Git repository not found. Please ensure the repository is properly cloned."
+        exit 1
     fi
 fi
 
