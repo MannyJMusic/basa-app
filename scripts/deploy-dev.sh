@@ -102,7 +102,7 @@ if [ -d ".git" ]; then
     
     # Try to use the existing repository directly
     log "🔄 Using existing Git repository..."
-    git remote add origin git@github.com:MannyJMusic/basa-app.git 2>/dev/null || git remote set-url origin git@github.com:MannyJMusic/basa-app.git
+    git remote add origin https://github.com/MannyJMusic/basa-app.git 2>/dev/null || git remote set-url origin https://github.com/MannyJMusic/basa-app.git
     
     # Handle any local changes or divergent branches
     log "🔄 Fetching latest changes..."
