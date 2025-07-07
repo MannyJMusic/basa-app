@@ -87,7 +87,7 @@ fi
 
 # Pull latest changes
 log "📥 Pulling latest changes from $BRANCH branch..."
-if [ -d ".git" ] && git rev-parse --git-dir > /dev/null 2>&1; then
+if [ -d ".git" ]; then
     # Ensure Git ownership is properly configured
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
     
@@ -105,37 +105,8 @@ if [ -d ".git" ] && git rev-parse --git-dir > /dev/null 2>&1; then
     log "🔄 Resetting to match remote branch..."
     git reset --hard origin/$BRANCH
 else
-    log "📥 Git repository not found or corrupted, cloning fresh..."
-    # Save important files
-    if [ -f "$ENV_FILE" ]; then
-        log "💾 Preserving environment file..."
-        cp "$ENV_FILE" /tmp/env_backup
-    fi
-    
-    # Add GitHub to known hosts
-    log "🔑 Adding GitHub to known hosts..."
-    mkdir -p ~/.ssh
-    ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-    
-    # Clone to temporary location
-    cd /tmp
-    git clone -b $BRANCH git@github.com:MannyJMusic/basa-app.git temp_repo
-    
-    # Move back and replace everything except important files
-    cd "$APP_DIR"
-    rm -rf .git 2>/dev/null || true
-    cp -r /tmp/temp_repo/* .
-    cp -r /tmp/temp_repo/.git .
-    
-    # Clean up temp directory
-    rm -rf /tmp/temp_repo
-    
-    # Restore important files
-    if [ -f /tmp/env_backup ]; then
-        log "💾 Restoring environment file..."
-        cp /tmp/env_backup "$ENV_FILE"
-        rm /tmp/env_backup
-    fi
+    log "❌ Git repository not found. Please ensure the repository is properly cloned."
+    exit 1
 fi
 
 
