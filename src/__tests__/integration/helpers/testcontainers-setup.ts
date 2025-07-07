@@ -75,25 +75,22 @@ export default class TestcontainersSetup {
       process.env.PRISMA_CLIENT_ENGINE_TYPE = 'binary';
       process.env.PRISMA_QUERY_ENGINE_TYPE = 'binary';
       
-      // Regenerate Prisma client to ensure correct engine type
-      try {
-        console.log('🔧 Regenerating Prisma client...');
-        execSync('npx prisma generate', {
-          stdio: 'inherit',
-          env: { 
-            ...process.env, 
-            DATABASE_URL: databaseUrl,
-            PRISMA_CLIENT_ENGINE_TYPE: 'binary',
-            PRISMA_QUERY_ENGINE_TYPE: 'binary'
-          },
-          cwd: process.cwd(),
-        });
-        console.log('✅ Prisma client regenerated successfully');
-      } catch (error) {
-        console.warn('Failed to regenerate Prisma client:', error);
-      }
+      // Don't regenerate Prisma client here - wait until after migrations
+      console.log('⏳ Prisma client will be regenerated after migrations...');
       
-      // Create Prisma client with explicit configuration
+      // Run migrations on the shared database first
+      await this.runMigrations(databaseUrl);
+      
+      // Create Prisma client with explicit configuration after migrations
+      console.log('🔧 Creating Prisma client with updated schema...');
+      
+      // Clear Node.js module cache to ensure fresh Prisma client
+      Object.keys(require.cache).forEach(key => {
+        if (key.includes('@prisma/client')) {
+          delete require.cache[key];
+        }
+      });
+      
       this.sharedPrisma = new PrismaClient({
         datasources: {
           db: {
@@ -102,9 +99,7 @@ export default class TestcontainersSetup {
         },
         log: ['error'],
       });
-
-      // Run migrations on the shared database
-      await this.runMigrations(databaseUrl);
+      console.log('✅ Prisma client created successfully');
     }
 
     return {
@@ -226,12 +221,21 @@ export default class TestcontainersSetup {
         }
       }
 
-      // Generate Prisma client
+      // Clear Prisma cache and regenerate client after schema changes
+      console.log('🧹 Clearing Prisma cache...');
+      try {
+        execSync('rm -rf node_modules/.prisma', { stdio: 'pipe' });
+      } catch (error) {
+        // Ignore errors if cache doesn't exist
+      }
+      
+      console.log('🔧 Regenerating Prisma client after schema changes...');
       execSync('npx prisma generate', {
         stdio: 'inherit',
         env: { ...process.env, DATABASE_URL: databaseUrl },
         cwd: process.cwd(),
       });
+      console.log('✅ Prisma client regenerated successfully');
     } catch (error) {
       console.error('Failed to run migrations:', error);
       // Don't throw error, just log it and continue
