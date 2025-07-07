@@ -1,5 +1,4 @@
 import { TestUtils, withTestDatabase, withEmptyTestDatabase } from './helpers/test-utils';
-import { PrismaClient } from '@prisma/client';
 
 describe('Database Integration Tests', () => {
   describe('User Management', () => {

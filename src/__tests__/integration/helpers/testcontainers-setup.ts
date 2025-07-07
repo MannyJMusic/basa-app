@@ -145,7 +145,7 @@ export default class TestcontainersSetup {
   /**
    * Clean the database by truncating all tables (faster than recreating)
    */
-  private async cleanDatabase(prisma: PrismaClient): Promise<void> {
+  private async cleanDatabase(prisma: any): Promise<void> {
     try {
       // Disable foreign key checks temporarily
       await prisma.$executeRaw`SET session_replication_role = replica;`;
@@ -246,7 +246,7 @@ export default class TestcontainersSetup {
   /**
    * Seed the test database with sample data
    */
-  private async seedTestDatabase(prisma: PrismaClient): Promise<void> {
+  private async seedTestDatabase(prisma: any): Promise<void> {
     try {
       // Create test users
       const testUser = await prisma.user.upsert({
