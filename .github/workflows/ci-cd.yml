@@ -164,6 +164,9 @@ jobs:
         ssh -A ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-dev
           
+          # Set up Git to use HTTPS
+          git remote set-url origin https://github.com/MannyJMusic/basa-app.git
+          
           # Pull latest changes
           git fetch origin
           git reset --hard origin/dev
