@@ -77,8 +77,19 @@ cd "$APP_DIR"
 
 # Fix all permissions for the entire directory
 log "🔧 Fixing directory permissions..."
-sudo chown -R $USER:$USER "$APP_DIR" 2>/dev/null || true
-sudo chmod -R 755 "$APP_DIR" 2>/dev/null || true
+if sudo chown -R $USER:$USER "$APP_DIR" 2>/dev/null; then
+    log "✅ Directory ownership fixed"
+else
+    log "⚠️ Could not change directory ownership, trying alternative approach..."
+    # Try to fix permissions without changing ownership
+    sudo chmod -R 777 "$APP_DIR" 2>/dev/null || true
+fi
+
+if sudo chmod -R 755 "$APP_DIR" 2>/dev/null; then
+    log "✅ Directory permissions fixed"
+else
+    log "⚠️ Could not change directory permissions"
+fi
 
 # Verify we're in the right directory
 log "📍 Current directory: $(pwd)"
@@ -87,7 +98,11 @@ log "👤 Current user: $(whoami)"
 # Backup current environment file if it exists
 if [ -f "$ENV_FILE" ]; then
     log "💾 Backing up current environment file..."
-    cp "$ENV_FILE" "${ENV_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
+    if cp "$ENV_FILE" "${ENV_FILE}.backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null; then
+        log "✅ Environment file backed up"
+    else
+        log "⚠️ Could not create backup, continuing without backup..."
+    fi
 fi
 
 # Pull latest changes
