@@ -106,8 +106,22 @@ if [ -d ".git" ] && git rev-parse --git-dir > /dev/null 2>&1; then
     git reset --hard origin/$BRANCH
 else
     log "📥 Git repository not found or corrupted, cloning fresh..."
+    # Save important files
+    if [ -f "$ENV_FILE" ]; then
+        log "💾 Preserving environment file..."
+        cp "$ENV_FILE" /tmp/env_backup
+    fi
+    
+    # Remove corrupted git and clone fresh
     rm -rf .git 2>/dev/null || true
     git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git .
+    
+    # Restore important files
+    if [ -f /tmp/env_backup ]; then
+        log "💾 Restoring environment file..."
+        cp /tmp/env_backup "$ENV_FILE"
+        rm /tmp/env_backup
+    fi
 fi
 
 
