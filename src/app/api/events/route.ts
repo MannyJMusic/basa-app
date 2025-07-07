@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Add basic organizer info separately to avoid relation issues
-    const eventsWithOrganizer = events.map((event) => {
+    const eventsWithOrganizer = events.map((event: any) => {
       return {
         ...event,
         organizer: null, // Skip organizer for now to isolate the issue
@@ -244,11 +244,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if organizer exists
-    const organizer = await prisma.member.findUnique({
+    const organizerCheck = await prisma.member.findUnique({
       where: { id: validatedData.organizerId },
     })
 
-    if (!organizer) {
+    if (!organizerCheck) {
       return NextResponse.json(
         { error: "Organizer not found" },
         { status: 400 }
