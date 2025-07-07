@@ -77,6 +77,7 @@ export default class TestcontainersSetup {
       
       // Regenerate Prisma client to ensure correct engine type
       try {
+        console.log('🔧 Regenerating Prisma client...');
         execSync('npx prisma generate', {
           stdio: 'inherit',
           env: { 
@@ -87,6 +88,7 @@ export default class TestcontainersSetup {
           },
           cwd: process.cwd(),
         });
+        console.log('✅ Prisma client regenerated successfully');
       } catch (error) {
         console.warn('Failed to regenerate Prisma client:', error);
       }
@@ -183,21 +185,46 @@ export default class TestcontainersSetup {
       // Set environment variable for Prisma
       process.env.DATABASE_URL = databaseUrl;
       
-      // Run migrations with better error handling
-      try {
-        execSync('npx prisma migrate deploy', {
-          stdio: 'inherit',
-          env: { ...process.env, DATABASE_URL: databaseUrl },
-          cwd: process.cwd(),
-        });
-      } catch (migrationError) {
-        console.warn('Migration deploy failed, trying reset:', migrationError);
-        // If migrate deploy fails, try reset
-        execSync('npx prisma migrate reset --force', {
-          stdio: 'inherit',
-          env: { ...process.env, DATABASE_URL: databaseUrl },
-          cwd: process.cwd(),
-        });
+      // Always start with a fresh schema in CI environment
+      const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+      
+      if (isCI) {
+        console.log('🔄 CI environment detected - forcing fresh schema...');
+        try {
+          // Force reset the database schema
+          execSync('npx prisma migrate reset --force --skip-seed', {
+            stdio: 'inherit',
+            env: { ...process.env, DATABASE_URL: databaseUrl },
+            cwd: process.cwd(),
+          });
+          console.log('✅ Database schema reset successfully');
+        } catch (resetError) {
+          console.warn('Schema reset failed, trying deploy:', resetError);
+          // Fall back to deploy if reset fails
+          execSync('npx prisma migrate deploy', {
+            stdio: 'inherit',
+            env: { ...process.env, DATABASE_URL: databaseUrl },
+            cwd: process.cwd(),
+          });
+        }
+      } else {
+        // For local development, try deploy first, then reset if needed
+        try {
+          execSync('npx prisma migrate deploy', {
+            stdio: 'inherit',
+            env: { ...process.env, DATABASE_URL: databaseUrl },
+            cwd: process.cwd(),
+          });
+        } catch (migrationError) {
+          console.warn('Migration deploy failed, trying reset:', migrationError);
+          // If migrate deploy fails, try reset
+          execSync('npx prisma migrate reset --force', {
+            stdio: 'inherit',
+            env: { ...process.env, DATABASE_URL: databaseUrl },
+            cwd: process.cwd(),
+          });
+        }
+      }
       }
 
       // Generate Prisma client

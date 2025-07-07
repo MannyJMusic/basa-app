@@ -89,7 +89,10 @@ jobs:
         echo "NODE_ENV=test" >> .env.test
 
     - name: Generate Prisma client
-      run: pnpm prisma generate
+      run: |
+        echo "🔧 Generating Prisma client..."
+        pnpm prisma generate
+        echo "✅ Prisma client generated successfully"
       env:
         PRISMA_CLIENT_ENGINE_TYPE: binary
         PRISMA_QUERY_ENGINE_TYPE: binary
@@ -106,6 +109,18 @@ jobs:
         PRISMA_CLIENT_ENGINE_TYPE: binary
         PRISMA_QUERY_ENGINE_TYPE: binary
 
+    - name: Clean Docker environment (if available)
+      run: |
+        echo "🧹 Cleaning Docker environment..."
+        if command -v docker &> /dev/null; then
+          echo "✅ Docker is available, cleaning containers and volumes..."
+          docker container prune -f || echo "⚠️  Could not prune containers"
+          docker volume prune -f || echo "⚠️  Could not prune volumes"
+          docker system prune -f || echo "⚠️  Could not prune system"
+        else
+          echo "⚠️  Docker is not available on this runner"
+        fi
+
     - name: Run comprehensive integration tests
       run: |
         echo "🧪 Starting comprehensive integration tests..."
@@ -117,6 +132,12 @@ jobs:
           echo "📊 Running tests with local Testcontainers..."
           echo "   Note: This may fail if Docker is not available on the runner"
         fi
+        
+        # Force clean test environment
+        echo "🧹 Forcing clean test environment..."
+        rm -rf node_modules/.cache || true
+        rm -rf .next || true
+        
         pnpm test:integration
       env:
         NODE_ENV: test
