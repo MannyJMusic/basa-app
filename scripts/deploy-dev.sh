@@ -87,7 +87,14 @@ fi
 
 # Pull latest changes
 log "📥 Pulling latest changes from $BRANCH branch..."
+log "🔍 Checking directory contents..."
+ls -la
+
 if [ -d ".git" ]; then
+    log "✅ .git directory found"
+    log "🔍 Checking .git directory contents..."
+    ls -la .git/
+    
     # Ensure Git ownership is properly configured
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
     
@@ -105,6 +112,9 @@ if [ -d ".git" ]; then
     log "🔄 Resetting to match remote branch..."
     git reset --hard origin/$BRANCH
 else
+    log "❌ .git directory not found"
+    log "🔍 Current directory contents:"
+    ls -la
     log "❌ Git repository not found. Please ensure the repository is properly cloned."
     exit 1
 fi
