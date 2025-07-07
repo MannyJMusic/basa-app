@@ -180,7 +180,7 @@ jobs:
           sudo chmod 755 .git 2>/dev/null || true
           
           # Clean up problematic Git state files
-          rm -f .git/FETCH_HEAD .git/MERGE_HEAD .git/REBASE_HEAD 2>/dev/null || true
+          sudo rm -f .git/FETCH_HEAD .git/MERGE_HEAD .git/REBASE_HEAD 2>/dev/null || true
           
           # Pull latest changes
           git fetch origin

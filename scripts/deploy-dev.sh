@@ -123,9 +123,9 @@ if [ -d ".git" ] && [ -f ".git/config" ]; then
         
         # Try to clean up any problematic Git state
         log "🧹 Cleaning Git state..."
-        rm -f .git/FETCH_HEAD 2>/dev/null || true
-        rm -f .git/MERGE_HEAD 2>/dev/null || true
-        rm -f .git/REBASE_HEAD 2>/dev/null || true
+        sudo rm -f .git/FETCH_HEAD 2>/dev/null || true
+        sudo rm -f .git/MERGE_HEAD 2>/dev/null || true
+        sudo rm -f .git/REBASE_HEAD 2>/dev/null || true
     fi
     
     # Check if Git repository is still valid
@@ -145,7 +145,7 @@ if [ -d ".git" ] && [ -f ".git/config" ]; then
         git reset --hard origin/$BRANCH
     else
         log "⚠️ Git repository corrupted, re-cloning..."
-        rm -rf .git
+        sudo rm -rf .git
         git clone -b $BRANCH https://github.com/businessassociationsa/basa-app.git .
     fi
 else
