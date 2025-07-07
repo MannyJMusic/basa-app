@@ -100,27 +100,8 @@ if [ -d ".git" ]; then
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
     git config --global --add safe.directory "/opt/basa-app-dev" 2>/dev/null || true
     
-    # Clean up problematic Git files
-    log "🧹 Cleaning up problematic Git files..."
-    rm -rf .git/hooks/* 2>/dev/null || true
-    rm -f .git/hooks/pre-push.sample 2>/dev/null || true
-    rm -f .git/hooks/pre-commit.sample 2>/dev/null || true
-    rm -f .git/hooks/commit-msg.sample 2>/dev/null || true
-    rm -f .git/hooks/prepare-commit-msg.sample 2>/dev/null || true
-    rm -f .git/hooks/applypatch-msg.sample 2>/dev/null || true
-    rm -f .git/hooks/pre-applypatch.sample 2>/dev/null || true
-    rm -f .git/hooks/post-update.sample 2>/dev/null || true
-    rm -f .git/hooks/pre-merge-commit.sample 2>/dev/null || true
-    rm -f .git/hooks/fsmonitor-watchman.sample 2>/dev/null || true
-    rm -f .git/hooks/pre-receive.sample 2>/dev/null || true
-    rm -f .git/hooks/update.sample 2>/dev/null || true
-    rm -f .git/hooks/sendemail-validate.sample 2>/dev/null || true
-    rm -f .git/hooks/push-to-checkout.sample 2>/dev/null || true
-    rm -f .git/hooks/pre-rebase.sample 2>/dev/null || true
-    
-    # Try to reinitialize the repository
-    log "🔄 Reinitializing Git repository..."
-    git init
+    # Try to use the existing repository directly
+    log "🔄 Using existing Git repository..."
     git remote add origin git@github.com:MannyJMusic/basa-app.git 2>/dev/null || git remote set-url origin git@github.com:MannyJMusic/basa-app.git
     
     # Handle any local changes or divergent branches
