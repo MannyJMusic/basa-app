@@ -87,7 +87,7 @@ fi
 
 # Pull latest changes
 log "📥 Pulling latest changes from $BRANCH branch..."
-if [ -d ".git" ]; then
+if [ -d ".git" ] && git rev-parse --git-dir > /dev/null 2>&1; then
     # Ensure Git ownership is properly configured
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
     
@@ -105,8 +105,27 @@ if [ -d ".git" ]; then
     log "🔄 Resetting to match remote branch..."
     git reset --hard origin/$BRANCH
 else
-    log "❌ Git repository not found. Please ensure the repository is properly cloned."
-    exit 1
+    log "📥 Git repository not found or corrupted, re-cloning..."
+    # Save important files
+    if [ -f "$ENV_FILE" ]; then
+        log "💾 Preserving environment file..."
+        cp "$ENV_FILE" /tmp/env_backup
+    fi
+    
+    # Remove everything and clone fresh
+    cd /opt
+    rm -rf basa-app-dev
+    git clone -b $BRANCH git@github.com:MannyJMusic/basa-app.git basa-app-dev
+    
+    # Move back to the app directory
+    cd "$APP_DIR"
+    
+    # Restore important files
+    if [ -f /tmp/env_backup ]; then
+        log "💾 Restoring environment file..."
+        cp /tmp/env_backup "$ENV_FILE"
+        rm /tmp/env_backup
+    fi
 fi
 
 
