@@ -10,7 +10,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -30,7 +30,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: basa-app-dev
     ports:
-      - "3001:3000"
+      - "3000:3000"
     env_file:
       - .env.development
     environment:
