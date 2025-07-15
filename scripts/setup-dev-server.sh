@@ -2,6 +2,8 @@
 
 # BASA Development Server Setup Script
 # Run this on a fresh Ubuntu server for development deployment
+# This script sets up a DEDICATED VPS for development use only
+# DO NOT run this on the production server
 set -e
 
 APP_USER="basa"
@@ -165,9 +167,19 @@ echo "3. Run: deploy-basa-dev to deploy the app."
 echo "4. Set up SSL: sudo certbot --nginx -d dev.businessassociationsa.com"
 echo "5. Monitor: docker-compose -f $DEV_DIR/docker-compose.dev.yml ps"
 echo ""
+echo "🔧 CI/CD Configuration:"
+echo "  Add these GitHub secrets for development deployment:"
+echo "  - DEV_SERVER_HOST: $(hostname -I | awk '{print $1}')"
+echo "  - DEV_SERVER_USER: $APP_USER"
+echo "  - SSH_PRIVATE_KEY: Your SSH private key for deployment"
+echo "  - DEVELOPMENT_DOMAIN: https://dev.businessassociationsa.com"
+echo ""
 echo "Useful commands:"
 echo "  deploy-basa-dev    - Deploy development version"
 echo "  stop-basa-dev      - Stop development version"
 echo "  docker system prune - Clean up Docker resources"
 echo ""
-echo "Development directory: $DEV_DIR" 
+echo "Development directory: $DEV_DIR"
+echo ""
+echo "⚠️  IMPORTANT: This is a DEDICATED development server."
+echo "   Production deployments should use the separate production VPS." 
