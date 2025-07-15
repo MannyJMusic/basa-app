@@ -182,42 +182,63 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Add server to known hosts
+    - name: Add development server to known hosts
       run: |
         mkdir -p ~/.ssh
-        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+        ssh-keyscan -H ${{ secrets.DEV_SERVER_HOST }} >> ~/.ssh/known_hosts
 
     - name: Deploy to development server
       run: |
-        ssh -A ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+        echo "🚀 Starting development deployment..."
+        echo "📍 Target: ${{ secrets.DEV_SERVER_HOST }}"
+        echo "👤 User: ${{ secrets.DEV_SERVER_USER }}"
+        
+        ssh -A ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }} << 'EOF'
+          set -e
+          echo "📁 Navigating to development directory..."
           cd /opt/basa-app-dev
           
+          echo "🔧 Setting up Git..."
           # Set up Git to use HTTPS
           git remote set-url origin https://github.com/MannyJMusic/basa-app.git
           
+          echo "📥 Pulling latest changes..."
           # Pull latest changes
           git fetch origin
           git reset --hard origin/dev
           
+          echo "🔧 Making scripts executable..."
           # Make scripts executable
           chmod +x scripts/*.sh scripts/*.js
           
+          echo "🚀 Running development deployment..."
           # Deploy
           ./scripts/deploy-dev.sh
+          
+          echo "✅ Development deployment completed"
         EOF
 
     - name: Health check development
       run: |
+        echo "🔍 Starting development health check..."
+        echo "🌐 Checking: ${{ secrets.DEVELOPMENT_DOMAIN }}"
+        
         sleep 15
         
         for i in {1..10}; do
-          if timeout 5 curl -s -f "http://${{ secrets.SERVER_HOST }}:3001/api/health" > /dev/null; then
-            echo "✅ Health check passed"
+          echo "🔍 Health check attempt $i/10..."
+          
+          if timeout 5 curl -s -f "${{ secrets.DEVELOPMENT_DOMAIN }}/api/health" > /dev/null; then
+            echo "✅ Development health check passed"
             exit 0
           fi
           
           if [ $i -eq 10 ]; then
-            echo "❌ Health check failed"
+            echo "❌ Development health check failed after 10 attempts"
+            echo "📋 Checking container status..."
+            ssh ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }} "cd /opt/basa-app-dev && docker-compose -f docker-compose.dev.yml ps"
+            echo "📋 Recent container logs:"
+            ssh ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }} "cd /opt/basa-app-dev && docker-compose -f docker-compose.dev.yml logs --tail=20"
             exit 1
           fi
           
@@ -246,7 +267,7 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Add server to known hosts
+    - name: Add production server to known hosts
       run: |
         mkdir -p ~/.ssh
         ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
@@ -254,6 +275,8 @@ jobs:
     - name: Deploy to Production
       run: |
         echo "🚀 Starting production deployment..."
+        echo "📍 Target: ${{ secrets.SERVER_HOST }}"
+        echo "👤 User: ${{ secrets.SERVER_USER }}"
         
         # SSH into production server and run deployment
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
@@ -280,11 +303,14 @@ jobs:
             ls -la scripts/
             exit 1
           fi
+          
+          echo "✅ Production deployment completed"
         EOF
 
     - name: Health check production
       run: |
-        echo "🚀 Starting efficient health check..."
+        echo "🚀 Starting efficient production health check..."
+        echo "🌐 Checking: ${{ secrets.PRODUCTION_DOMAIN }}"
         
         # Quick initial check after 10 seconds
         echo "⏳ Initial check in 10 seconds..."
@@ -295,8 +321,8 @@ jobs:
           echo "🔍 Health check attempt $i/20..."
           
           # Try to connect with timeout
-          if timeout 5 curl -s -f "https://app.businessassociationsa.com/api/health" > /dev/null; then
-            echo "✅ Health check passed on attempt $i!"
+          if timeout 5 curl -s -f "${{ secrets.PRODUCTION_DOMAIN }}/api/health" > /dev/null; then
+            echo "✅ Production health check passed on attempt $i!"
             exit 0
           else
             echo "❌ Health check failed on attempt $i"
@@ -333,6 +359,7 @@ jobs:
     - name: Rollback on failure
       if: failure()
       run: |
+        echo "🔄 Rolling back production deployment..."
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-prod
           echo "Rolling back to previous version..."

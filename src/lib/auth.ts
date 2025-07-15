@@ -19,10 +19,10 @@ export const authConfig: NextAuthConfig = {
         clientId: process.env.GOOGLE_CLIENT_ID!,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       }),
-      LinkedInProvider({
-        clientId: process.env.LINKEDIN_CLIENT_ID!,
-        clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
-      }),
+      // LinkedInProvider({
+      //   clientId: process.env.LINKEDIN_CLIENT_ID!,
+      //   clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
+      // }),
       CredentialsProvider({
         name: "credentials",
         credentials: {
@@ -97,10 +97,14 @@ export const authConfig: NextAuthConfig = {
         return session
       },
       async redirect({ url, baseUrl }) {
+        console.log("Redirect callback - url:", url, "baseUrl:", baseUrl);
+        
         // If the url is relative, prefix it with the base url
         if (url.startsWith("/")) return `${baseUrl}${url}`
         // If the url is on the same origin, allow it
         else if (new URL(url).origin === baseUrl) return url
+        // For OAuth callbacks, redirect to dashboard
+        else if (url.includes("/api/auth/callback")) return `${baseUrl}/dashboard`
         // Otherwise, redirect to the dashboard
         return `${baseUrl}/dashboard`
       },

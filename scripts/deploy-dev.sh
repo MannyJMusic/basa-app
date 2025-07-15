@@ -11,7 +11,7 @@ APP_DIR="/opt/basa-app-dev"
 COMPOSE_FILE="docker-compose.dev.yml"
 ENV_FILE=".env.development"
 BRANCH="dev"
-PORT="3001"
+PORT="3000"
 
 # Colors for output
 RED='\033[0;31m'

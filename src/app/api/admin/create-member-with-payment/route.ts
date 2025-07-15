@@ -198,7 +198,12 @@ export async function POST(request: NextRequest) {
 
     // Send welcome email with generated password
     try {
-      const siteUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+      // Get the correct site URL based on environment
+      const siteUrl = process.env.NEXTAUTH_URL || 
+                     process.env.NEXT_PUBLIC_APP_URL || 
+                     (process.env.NODE_ENV === 'production' 
+                       ? 'https://app.businessassociationsa.com' 
+                       : 'https://dev.businessassociationsa.com')
       const activationUrl = `${siteUrl}/auth/verify-email?token=${verificationToken}&email=${user.email}`
       
       await sendAdminCreatedWelcomeEmail(
@@ -221,7 +226,12 @@ export async function POST(request: NextRequest) {
     if (paymentRecord) {
       try {
         const membershipTier = MEMBERSHIP_TIERS[memberData.membershipTier as keyof typeof MEMBERSHIP_TIERS]
-        const siteUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+        // Get the correct site URL based on environment
+        const siteUrl = process.env.NEXTAUTH_URL || 
+                       process.env.NEXT_PUBLIC_APP_URL || 
+                       (process.env.NODE_ENV === 'production' 
+                         ? 'https://app.businessassociationsa.com' 
+                         : 'https://dev.businessassociationsa.com')
         
         await sendPaymentReceiptEmail(
           user.email!,

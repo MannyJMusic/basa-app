@@ -8,9 +8,9 @@ console.log('🚀 Setting up BASA development environment...');
 
 try {
   // Check if .env.local exists
-  const envPath = path.join(process.cwd(), '.env.local');
+  const envPath = path.join(process.cwd(), '.env.development');
   if (!fs.existsSync(envPath)) {
-    console.log('⚠️  .env.local not found. Please create it from .env.local.example');
+    console.log('⚠️  .env.development not found. Please create it from .env.development.example');
     process.exit(1);
   }
 

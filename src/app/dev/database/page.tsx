@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/components/ui/use-toast"
 import { 
   Database, 
   Table, 
@@ -18,7 +19,12 @@ import {
   Download,
   Eye,
   RefreshCw,
-  Loader2
+  Loader2,
+  Plus,
+  Edit,
+  Trash2,
+  Save,
+  X
 } from "lucide-react"
 
 interface TableInfo {
@@ -42,6 +48,7 @@ interface ColumnConfig {
 }
 
 export default function DatabaseBrowserPage() {
+  const { toast } = useToast()
   const [tables, setTables] = useState<TableInfo[]>([])
   const [selectedTable, setSelectedTable] = useState<string>("")
   const [tableData, setTableData] = useState<TableData | null>(null)
@@ -52,6 +59,11 @@ export default function DatabaseBrowserPage() {
   const [visibleColumns, setVisibleColumns] = useState<string[]>([])
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
+  const [editingRecord, setEditingRecord] = useState<string | null>(null)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createFormData, setCreateFormData] = useState<any>({})
+  const [editFormData, setEditFormData] = useState<any>({})
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   const tableDefinitions: TableInfo[] = [
     { name: "User", count: 0, description: "User accounts and authentication", icon: "Users" },
@@ -70,19 +82,16 @@ export default function DatabaseBrowserPage() {
   const columnConfigs: Record<string, ColumnConfig[]> = {
     User: [
       { name: 'id', label: 'ID', defaultVisible: false, type: 'text' },
-      { name: 'email', label: 'Email', defaultVisible: true, type: 'email' },
       { name: 'firstName', label: 'First Name', defaultVisible: true, type: 'text' },
       { name: 'lastName', label: 'Last Name', defaultVisible: true, type: 'text' },
-      { name: 'name', label: 'Full Name', defaultVisible: false, type: 'text' },
+      { name: 'email', label: 'Email', defaultVisible: true, type: 'email' },
       { name: 'role', label: 'Role', defaultVisible: true, type: 'text' },
       { name: 'accountStatus', label: 'Status', defaultVisible: true, type: 'text' },
       { name: 'isActive', label: 'Active', defaultVisible: true, type: 'boolean' },
       { name: 'createdAt', label: 'Created', defaultVisible: true, type: 'date' },
       { name: 'lastLogin', label: 'Last Login', defaultVisible: false, type: 'date' },
-      { name: 'phone', label: 'Phone', defaultVisible: false, type: 'text' },
-      { name: 'newsletterSubscribed', label: 'Newsletter', defaultVisible: false, type: 'boolean' },
-      { name: 'membershipPaymentConfirmed', label: 'Payment Confirmed', defaultVisible: false, type: 'boolean' },
       { name: 'updatedAt', label: 'Updated', defaultVisible: false, type: 'date' },
+      { name: 'name', label: 'Full Name', defaultVisible: false, type: 'text' },
     ],
     Member: [
       { name: 'id', label: 'ID', defaultVisible: false, type: 'text' },
@@ -94,6 +103,8 @@ export default function DatabaseBrowserPage() {
       { name: 'membershipTier', label: 'Tier', defaultVisible: true, type: 'text' },
       { name: 'membershipStatus', label: 'Status', defaultVisible: true, type: 'text' },
       { name: 'joinedAt', label: 'Joined', defaultVisible: true, type: 'date' },
+      { name: 'newsletterSubscribed', label: 'Newsletter', defaultVisible: false, type: 'boolean' },
+      { name: 'membershipPaymentConfirmed', label: 'Payment Confirmed', defaultVisible: false, type: 'boolean' },
       { name: 'businessType', label: 'Business Type', defaultVisible: false, type: 'text' },
       { name: 'industry', label: 'Industry', defaultVisible: false, type: 'array' },
       { name: 'website', label: 'Website', defaultVisible: false, type: 'text' },
@@ -248,19 +259,51 @@ export default function DatabaseBrowserPage() {
     
     setLoading(true)
     try {
+      // Always include 'id' in the columns for edit functionality
+      const columnsToFetch = visibleColumns.includes('id') 
+        ? visibleColumns 
+        : ['id', ...visibleColumns]
+      
       const params = new URLSearchParams({
         table: selectedTable,
         page: currentPage.toString(),
         pageSize: pageSize.toString(),
         search: searchTerm,
-        columns: visibleColumns.join(',')
+        columns: columnsToFetch.join(',')
       })
       
       const response = await fetch(`/api/dev/database/data?${params}`)
       const data = await response.json()
       
       if (data.success) {
-        setTableData(data.data)
+        // For User table, check if each user has a related member record
+        if (selectedTable === 'User' && data.data.data) {
+          const usersWithMemberStatus = await Promise.all(
+            data.data.data.map(async (user: any) => {
+              try {
+                const memberCheckResponse = await fetch(`/api/dev/database/member-check?userId=${user.id}`)
+                const memberCheck = await memberCheckResponse.json()
+                return {
+                  ...user,
+                  hasMemberRecord: memberCheck.hasMember
+                }
+              } catch (error) {
+                console.error('Failed to check member status for user:', user.id, error)
+                return {
+                  ...user,
+                  hasMemberRecord: false
+                }
+              }
+            })
+          )
+          
+          setTableData({
+            ...data.data,
+            data: usersWithMemberStatus
+          })
+        } else {
+          setTableData(data.data)
+        }
       }
     } catch (error) {
       console.error('Failed to load table data:', error)
@@ -341,6 +384,295 @@ export default function DatabaseBrowserPage() {
     }
   }
 
+  const handleCreateRecord = async () => {
+    if (!selectedTable) return
+    
+    try {
+      const response = await fetch('/api/dev/database/records', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          table: selectedTable,
+          data: createFormData
+        })
+      })
+      
+      if (response.status === 401) {
+        toast({
+          title: "Access Denied",
+          description: "Admin privileges required to create database records.",
+          variant: "destructive",
+        })
+        setShowCreateForm(false)
+        setCreateFormData({})
+        return
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        toast({
+          title: "Record Created",
+          description: "The record has been created successfully.",
+        })
+        setShowCreateForm(false)
+        setCreateFormData({})
+        loadTableData()
+        loadTableCounts()
+      } else {
+        toast({
+          title: "Error Creating Record",
+          description: result.error || "An error occurred while creating the record.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Failed to create record:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create record. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleUpdateRecord = async (recordId: string) => {
+    if (!selectedTable) return
+    
+    try {
+      const response = await fetch(`/api/dev/database/records/${recordId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          table: selectedTable,
+          data: editFormData
+        })
+      })
+      
+      if (response.status === 401) {
+        toast({
+          title: "Access Denied",
+          description: "Admin privileges required to edit database records.",
+          variant: "destructive",
+        })
+        setEditingRecord(null)
+        setEditFormData({})
+        return
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        toast({
+          title: "Record Updated",
+          description: "The record has been updated successfully.",
+        })
+        setEditingRecord(null)
+        setEditFormData({})
+        loadTableData()
+      } else {
+        toast({
+          title: "Error Updating Record",
+          description: result.error || "An error occurred while updating the record.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Failed to update record:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update record. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteRecord = async (recordId: string) => {
+    if (!selectedTable) return
+    
+    try {
+      const response = await fetch(`/api/dev/database/records/${recordId}?table=${selectedTable}`, {
+        method: 'DELETE',
+      })
+      
+      if (response.status === 401) {
+        toast({
+          title: "Access Denied",
+          description: "Admin privileges required to delete database records.",
+          variant: "destructive",
+        })
+        setDeleteConfirmId(null)
+        return
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        toast({
+          title: "Record Deleted",
+          description: "The record has been deleted successfully.",
+        })
+        setDeleteConfirmId(null)
+        loadTableData()
+        loadTableCounts()
+      } else {
+        toast({
+          title: "Error Deleting Record",
+          description: result.error || "An error occurred while deleting the record.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Failed to delete record:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete record. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCreateMemberForUser = async (userId: string, userData: any) => {
+    try {
+      const memberData = {
+        userId: userId,
+        businessName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Business Name',
+        businessEmail: userData.email,
+        businessPhone: userData.phone || '',
+        membershipTier: 'MEETING_MEMBER',
+        membershipStatus: 'PENDING',
+        joinedAt: new Date().toISOString(),
+        showInDirectory: true,
+        allowContact: true,
+        showAddress: false,
+        newsletterSubscribed: false,
+        membershipPaymentConfirmed: false,
+      }
+
+      const response = await fetch('/api/dev/database/records', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          table: 'Member',
+          data: memberData
+        })
+      })
+      
+      if (response.status === 401) {
+        toast({
+          title: "Access Denied",
+          description: "Admin privileges required to create member records.",
+          variant: "destructive",
+        })
+        return
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        toast({
+          title: "Member Record Created",
+          description: "The member record has been created successfully.",
+        })
+        // Refresh the table data to update the hasMemberRecord status
+        loadTableData()
+        loadTableCounts() // Refresh table counts to show new member
+      } else {
+        toast({
+          title: "Error Creating Member Record",
+          description: result.error || "An error occurred while creating the member record.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Failed to create member record:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create member record. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const startEdit = (record: any) => {
+    setEditingRecord(String(record.id))
+    setEditFormData(record)
+  }
+
+  const cancelEdit = () => {
+    setEditingRecord(null)
+    setEditFormData({})
+  }
+
+  const handleInputChange = (field: string, value: any, isCreate: boolean = false) => {
+    if (isCreate) {
+      setCreateFormData(prev => ({ ...prev, [field]: value }))
+    } else {
+      setEditFormData(prev => ({ ...prev, [field]: value }))
+    }
+  }
+
+  const renderInputField = (column: ColumnConfig, value: any, isCreate: boolean = false) => {
+    const fieldValue = isCreate ? createFormData[column.name] : editFormData[column.name] ?? value
+    
+    switch (column.type) {
+      case 'boolean':
+        return (
+          <select
+            value={fieldValue ? 'true' : 'false'}
+            onChange={(e) => handleInputChange(column.name, e.target.value === 'true', isCreate)}
+            className="w-full px-2 py-1 border rounded text-sm"
+          >
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        )
+      case 'date':
+        return (
+          <input
+            type="datetime-local"
+            value={fieldValue ? new Date(fieldValue).toISOString().slice(0, 16) : ''}
+            onChange={(e) => handleInputChange(column.name, e.target.value, isCreate)}
+            className="w-full px-2 py-1 border rounded text-sm"
+          />
+        )
+      case 'number':
+        return (
+          <input
+            type="number"
+            value={fieldValue || ''}
+            onChange={(e) => handleInputChange(column.name, parseFloat(e.target.value) || 0, isCreate)}
+            className="w-full px-2 py-1 border rounded text-sm"
+          />
+        )
+      case 'array':
+        return (
+          <input
+            type="text"
+            value={Array.isArray(fieldValue) ? fieldValue.join(', ') : fieldValue || ''}
+            onChange={(e) => handleInputChange(column.name, e.target.value.split(',').map(s => s.trim()), isCreate)}
+            className="w-full px-2 py-1 border rounded text-sm"
+            placeholder="Comma-separated values"
+          />
+        )
+      default:
+        return (
+          <input
+            type="text"
+            value={fieldValue || ''}
+            onChange={(e) => handleInputChange(column.name, e.target.value, isCreate)}
+            className="w-full px-2 py-1 border rounded text-sm"
+          />
+        )
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -406,6 +738,14 @@ export default function DatabaseBrowserPage() {
                         </CardDescription>
                       </div>
                       <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowCreateForm(!showCreateForm)}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Record
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -477,6 +817,44 @@ export default function DatabaseBrowserPage() {
                       </div>
                     </div>
 
+                    {/* Create Record Form */}
+                    {showCreateForm && columnConfigs[selectedTable] && (
+                      <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium text-gray-900">Create New Record</h4>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowCreateForm(false)}
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Cancel
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {columnConfigs[selectedTable]
+                            .filter(col => col.name !== 'id' && col.name !== 'createdAt' && col.name !== 'updatedAt')
+                            .map((column) => (
+                              <div key={column.name} className="min-w-0">
+                                <Label className="text-sm font-medium text-gray-700 block mb-1">
+                                  {column.label}
+                                </Label>
+                                {renderInputField(column, null, true)}
+                              </div>
+                            ))}
+                        </div>
+                        <div className="mt-4 flex justify-end">
+                          <Button
+                            onClick={handleCreateRecord}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Save className="w-4 h-4 mr-2" />
+                            Create Record
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Column Selector */}
                     {showColumnSelector && columnConfigs[selectedTable] && (
                       <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
@@ -490,16 +868,16 @@ export default function DatabaseBrowserPage() {
                             Reset to Defaults
                           </Button>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                           {columnConfigs[selectedTable].map((column) => (
-                            <label key={column.name} className="flex items-center space-x-2 cursor-pointer">
+                            <label key={column.name} className="flex items-center space-x-2 cursor-pointer min-w-0">
                               <input
                                 type="checkbox"
                                 checked={visibleColumns.includes(column.name)}
                                 onChange={() => toggleColumn(column.name)}
-                                className="rounded border-gray-300"
+                                className="rounded border-gray-300 flex-shrink-0"
                               />
-                              <span className="text-sm text-gray-700">{column.label}</span>
+                              <span className="text-sm text-gray-700 truncate">{column.label}</span>
                             </label>
                           ))}
                         </div>
@@ -513,37 +891,109 @@ export default function DatabaseBrowserPage() {
                       </div>
                     ) : tableData ? (
                       <div className="overflow-x-auto">
-                        <table className="w-full border-collapse border border-gray-300">
-                          <thead>
-                            <tr className="bg-gray-100">
-                              {visibleColumns.map((columnName) => {
-                                const columnConfig = columnConfigs[selectedTable]?.find(col => col.name === columnName)
-                                return (
-                                  <th key={columnName} className="border border-gray-300 px-4 py-2 text-left">
-                                    {columnConfig?.label || columnName}
-                                  </th>
-                                )
-                              })}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {tableData.data.map((row, index) => (
-                              <tr key={index} className="hover:bg-gray-50">
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse border border-gray-300 min-w-full">
+                            <thead>
+                              <tr className="bg-gray-100">
                                 {visibleColumns.map((columnName) => {
                                   const columnConfig = columnConfigs[selectedTable]?.find(col => col.name === columnName)
-                                  const value = row[columnName]
                                   return (
-                                    <td key={columnName} className="border border-gray-300 px-4 py-2">
-                                      <div className="max-w-xs truncate">
-                                        {formatCellValue(value, columnConfig?.type || 'text')}
-                                      </div>
-                                    </td>
+                                    <th key={columnName} className="border border-gray-300 px-2 py-2 text-left text-sm font-medium whitespace-nowrap">
+                                      {columnConfig?.label || columnName}
+                                    </th>
                                   )
                                 })}
+                                <th className="border border-gray-300 px-2 py-2 text-left text-sm font-medium whitespace-nowrap">
+                                  Actions
+                                </th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {tableData.data.map((row, index) => (
+                                <tr key={index} className="hover:bg-gray-50">
+                                  {visibleColumns.map((columnName) => {
+                                    const columnConfig = columnConfigs[selectedTable]?.find(col => col.name === columnName)
+                                    const value = row[columnName]
+                                    
+                                    if (editingRecord === String(row.id)) {
+                                      return (
+                                        <td key={columnName} className="border border-gray-300 px-2 py-2">
+                                          <div className="min-w-0">
+                                            {renderInputField(columnConfig!, value, false)}
+                                          </div>
+                                        </td>
+                                      )
+                                    }
+                                    
+                                    return (
+                                      <td key={columnName} className="border border-gray-300 px-2 py-2">
+                                        <div className="max-w-32 truncate text-sm">
+                                          {formatCellValue(value, columnConfig?.type || 'text')}
+                                        </div>
+                                      </td>
+                                    )
+                                  })}
+                                  <td className="border border-gray-300 px-2 py-2">
+                                    {editingRecord === String(row.id) ? (
+                                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1">
+                                        <Button
+                                          size="sm"
+                                          onClick={() => handleUpdateRecord(row.id)}
+                                          className="bg-green-600 hover:bg-green-700 text-xs"
+                                        >
+                                          <Save className="w-3 h-3 mr-1" />
+                                          Save
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={cancelEdit}
+                                          className="text-xs"
+                                        >
+                                          <X className="w-3 h-3 mr-1" />
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => startEdit(row)}
+                                          className="text-xs"
+                                        >
+                                          <Edit className="w-3 h-3 mr-1" />
+                                          Edit
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => setDeleteConfirmId(row.id)}
+                                          className="text-red-600 hover:text-red-700 text-xs"
+                                        >
+                                          <Trash2 className="w-3 h-3 mr-1" />
+                                          Delete
+                                        </Button>
+                                        {selectedTable === 'User' && !row.hasMemberRecord && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleCreateMemberForUser(row.id, row)}
+                                            className="text-blue-600 hover:text-blue-700 text-xs"
+                                            title="Create Member record for this user"
+                                          >
+                                            <Users className="w-3 h-3 mr-1" />
+                                            Add Member
+                                          </Button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500">
@@ -701,6 +1151,35 @@ export default function DatabaseBrowserPage() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirmId && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Confirm Delete
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete this record? This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteConfirmId(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleDeleteRecord(deleteConfirmId)}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

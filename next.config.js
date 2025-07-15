@@ -14,6 +14,24 @@ const nextConfig = {
   env: {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET
+  },
+  // Allow development origins for HMR
+  allowedDevOrigins: [
+    'dev.businessassociationsa.com',
+    'localhost:3000',
+    'localhost:3001'
+  ],
+
+  // Configure webpack for better HMR support
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      // Enable HMR for development
+      config.watchOptions = {
+        poll: 1000,
+        aggregateTimeout: 300,
+      }
+    }
+    return config
   }
 };
 

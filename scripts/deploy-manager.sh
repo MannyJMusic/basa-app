@@ -460,11 +460,11 @@ main() {
                 ;;
             1)
                 log "🚀 Deploying Development Environment..."
-                bash scripts/deploy-dev.sh
+                bash ./scripts/deploy-dev.sh
                 ;;
             2)
                 log "🚀 Deploying Production Environment..."
-                bash scripts/deploy-prod.sh
+                bash ./scripts/deploy-prod.sh
                 ;;
             3)
                 log "🔍 Debugging Development Environment..."

@@ -6,17 +6,17 @@ services:
     env_file:
       - .env.development
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: basa_dev
+      POSTGRES_USER: basa_user
+      POSTGRES_PASSWORD: basa_password
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - basa-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U basa_user -d basa_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,18 +30,18 @@ services:
       dockerfile: Dockerfile.dev
     container_name: basa-app-dev
     ports:
-      - "3001:3000"
+      - "3000:3000"
     env_file:
       - .env.development
     environment:
       # Override DATABASE_URL to use the Docker PostgreSQL service
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://basa_user:basa_password@postgres:5432/basa_dev
       # Override NEXTAUTH_URL for Docker environment
-      - NEXTAUTH_URL=http://localhost:3001
+      NEXTAUTH_URL: https://dev.businessassociationsa.com
       # Override NEXT_PUBLIC_APP_URL for Docker environment
-      - NEXT_PUBLIC_APP_URL=http://localhost:3001
+      NEXT_PUBLIC_APP_URL: https://dev.businessassociationsa.com
       # Ensure we're in development mode
-      - NODE_ENV=development
+      NODE_ENV: development
     volumes:
       # Mount only the source code, let Docker handle node_modules and .next
       - ./src:/app/src:delegated

@@ -107,19 +107,28 @@ export async function GET(request: NextRequest) {
           take: pageSize
         })
       } else {
-        throw error
+        console.error('Database error in /api/dev/database/data:', error)
+        return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
       }
     }
 
     // Use provided columns or get all columns from first record
     const availableColumns = data.length > 0 ? Object.keys(data[0]) : []
     const selectedColumns = columns.length > 0 ? columns.filter(col => availableColumns.includes(col)) : availableColumns
+    // Filter data to only include selected columns
+    const filteredData = data.map(row => {
+      const filteredRow: any = {}
+      selectedColumns.forEach(col => {
+        filteredRow[col] = row[col]
+      })
+      return filteredRow
+    })
 
     return NextResponse.json({
       success: true,
       data: {
         columns: selectedColumns,
-        data,
+        data: filteredData,
         totalCount
       },
       pagination: {
