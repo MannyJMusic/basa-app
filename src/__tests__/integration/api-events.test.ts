@@ -7,6 +7,26 @@ jest.mock('@/lib/db', () => ({
   prisma: null, // Will be set dynamically in each test
 }));
 
+// Create a wrapper to inject the test Prisma client
+const createTestAPI = (testPrisma: any) => {
+  // Clear module cache
+  Object.keys(require.cache).forEach(key => {
+    if (key.includes('@/lib/db')) {
+      delete require.cache[key];
+    }
+  });
+  
+  // Update the global Prisma client
+  const globalForPrisma = globalThis as unknown as {
+    prisma: any | undefined
+  };
+  globalForPrisma.prisma = testPrisma;
+  
+  // Re-import the API routes with the updated Prisma client
+  const { GET, POST } = require('@/app/api/events/route');
+  return { GET, POST };
+};
+
 import { TestUtils, withTestDatabase } from './helpers/test-utils';
 import { GET, POST } from '@/app/api/events/route';
 import { auth } from '@/lib/auth';
@@ -47,8 +67,8 @@ describe('Events API Integration Tests', () => {
           },
         });
 
-        // Set the mocked Prisma client to use the test database
-        TestUtils.setMockedPrismaClient(database.prisma);
+        // Create API with test Prisma client
+        const { GET } = createTestAPI(database.prisma);
 
         // Call the API
         const response = await GET(req as any);
@@ -95,8 +115,8 @@ describe('Events API Integration Tests', () => {
           query: { category: 'Networking' },
         });
 
-        // Set the mocked Prisma client to use the test database
-        TestUtils.setMockedPrismaClient(database.prisma);
+        // Create API with test Prisma client
+        const { GET } = createTestAPI(database.prisma);
 
         const response = await GET(req as any);
 
@@ -130,8 +150,8 @@ describe('Events API Integration Tests', () => {
           query: { page: '1', limit: '2' },
         });
 
-        // Set the mocked Prisma client to use the test database
-        TestUtils.setMockedPrismaClient(database.prisma);
+        // Create API with test Prisma client
+        const { GET } = createTestAPI(database.prisma);
 
         const response = await GET(req as any);
 
@@ -188,8 +208,8 @@ describe('Events API Integration Tests', () => {
           },
         });
 
-        // Set the mocked Prisma client to use the test database
-        TestUtils.setMockedPrismaClient(database.prisma);
+        // Create API with test Prisma client
+        const { POST } = createTestAPI(database.prisma);
         
         // Mock auth to return admin user
         (auth as jest.Mock).mockResolvedValue({
@@ -234,8 +254,8 @@ describe('Events API Integration Tests', () => {
           },
         });
 
-        // Set the mocked Prisma client to use the test database
-        TestUtils.setMockedPrismaClient(database.prisma);
+        // Create API with test Prisma client
+        const { POST } = createTestAPI(database.prisma);
         
         // Mock auth to return admin user
         (auth as jest.Mock).mockResolvedValue({

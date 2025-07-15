@@ -28,6 +28,19 @@ export default class TestcontainersSetup {
     // Check if we're running in Testcontainers Cloud
     this.isCloudEnvironment = !!process.env.TC_CLOUD_TOKEN;
     
+    // Clear any existing global Prisma client
+    const globalForPrisma = globalThis as unknown as {
+      prisma: any | undefined
+    };
+    if (globalForPrisma.prisma) {
+      try {
+        globalForPrisma.prisma.$disconnect();
+      } catch (error) {
+        // Ignore disconnect errors
+      }
+      globalForPrisma.prisma = undefined;
+    }
+    
     if (this.isCloudEnvironment) {
       console.log('🌐 Using Testcontainers Cloud environment');
       console.log('   - Containers will be created in the cloud');
@@ -75,23 +88,22 @@ export default class TestcontainersSetup {
       process.env.PRISMA_CLIENT_ENGINE_TYPE = 'binary';
       process.env.PRISMA_QUERY_ENGINE_TYPE = 'binary';
       
-      // Regenerate Prisma client to ensure correct engine type
-      try {
-        execSync('npx prisma generate', {
-          stdio: 'inherit',
-          env: { 
-            ...process.env, 
-            DATABASE_URL: databaseUrl,
-            PRISMA_CLIENT_ENGINE_TYPE: 'binary',
-            PRISMA_QUERY_ENGINE_TYPE: 'binary'
-          },
-          cwd: process.cwd(),
-        });
-      } catch (error) {
-        console.warn('Failed to regenerate Prisma client:', error);
-      }
+      // Don't regenerate Prisma client here - wait until after migrations
+      console.log('⏳ Prisma client will be regenerated after migrations...');
       
-      // Create Prisma client with explicit configuration
+      // Run migrations on the shared database first
+      await this.runMigrations(databaseUrl);
+      
+      // Create Prisma client with explicit configuration after migrations
+      console.log('🔧 Creating Prisma client with updated schema...');
+      
+      // Clear Node.js module cache to ensure fresh Prisma client
+      Object.keys(require.cache).forEach(key => {
+        if (key.includes('@prisma/client') || key.includes('@/lib/db')) {
+          delete require.cache[key];
+        }
+      });
+      
       this.sharedPrisma = new PrismaClient({
         datasources: {
           db: {
@@ -100,9 +112,14 @@ export default class TestcontainersSetup {
         },
         log: ['error'],
       });
-
-      // Run migrations on the shared database
-      await this.runMigrations(databaseUrl);
+      
+      // Update the global Prisma client instance
+      const globalForPrisma = globalThis as unknown as {
+        prisma: PrismaClient | undefined
+      };
+      globalForPrisma.prisma = this.sharedPrisma;
+      
+      console.log('✅ Prisma client created successfully');
     }
 
     return {
@@ -148,7 +165,7 @@ export default class TestcontainersSetup {
   /**
    * Clean the database by truncating all tables (faster than recreating)
    */
-  private async cleanDatabase(prisma: PrismaClient): Promise<void> {
+  private async cleanDatabase(prisma: any): Promise<void> {
     try {
       // Disable foreign key checks temporarily
       await prisma.$executeRaw`SET session_replication_role = replica;`;
@@ -183,29 +200,62 @@ export default class TestcontainersSetup {
       // Set environment variable for Prisma
       process.env.DATABASE_URL = databaseUrl;
       
-      // Run migrations with better error handling
-      try {
-        execSync('npx prisma migrate deploy', {
-          stdio: 'inherit',
-          env: { ...process.env, DATABASE_URL: databaseUrl },
-          cwd: process.cwd(),
-        });
-      } catch (migrationError) {
-        console.warn('Migration deploy failed, trying reset:', migrationError);
-        // If migrate deploy fails, try reset
-        execSync('npx prisma migrate reset --force', {
-          stdio: 'inherit',
-          env: { ...process.env, DATABASE_URL: databaseUrl },
-          cwd: process.cwd(),
-        });
+      // Always start with a fresh schema in CI environment
+      const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+      
+      if (isCI) {
+        console.log('🔄 CI environment detected - forcing fresh schema...');
+        try {
+          // Force reset the database schema
+          execSync('npx prisma migrate reset --force --skip-seed', {
+            stdio: 'inherit',
+            env: { ...process.env, DATABASE_URL: databaseUrl },
+            cwd: process.cwd(),
+          });
+          console.log('✅ Database schema reset successfully');
+        } catch (resetError) {
+          console.warn('Schema reset failed, trying deploy:', resetError);
+          // Fall back to deploy if reset fails
+          execSync('npx prisma migrate deploy', {
+            stdio: 'inherit',
+            env: { ...process.env, DATABASE_URL: databaseUrl },
+            cwd: process.cwd(),
+          });
+        }
+      } else {
+        // For local development, try deploy first, then reset if needed
+        try {
+          execSync('npx prisma migrate deploy', {
+            stdio: 'inherit',
+            env: { ...process.env, DATABASE_URL: databaseUrl },
+            cwd: process.cwd(),
+          });
+        } catch (migrationError) {
+          console.warn('Migration deploy failed, trying reset:', migrationError);
+          // If migrate deploy fails, try reset
+          execSync('npx prisma migrate reset --force', {
+            stdio: 'inherit',
+            env: { ...process.env, DATABASE_URL: databaseUrl },
+            cwd: process.cwd(),
+          });
+        }
       }
 
-      // Generate Prisma client
+      // Clear Prisma cache and regenerate client after schema changes
+      console.log('🧹 Clearing Prisma cache...');
+      try {
+        execSync('rm -rf node_modules/.prisma', { stdio: 'pipe' });
+      } catch (error) {
+        // Ignore errors if cache doesn't exist
+      }
+      
+      console.log('🔧 Regenerating Prisma client after schema changes...');
       execSync('npx prisma generate', {
         stdio: 'inherit',
         env: { ...process.env, DATABASE_URL: databaseUrl },
         cwd: process.cwd(),
       });
+      console.log('✅ Prisma client regenerated successfully');
     } catch (error) {
       console.error('Failed to run migrations:', error);
       // Don't throw error, just log it and continue
@@ -216,7 +266,7 @@ export default class TestcontainersSetup {
   /**
    * Seed the test database with sample data
    */
-  private async seedTestDatabase(prisma: PrismaClient): Promise<void> {
+  private async seedTestDatabase(prisma: any): Promise<void> {
     try {
       // Create test users
       const testUser = await prisma.user.upsert({
@@ -224,10 +274,10 @@ export default class TestcontainersSetup {
         update: {},
         create: {
           email: 'test@example.com',
-          name: 'Test User',
           firstName: 'Test',
           lastName: 'User',
           role: 'ADMIN',
+          hashedPassword: 'test-hashed-password',
           isActive: true,
         },
       });
@@ -237,10 +287,10 @@ export default class TestcontainersSetup {
         update: {},
         create: {
           email: 'member@example.com',
-          name: 'Member User',
           firstName: 'Member',
           lastName: 'User',
           role: 'MEMBER',
+          hashedPassword: 'test-hashed-password',
           isActive: true,
         },
       });

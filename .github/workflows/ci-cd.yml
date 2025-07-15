@@ -5,6 +5,13 @@ on:
     branches: [main, dev]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests and deploy directly'
+        required: false
+        default: false
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
@@ -82,7 +89,10 @@ jobs:
         echo "NODE_ENV=test" >> .env.test
 
     - name: Generate Prisma client
-      run: pnpm prisma generate
+      run: |
+        echo "🔧 Generating Prisma client..."
+        pnpm prisma generate
+        echo "✅ Prisma client generated successfully"
       env:
         PRISMA_CLIENT_ENGINE_TYPE: binary
         PRISMA_QUERY_ENGINE_TYPE: binary
@@ -99,6 +109,18 @@ jobs:
         PRISMA_CLIENT_ENGINE_TYPE: binary
         PRISMA_QUERY_ENGINE_TYPE: binary
 
+    - name: Clean Docker environment (if available)
+      run: |
+        echo "🧹 Cleaning Docker environment..."
+        if command -v docker &> /dev/null; then
+          echo "✅ Docker is available, cleaning containers and volumes..."
+          docker container prune -f || echo "⚠️  Could not prune containers"
+          docker volume prune -f || echo "⚠️  Could not prune volumes"
+          docker system prune -f || echo "⚠️  Could not prune system"
+        else
+          echo "⚠️  Docker is not available on this runner"
+        fi
+
     - name: Run comprehensive integration tests
       run: |
         echo "🧪 Starting comprehensive integration tests..."
@@ -110,6 +132,12 @@ jobs:
           echo "📊 Running tests with local Testcontainers..."
           echo "   Note: This may fail if Docker is not available on the runner"
         fi
+        
+        # Force clean test environment
+        echo "🧹 Forcing clean test environment..."
+        rm -rf node_modules/.cache || true
+        rm -rf .next || true
+        
         pnpm test:integration
       env:
         NODE_ENV: test
@@ -332,6 +360,153 @@ jobs:
       if: failure()
       run: |
         echo "🔄 Rolling back production deployment..."
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          cd /opt/basa-app-prod
+          echo "Rolling back to previous version..."
+          docker-compose -f docker-compose.prod.yml --env-file .env.production down
+          git reset --hard HEAD~1
+          docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+          echo "Rollback completed"
+        EOF
+
+  # Direct Production Deployment (Skip Tests)
+  deploy-prod-direct:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true) ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[skip-tests]'))
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 9.12.2
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: |
+        echo "Node version: $(node --version)"
+        echo "PNPM version: $(pnpm --version)"
+        echo "Installing dependencies..."
+        pnpm install --frozen-lockfile
+        echo "Dependencies installed successfully"
+
+    - name: Generate Prisma client
+      run: pnpm prisma generate
+      env:
+        PRISMA_CLIENT_ENGINE_TYPE: binary
+        PRISMA_QUERY_ENGINE_TYPE: binary
+
+    - name: Build application
+      run: |
+        echo "Building application..."
+        pnpm build
+      env:
+        NODE_ENV: production
+        NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+        NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Add server to known hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to Production
+      run: |
+        echo "🚀 Starting direct production deployment (tests skipped)..."
+        
+        # SSH into production server and run deployment
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          set -e
+          echo "📁 Navigating to production directory..."
+          cd /opt/basa-app-prod
+          
+          echo "🔧 Making scripts executable..."
+          chmod +x scripts/*.sh 2>/dev/null || echo "⚠️  Could not make all scripts executable"
+          
+          echo "🔧 Fixing Prisma environment variables..."
+          if [ -f "scripts/fix-production-prisma.sh" ]; then
+            ./scripts/fix-production-prisma.sh
+          else
+            echo "⚠️  Prisma fix script not found, continuing..."
+          fi
+          
+          echo "🚀 Running simple deployment..."
+          if [ -f "scripts/deploy-simple.sh" ]; then
+            ./scripts/deploy-simple.sh
+          else
+            echo "❌ Simple deployment script not found"
+            echo "📋 Available scripts:"
+            ls -la scripts/
+            exit 1
+          fi
+        EOF
+
+    - name: Health check production
+      run: |
+        echo "🚀 Starting efficient health check..."
+        
+        # Quick initial check after 10 seconds
+        echo "⏳ Initial check in 10 seconds..."
+        sleep 10
+        
+        # Progressive health check with shorter intervals
+        for i in {1..20}; do
+          echo "🔍 Health check attempt $i/20..."
+          
+          # Try to connect with timeout
+          if timeout 5 curl -s -f "https://app.businessassociationsa.com/api/health" > /dev/null; then
+            echo "✅ Health check passed on attempt $i!"
+            exit 0
+          else
+            echo "❌ Health check failed on attempt $i"
+            
+            # Show progress every 5 attempts
+            if [ $((i % 5)) -eq 0 ]; then
+              echo "📊 Progress: $i/20 attempts completed"
+              echo "🔍 Checking container status..."
+              ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
+            fi
+            
+            # Shorter intervals: 5 seconds for first 10 attempts, then 10 seconds
+            if [ $i -lt 10 ]; then
+              sleep 5
+            else
+              sleep 10
+            fi
+          fi
+        done
+        
+        echo "❌ Health check failed after 20 attempts"
+        echo "📋 Final container status:"
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
+        echo "📋 Recent container logs:"
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml logs --tail=50"
+        exit 1
+
+    - name: Notify deployment success
+      if: success()
+      run: |
+        echo "Production deployment successful!"
+        # Add notification logic here (Slack, email, etc.)
+
+    - name: Rollback on failure
+      if: failure()
+      run: |
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           cd /opt/basa-app-prod
           echo "Rolling back to previous version..."

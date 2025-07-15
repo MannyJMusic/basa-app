@@ -1,4 +1,3 @@
-import { PrismaClient } from '@prisma/client';
 import TestcontainersSetup, { TestEnvironment } from './testcontainers-setup';
 
 /**
@@ -6,7 +5,7 @@ import TestcontainersSetup, { TestEnvironment } from './testcontainers-setup';
  */
 export class TestUtils {
   private static setup = TestcontainersSetup.getInstance();
-  private static activeClients: PrismaClient[] = [];
+  private static activeClients: any[] = [];
 
   /**
    * Create a test environment with seeded data
@@ -30,7 +29,7 @@ export class TestUtils {
    * Create a test user with specified role
    */
   static async createTestUser(
-    prisma: PrismaClient,
+    prisma: any,
     email: string,
     role: string = 'GUEST',
     isActive: boolean = true
@@ -40,10 +39,10 @@ export class TestUtils {
       update: { role, isActive },
       create: {
         email,
-        name: `${role} User`,
         firstName: role,
         lastName: 'User',
         role,
+        hashedPassword: 'test-hashed-password',
         isActive,
       },
     });
@@ -53,7 +52,7 @@ export class TestUtils {
    * Create a test member
    */
   static async createTestMember(
-    prisma: PrismaClient,
+    prisma: any,
     userId: string,
     businessName: string = 'Test Business'
   ) {
@@ -80,7 +79,7 @@ export class TestUtils {
    * Create a test event
    */
   static async createTestEvent(
-    prisma: PrismaClient,
+    prisma: any,
     organizerId: string,
     title: string = 'Test Event'
   ) {
@@ -115,7 +114,7 @@ export class TestUtils {
    * Create a test resource
    */
   static async createTestResource(
-    prisma: PrismaClient,
+    prisma: any,
     title: string = 'Test Resource',
     memberId?: string
   ) {
@@ -212,13 +211,19 @@ export class TestUtils {
   /**
    * Set the mocked Prisma client for API testing
    */
-  static setMockedPrismaClient(testPrisma: PrismaClient) {
-    const { prisma } = require('@/lib/db');
-    // Replace the mocked prisma with the test database client
-    Object.defineProperty(require('@/lib/db'), 'prisma', {
-      value: testPrisma,
-      writable: true,
+  static setMockedPrismaClient(testPrisma: any) {
+    // Clear the module cache for @/lib/db
+    Object.keys(require.cache).forEach(key => {
+      if (key.includes('@/lib/db')) {
+        delete require.cache[key];
+      }
     });
+    
+    // Update the global Prisma client instance
+    const globalForPrisma = globalThis as unknown as {
+      prisma: any | undefined
+    };
+    globalForPrisma.prisma = testPrisma;
   }
 
   /**
@@ -285,7 +290,7 @@ export class TestUtils {
    * Assert that a record exists in the database
    */
   static async assertRecordExists(
-    prisma: PrismaClient,
+    prisma: any,
     model: string,
     where: any
   ) {
@@ -300,7 +305,7 @@ export class TestUtils {
    * Assert that a record does not exist in the database
    */
   static async assertRecordNotExists(
-    prisma: PrismaClient,
+    prisma: any,
     model: string,
     where: any
   ) {
@@ -314,7 +319,7 @@ export class TestUtils {
    * Count records in a model
    */
   static async countRecords(
-    prisma: PrismaClient,
+    prisma: any,
     model: string,
     where: any = {}
   ) {

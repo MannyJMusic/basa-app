@@ -207,8 +207,8 @@ export async function POST(request: NextRequest) {
       const activationUrl = `${siteUrl}/auth/verify-email?token=${verificationToken}&email=${user.email}`
       
       await sendAdminCreatedWelcomeEmail(
-        user.email,
-        user.firstName,
+        user.email!,
+        user.firstName || 'Member',
         randomPassword,
         activationUrl,
         {
@@ -234,8 +234,8 @@ export async function POST(request: NextRequest) {
                          : 'https://dev.businessassociationsa.com')
         
         await sendPaymentReceiptEmail(
-          user.email,
-          user.firstName,
+          user.email!,
+          user.firstName || 'Member',
           {
             paymentId: paymentRecord.id,
             amount: paymentRecord.amount / 100, // Convert from cents
@@ -247,8 +247,8 @@ export async function POST(request: NextRequest) {
               name: membershipTier.name
             }],
             customerInfo: {
-              name: `${user.firstName} ${user.lastName}`,
-              email: user.email
+              name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'BASA Member',
+              email: user.email!
             },
             businessInfo: {
               businessName: user.member?.businessName || ''
