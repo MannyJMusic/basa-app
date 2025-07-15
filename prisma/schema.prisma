@@ -43,7 +43,6 @@ model User {
   firstName                  String?
   lastName                   String?
   hashedPassword             String?
-  password                   String?
   role                       String                 @default("GUEST")
   isActive                   Boolean                @default(true)
   lastLogin                  DateTime?
