@@ -390,7 +390,7 @@ async function main() {
           showInDirectory: memberData.showInDirectory,
           allowContact: memberData.allowContact,
           showAddress: memberData.showAddress,
-          newsletterSubscribed: false,
+          // newsletterSubscribed field removed - not in User model
           membershipPaymentConfirmed: true,
         },
       })

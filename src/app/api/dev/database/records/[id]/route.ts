@@ -86,7 +86,7 @@ export async function PUT(
         entityType: table.toUpperCase(),
         entityId: params.id,
         oldValues: existingRecord,
-        newValues: cleanData,
+        newValues: cleanData as any,
         timestamp: new Date(),
       },
     })

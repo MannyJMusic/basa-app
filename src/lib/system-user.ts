@@ -18,7 +18,7 @@ export async function getSystemUser() {
         name: 'System User',
         role: 'ADMIN',
         isActive: true,
-        newsletterSubscribed: false
+        // newsletterSubscribed field removed - not in User model
       }
     })
   }

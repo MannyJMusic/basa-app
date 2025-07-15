@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
     const availableColumns = data.length > 0 ? Object.keys(data[0]) : []
     const selectedColumns = columns.length > 0 ? columns.filter(col => availableColumns.includes(col)) : availableColumns
     // Filter data to only include selected columns
-    const filteredData = data.map(row => {
+    const filteredData = data.map((row: any) => {
       const filteredRow: any = {}
       selectedColumns.forEach(col => {
         filteredRow[col] = row[col]

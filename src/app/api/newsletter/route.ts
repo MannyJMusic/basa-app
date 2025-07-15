@@ -32,72 +32,90 @@ export async function POST(request: NextRequest) {
       
       switch (segment) {
         case "all":
-          const allUsers = await prisma.user.findMany({
+          const allMembers = await prisma.member.findMany({
             where: { 
-              isActive: true,
               newsletterSubscribed: true,
-              email: { not: null }
+              user: {
+                email: { not: null }
+              }
             },
-            select: { email: true, firstName: true }
+            include: {
+              user: {
+                select: { email: true, firstName: true }
+              }
+            }
           })
-          recipients = allUsers
-            .filter(user => user.email !== null)
-            .map(user => ({ 
-              email: user.email!, 
-              firstName: user.firstName || 'User' 
+          recipients = allMembers
+            .filter(member => member.user?.email !== null)
+            .map(member => ({ 
+              email: member.user!.email!, 
+              firstName: member.user!.firstName || 'User' 
             }))
           break
         case "active":
-          const activeUsers = await prisma.user.findMany({
+          const activeMembers = await prisma.member.findMany({
             where: { 
-              isActive: true,
               newsletterSubscribed: true,
-              email: { not: null },
-              lastLogin: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
+              user: {
+                email: { not: null },
+                lastLogin: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
+              }
             },
-            select: { email: true, firstName: true }
+            include: {
+              user: {
+                select: { email: true, firstName: true }
+              }
+            }
           })
-          recipients = activeUsers
-            .filter(user => user.email !== null)
-            .map(user => ({ 
-              email: user.email!, 
-              firstName: user.firstName || 'User' 
+          recipients = activeMembers
+            .filter(member => member.user?.email !== null)
+            .map(member => ({ 
+              email: member.user!.email!, 
+              firstName: member.user!.firstName || 'User' 
             }))
           break
         case "new":
-          const newUsers = await prisma.user.findMany({
+          const newMembers = await prisma.member.findMany({
             where: { 
-              isActive: true,
               newsletterSubscribed: true,
-              email: { not: null },
-              createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
+              user: {
+                email: { not: null },
+                createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
+              }
             },
-            select: { email: true, firstName: true }
+            include: {
+              user: {
+                select: { email: true, firstName: true }
+              }
+            }
           })
-          recipients = newUsers
-            .filter(user => user.email !== null)
-            .map(user => ({ 
-              email: user.email!, 
-              firstName: user.firstName || 'User' 
+          recipients = newMembers
+            .filter(member => member.user?.email !== null)
+            .map(member => ({ 
+              email: member.user!.email!, 
+              firstName: member.user!.firstName || 'User' 
             }))
           break
         case "premium":
-          const premiumUsers = await prisma.user.findMany({
+          const premiumMembers = await prisma.member.findMany({
             where: { 
-              isActive: true,
               newsletterSubscribed: true,
-              email: { not: null },
-              member: {
-                membershipTier: { in: ["PREMIUM", "VIP"] }
+              membershipTier: { in: ["PREMIUM", "VIP"] },
+              user: {
+                email: { not: null }
               }
             },
-            select: { email: true, firstName: true }
+            include: {
+              user: {
+                select: { email: true, firstName: true }
+              }
+            }
           })
-          recipients = premiumUsers
-            .filter(user => user.email !== null)
-            .map(user => ({ 
-              email: user.email!, 
-              firstName: user.firstName || 'User' 
+          recipients = premiumMembers
+            .filter(member => member.user?.email !== null)
+            .map(member => ({ 
+              email: member.user!.email!, 
+              firstName: member.user!.firstName || 'User' 
             }))
           break
       }
@@ -136,32 +154,49 @@ export async function POST(request: NextRequest) {
       
       // Check if already subscribed
       const existingUser = await prisma.user.findUnique({
-        where: { email }
+        where: { email },
+        include: { member: true }
       })
       
-      if (existingUser?.newsletterSubscribed) {
+      if (existingUser?.member?.newsletterSubscribed) {
         return NextResponse.json(
           { error: "Email is already subscribed to the newsletter" },
           { status: 400 }
         )
       }
       
-      // Create or update user subscription
+      // Create or update user and member subscription
       const user = await prisma.user.upsert({
         where: { email },
         update: {
-          newsletterSubscribed: true,
           firstName: firstName || existingUser?.firstName,
-          lastName: lastName || existingUser?.lastName
+          lastName: lastName || existingUser?.lastName,
+          member: {
+            upsert: {
+              create: {
+                newsletterSubscribed: true,
+                membershipStatus: "PENDING"
+              },
+              update: {
+                newsletterSubscribed: true
+              }
+            }
+          }
         },
         create: {
           email,
           firstName,
           lastName,
-          newsletterSubscribed: true,
           role: "MEMBER",
-          isActive: true
-        }
+          isActive: true,
+          member: {
+            create: {
+              newsletterSubscribed: true,
+              membershipStatus: "PENDING"
+            }
+          }
+        },
+        include: { member: true }
       })
       
       // Send welcome newsletter email
@@ -240,7 +275,8 @@ export async function DELETE(request: NextRequest) {
     
     // Unsubscribe from newsletter
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      include: { member: true }
     })
     
     if (!user) {
@@ -250,10 +286,12 @@ export async function DELETE(request: NextRequest) {
       )
     }
     
-    await prisma.user.update({
-      where: { email },
-      data: { newsletterSubscribed: false }
-    })
+    if (user.member) {
+      await prisma.member.update({
+        where: { id: user.member.id },
+        data: { newsletterSubscribed: false }
+      })
+    }
     
     // Get system user for audit log
     const systemUser = await getSystemUser()

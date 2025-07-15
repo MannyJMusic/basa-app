@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
         hashedPassword,
         firstName,
         lastName,
-        phone,
+        // phone field removed - not in User model
         role: "MEMBER",
         isActive: false,
         accountStatus: "PENDING_VERIFICATION",

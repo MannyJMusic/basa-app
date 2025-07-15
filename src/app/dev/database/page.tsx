@@ -612,9 +612,9 @@ export default function DatabaseBrowserPage() {
 
   const handleInputChange = (field: string, value: any, isCreate: boolean = false) => {
     if (isCreate) {
-      setCreateFormData(prev => ({ ...prev, [field]: value }))
+      setCreateFormData((prev: any) => ({ ...prev, [field]: value }))
     } else {
-      setEditFormData(prev => ({ ...prev, [field]: value }))
+              setEditFormData((prev: any) => ({ ...prev, [field]: value }))
     }
   }
 

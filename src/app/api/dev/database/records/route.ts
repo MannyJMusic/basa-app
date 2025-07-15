@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         action: 'CREATE_RECORD',
         entityType: table.toUpperCase(),
         entityId: result.id,
-        newValues: cleanData,
+        newValues: cleanData as any,
         timestamp: new Date(),
       },
     })

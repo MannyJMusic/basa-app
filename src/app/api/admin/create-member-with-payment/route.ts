@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         verificationToken: verificationToken,
         resetToken: null,
         resetTokenExpiry: null,
-        phone: memberData.phone || null,
+        // phone field removed - not in User model
         isActive: true, // Admin-created members should be active immediately
         member: {
           create: {
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         action: 'MEMBER_CREATED_BY_ADMIN',
         entityType: 'MEMBER',
-        entityId: user.member?.id || '',
+        entityId: user.id || '',
         oldValues: {},
         newValues: {
           email: user.email,
