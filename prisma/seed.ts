@@ -24,9 +24,6 @@ async function main() {
           role: 'ADMIN',
           isActive: true,
           accountStatus: 'ACTIVE',
-          verificationToken: null,
-          verificationTokenExpiry: null,
-          membershipPaymentConfirmed: true,
         },
       })
       console.log(`Created admin: ${email}`)
@@ -51,9 +48,6 @@ async function main() {
         role: 'GUEST',
         isActive: true,
         accountStatus: 'ACTIVE',
-        verificationToken: null,
-        verificationTokenExpiry: null,
-        membershipPaymentConfirmed: false,
       },
     })
     console.log('Created test guest user: guest@test.com (password: password123)')
@@ -369,9 +363,6 @@ async function main() {
           role: 'MEMBER',
           isActive: true,
           accountStatus: 'ACTIVE',
-          verificationToken: null,
-          verificationTokenExpiry: null,
-          membershipPaymentConfirmed: true,
         },
       })
 
@@ -389,7 +380,7 @@ async function main() {
           zipCode: memberData.zipCode,
           website: memberData.website,
           membershipTier: mapTier(memberData.membershipTier as string) as any,
-          membershipStatus: 'PENDING',
+          membershipStatus: 'ACTIVE',
           joinedAt: new Date(),
           renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
           description: memberData.description,
@@ -399,6 +390,8 @@ async function main() {
           showInDirectory: memberData.showInDirectory,
           allowContact: memberData.allowContact,
           showAddress: memberData.showAddress,
+          newsletterSubscribed: false,
+          membershipPaymentConfirmed: true,
         },
       })
 
