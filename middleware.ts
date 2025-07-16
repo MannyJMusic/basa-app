@@ -5,6 +5,16 @@ export default auth((req) => {
   const { nextUrl } = req
   const isLoggedIn = !!req.auth
 
+  // Debug logging
+  console.log(`[Middleware] ${nextUrl.pathname} - isLoggedIn: ${isLoggedIn}`)
+  console.log(`[Middleware] User:`, req.auth?.user)
+
+  // Skip middleware for API routes entirely
+  if (nextUrl.pathname.startsWith('/api/')) {
+    console.log(`[Middleware] Skipping API route: ${nextUrl.pathname}`)
+    return NextResponse.next()
+  }
+
   // Public routes
   const publicRoutes = [
     "/",
@@ -33,6 +43,7 @@ export default auth((req) => {
 
   // Allow public routes
   if (isPublicRoute) {
+    console.log(`[Middleware] Allowing public route: ${nextUrl.pathname}`)
     return NextResponse.next()
   }
 
@@ -51,6 +62,7 @@ export default auth((req) => {
 
   // Redirect to login if accessing protected route without authentication
   if (isProtectedRoute && !isLoggedIn) {
+    console.log(`[Middleware] Redirecting to login: ${nextUrl.pathname}`)
     const loginUrl = new URL("/auth/sign-in", nextUrl.origin)
     loginUrl.searchParams.set("callbackUrl", nextUrl.pathname)
     return NextResponse.redirect(loginUrl)
@@ -64,11 +76,14 @@ export default auth((req) => {
 
   if (isAdminRoute && isLoggedIn) {
     const userRole = req.auth?.user?.role
+    console.log(`[Middleware] Admin route check - userRole: ${userRole}`)
     if (userRole !== "ADMIN") {
+      console.log(`[Middleware] Non-admin user accessing admin route, redirecting to dashboard`)
       return NextResponse.redirect(new URL("/dashboard", nextUrl.origin))
     }
   }
 
+  console.log(`[Middleware] Allowing access to: ${nextUrl.pathname}`)
   return NextResponse.next()
 })
 

@@ -11,9 +11,10 @@ import type { JWT } from "next-auth/jwt"
 import type { Session } from "next-auth"
 
 export const authConfig: NextAuthConfig = {
-    debug: false,
+    debug: process.env.NODE_ENV === 'development',
     adapter: PrismaAdapter(prisma),
     trustHost: true,
+    useSecureCookies: process.env.NODE_ENV === 'production',
     providers: [
       GoogleProvider({
         clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -105,8 +106,8 @@ export const authConfig: NextAuthConfig = {
         else if (new URL(url).origin === baseUrl) return url
         // For OAuth callbacks, redirect to dashboard
         else if (url.includes("/api/auth/callback")) return `${baseUrl}/dashboard`
-        // Otherwise, redirect to the dashboard
-        return `${baseUrl}/dashboard`
+        // For external URLs, redirect to dashboard
+        else return `${baseUrl}/dashboard`
       },
       async signIn({ user, account, profile }: { user: any; account?: any; profile?: any }) {
         if (user) {
@@ -264,6 +265,8 @@ export const authConfig: NextAuthConfig = {
     },
     session: {
       strategy: "jwt",
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+      updateAge: 24 * 60 * 60, // 24 hours
     },
   }
   
