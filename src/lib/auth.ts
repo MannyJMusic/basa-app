@@ -11,7 +11,7 @@ import type { JWT } from "next-auth/jwt"
 import type { Session } from "next-auth"
 
 export const authConfig: NextAuthConfig = {
-    debug: process.env.NODE_ENV === 'development',
+    debug: true, // Force debug mode to see what's happening
     adapter: PrismaAdapter(prisma),
     trustHost: true,
     useSecureCookies: process.env.NODE_ENV === 'production',
@@ -19,6 +19,13 @@ export const authConfig: NextAuthConfig = {
       GoogleProvider({
         clientId: process.env.GOOGLE_CLIENT_ID!,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        authorization: {
+          params: {
+            prompt: "consent",
+            access_type: "offline",
+            response_type: "code"
+          }
+        }
       }),
       // LinkedInProvider({
       //   clientId: process.env.LINKEDIN_CLIENT_ID!,
@@ -100,14 +107,32 @@ export const authConfig: NextAuthConfig = {
       async redirect({ url, baseUrl }) {
         console.log("Redirect callback - url:", url, "baseUrl:", baseUrl);
         
+        // Handle OAuth callbacks specifically
+        if (url.includes("/api/auth/callback")) {
+          console.log("OAuth callback detected, redirecting to dashboard");
+          return `${baseUrl}/dashboard`;
+        }
+        
         // If the url is relative, prefix it with the base url
-        if (url.startsWith("/")) return `${baseUrl}${url}`
+        if (url.startsWith("/")) {
+          console.log("Relative URL, prefixing with baseUrl");
+          return `${baseUrl}${url}`;
+        }
+        
         // If the url is on the same origin, allow it
-        else if (new URL(url).origin === baseUrl) return url
-        // For OAuth callbacks, redirect to dashboard
-        else if (url.includes("/api/auth/callback")) return `${baseUrl}/dashboard`
+        try {
+          const urlObj = new URL(url);
+          if (urlObj.origin === baseUrl) {
+            console.log("Same origin URL, allowing");
+            return url;
+          }
+        } catch (error) {
+          console.log("Invalid URL, redirecting to dashboard");
+        }
+        
         // For external URLs, redirect to dashboard
-        else return `${baseUrl}/dashboard`
+        console.log("External URL, redirecting to dashboard");
+        return `${baseUrl}/dashboard`;
       },
       async signIn({ user, account, profile }: { user: any; account?: any; profile?: any }) {
         if (user) {
