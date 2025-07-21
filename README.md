@@ -65,6 +65,7 @@ cp .env.example .env.local
 # - STRIPE_SECRET_KEY
 # - MAILGUN_API_KEY
 # - MAILGUN_DOMAIN
+# TEST
 ```
 
 ### 3. Database Setup
