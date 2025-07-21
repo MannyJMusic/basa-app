@@ -89,6 +89,7 @@ USER nextjs
 
 # Expose port
 EXPOSE 3000
+EXPOSE 5555
 
 # Set environment variable
 ENV NODE_ENV=production
