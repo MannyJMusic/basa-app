@@ -67,9 +67,16 @@ export async function PUT(
       })
     }
 
-    // Clean up the data - remove any undefined or null values that shouldn't be sent to Prisma
+    // Clean up the data - remove any undefined or null values and virtual fields that shouldn't be sent to Prisma
+    const virtualFields = ['hasMemberRecord'] // Add any other virtual fields here
     const cleanData = Object.fromEntries(
-      Object.entries(data).filter(([_, value]) => value !== undefined && value !== null)
+      Object.entries(data).filter(([key, value]) => {
+        // Remove undefined, null values
+        if (value === undefined || value === null) return false
+        // Remove virtual fields that don't exist in the database schema
+        if (virtualFields.includes(key)) return false
+        return true
+      })
     )
 
     // Update the record

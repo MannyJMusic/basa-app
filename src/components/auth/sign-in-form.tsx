@@ -40,7 +40,17 @@ export default function SignInForm({ prefillEmail }: SignInFormProps) {
       })
       
       if (res?.error) {
-        setError(res.error)
+        // Provide more user-friendly error messages
+        switch (res.error) {
+          case 'CredentialsSignin':
+            setError('Invalid email or password. Please check your credentials and try again.')
+            break
+          case 'EmailSignin':
+            setError('There was an issue with email authentication. Please try again.')
+            break
+          default:
+            setError(res.error)
+        }
       } else if (res?.ok) {
         // Wait for session to update and get the user's role
         const session = await getSession()

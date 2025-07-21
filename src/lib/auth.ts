@@ -38,37 +38,60 @@ export const authConfig: NextAuthConfig = {
           password: { label: "Password", type: "password" }
         },
         async authorize(credentials) {
+          console.log("Credentials login attempt for:", credentials?.email);
+          
           if (!credentials?.email || !credentials?.password) {
+            console.log("Missing email or password");
             return null
           }
           if (typeof credentials.email !== "string") {
+            console.log("Invalid email format");
             return null
           }
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email as string }
-          })
+          
+          try {
+            const user = await prisma.user.findUnique({
+              where: { email: credentials.email as string }
+            })
 
-          if (!user || !user.hashedPassword) {
-            return null
-          }
+            if (!user) {
+              console.log("User not found:", credentials.email);
+              return null
+            }
 
-          const isPasswordValid = await bcrypt.compare(
-            credentials.password as string,
-            user.hashedPassword
-          )
+            if (!user.hashedPassword) {
+              console.log("User has no password set:", credentials.email);
+              return null
+            }
 
-          if (!isPasswordValid) {
-            return null
-          }
+            if (!user.isActive) {
+              console.log("User account is not active:", credentials.email);
+              return null
+            }
 
-          return {
-            id: user.id,
-            email: user.email || '',
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            role: user.role,
-            isActive: user.isActive,
-            accountStatus: (user as any).accountStatus,
+            const isPasswordValid = await bcrypt.compare(
+              credentials.password as string,
+              user.hashedPassword
+            )
+
+            if (!isPasswordValid) {
+              console.log("Invalid password for user:", credentials.email);
+              return null
+            }
+
+            console.log("Credentials login successful for:", credentials.email);
+            return {
+              id: user.id,
+              email: user.email || '',
+              firstName: user.firstName || '',
+              lastName: user.lastName || '',
+              role: user.role,
+              isActive: user.isActive,
+              accountStatus: (user as any).accountStatus,
+            }
+          } catch (error) {
+            console.error("Error during credentials authorization:", error);
+            return null;
           }
         }
       })
