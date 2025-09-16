@@ -209,9 +209,10 @@ jobs:
         SSH_PORT=${DEV_SSH_PORT:-22}
         SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10"
         echo "🔌 Testing SSH connectivity to ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }}:${SSH_PORT} ..."
-        set -x
-        ssh ${SSH_OPTS} ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }} echo ok
-        set +x
+        echo "🔎 ssh-add -l output:" && ssh-add -l || true
+        echo "🔎 Public key fingerprints from agent:" && ssh-add -L | ssh-keygen -l -E sha256 -f - || true
+        echo "🔎 Attempting verbose SSH (-vvv) to capture auth negotiation..."
+        ssh -vvv ${SSH_OPTS} ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }} echo ok || true
 
     - name: Deploy to development server
       run: |
