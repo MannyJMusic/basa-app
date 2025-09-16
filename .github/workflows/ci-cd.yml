@@ -182,10 +182,36 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+    - name: Debug SSH agent keys (dev)
+      run: |
+        echo "🔐 Listing keys loaded into ssh-agent..."
+        ssh-add -l || (echo "❌ No keys loaded in ssh-agent" && exit 1)
+
     - name: Add development server to known hosts
       run: |
         mkdir -p ~/.ssh
         ssh-keyscan -H ${{ secrets.DEV_SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Configure SSH client (dev)
+      run: |
+        mkdir -p ~/.ssh
+        {
+          echo "Host *"
+          echo "  IdentitiesOnly yes"
+          echo "  ServerAliveInterval 30"
+          echo "  ServerAliveCountMax 3"
+        } >> ~/.ssh/config
+        chmod 600 ~/.ssh/config
+
+    - name: Preflight SSH connectivity (dev)
+      run: |
+        DEV_SSH_PORT="${{ secrets.DEV_SERVER_PORT }}"
+        SSH_PORT=${DEV_SSH_PORT:-22}
+        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10"
+        echo "🔌 Testing SSH connectivity to ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }}:${SSH_PORT} ..."
+        set -x
+        ssh ${SSH_OPTS} ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }} echo ok
+        set +x
 
     - name: Deploy to development server
       run: |
@@ -193,7 +219,10 @@ jobs:
         echo "📍 Target: ${{ secrets.DEV_SERVER_HOST }}"
         echo "👤 User: ${{ secrets.DEV_SERVER_USER }}"
         
-        ssh -A ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }} << 'EOF'
+        DEV_SSH_PORT="${{ secrets.DEV_SERVER_PORT }}"
+        SSH_PORT=${DEV_SSH_PORT:-22}
+        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30"
+        ssh ${SSH_OPTS} ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }} << 'EOF'
           set -e
           echo "📁 Navigating to development directory..."
           cd /opt/basa-app-dev
@@ -267,10 +296,36 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+    - name: Debug SSH agent keys (prod)
+      run: |
+        echo "🔐 Listing keys loaded into ssh-agent..."
+        ssh-add -l || (echo "❌ No keys loaded in ssh-agent" && exit 1)
+
     - name: Add production server to known hosts
       run: |
         mkdir -p ~/.ssh
         ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Configure SSH client (prod)
+      run: |
+        mkdir -p ~/.ssh
+        {
+          echo "Host *"
+          echo "  IdentitiesOnly yes"
+          echo "  ServerAliveInterval 30"
+          echo "  ServerAliveCountMax 3"
+        } >> ~/.ssh/config
+        chmod 600 ~/.ssh/config
+
+    - name: Preflight SSH connectivity (prod)
+      run: |
+        PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"
+        SSH_PORT=${PROD_SSH_PORT:-22}
+        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10"
+        echo "🔌 Testing SSH connectivity to ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${SSH_PORT} ..."
+        set -x
+        ssh ${SSH_OPTS} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} echo ok
+        set +x
 
     - name: Deploy to Production
       run: |
@@ -279,7 +334,10 @@ jobs:
         echo "👤 User: ${{ secrets.SERVER_USER }}"
         
         # SSH into production server and run deployment
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+        PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"
+        SSH_PORT=${PROD_SSH_PORT:-22}
+        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30"
+        ssh ${SSH_OPTS} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           set -e
           echo "📁 Navigating to production directory..."
           cd /opt/basa-app-prod
@@ -331,7 +389,7 @@ jobs:
             if [ $((i % 5)) -eq 0 ]; then
               echo "📊 Progress: $i/20 attempts completed"
               echo "🔍 Checking container status..."
-              ssh ${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
+              PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"; SSH_PORT=${PROD_SSH_PORT:-22}; SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10"; ssh ${SSH_OPTS} ${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
             fi
             
             # Shorter intervals: 5 seconds for first 10 attempts, then 10 seconds
@@ -345,9 +403,9 @@ jobs:
         
         echo "❌ Health check failed after 20 attempts"
         echo "📋 Final container status:"
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
+        PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"; SSH_PORT=${PROD_SSH_PORT:-22}; SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10"; ssh ${SSH_OPTS} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
         echo "📋 Recent container logs:"
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml logs --tail=50"
+        PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"; SSH_PORT=${PROD_SSH_PORT:-22}; SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10"; ssh ${SSH_OPTS} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml logs --tail=50"
         exit 1
 
     - name: Notify deployment success
