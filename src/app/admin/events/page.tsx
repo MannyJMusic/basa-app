@@ -735,8 +735,9 @@ export default function AdminEventsPage() {
                       <div className="flex items-center text-sm text-gray-600">
                         <Building className="w-4 h-4 mr-2" />
                         <span className="line-clamp-1">
-                          {event.organizer.businessName || 
-                           `${event.organizer.user.firstName} ${event.organizer.user.lastName}`}
+                          {(event.organizer && event.organizer.businessName) || 
+                           (event.organizer && event.organizer.user && `${event.organizer.user.firstName} ${event.organizer.user.lastName}`) ||
+                           'Unknown Organizer'}
                         </span>
                       </div>
                       <div className="flex items-center space-x-1">
