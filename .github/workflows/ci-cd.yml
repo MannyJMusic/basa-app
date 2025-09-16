@@ -182,6 +182,15 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+    - name: Write CI private key to file (dev)
+      run: |
+        mkdir -p ~/.ssh
+        umask 077
+        cat > ~/.ssh/ci_key <<'KEY'
+        ${{ secrets.SSH_PRIVATE_KEY }}
+        KEY
+        chmod 600 ~/.ssh/ci_key
+
     - name: Debug SSH agent keys (dev)
       run: |
         echo "🔐 Listing keys loaded into ssh-agent..."
@@ -206,7 +215,7 @@ jobs:
       run: |
         DEV_SSH_PORT="${{ secrets.DEV_SERVER_PORT }}"
         SSH_PORT=${DEV_SSH_PORT:-22}
-        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o IdentitiesOnly=no"
+        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o IdentitiesOnly=yes -i ~/.ssh/ci_key"
         echo "🔌 Testing SSH connectivity to ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }}:${SSH_PORT} ..."
         echo "🔎 ssh-add -l output:" && ssh-add -l || true
         echo "🔎 Public key fingerprints from agent:" && ssh-add -L | ssh-keygen -l -E sha256 -f - || true
@@ -221,7 +230,7 @@ jobs:
         
         DEV_SSH_PORT="${{ secrets.DEV_SERVER_PORT }}"
         SSH_PORT=${DEV_SSH_PORT:-22}
-        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o IdentitiesOnly=no"
+        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o IdentitiesOnly=yes -i ~/.ssh/ci_key"
         ssh ${SSH_OPTS} ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_HOST }} << 'EOF'
           set -e
           echo "📁 Navigating to development directory..."
@@ -296,6 +305,15 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+    - name: Write CI private key to file (prod)
+      run: |
+        mkdir -p ~/.ssh
+        umask 077
+        cat > ~/.ssh/ci_key <<'KEY'
+        ${{ secrets.SSH_PRIVATE_KEY }}
+        KEY
+        chmod 600 ~/.ssh/ci_key
+
     - name: Debug SSH agent keys (prod)
       run: |
         echo "🔐 Listing keys loaded into ssh-agent..."
@@ -320,7 +338,7 @@ jobs:
       run: |
         PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"
         SSH_PORT=${PROD_SSH_PORT:-22}
-        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o IdentitiesOnly=no"
+        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o IdentitiesOnly=yes -i ~/.ssh/ci_key"
         echo "🔌 Testing SSH connectivity to ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${SSH_PORT} ..."
         set -x
         ssh ${SSH_OPTS} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} echo ok
@@ -335,7 +353,7 @@ jobs:
         # SSH into production server and run deployment
         PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"
         SSH_PORT=${PROD_SSH_PORT:-22}
-        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o IdentitiesOnly=no"
+        SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -o IdentitiesOnly=yes -i ~/.ssh/ci_key"
         ssh ${SSH_OPTS} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           set -e
           echo "📁 Navigating to production directory..."
@@ -388,7 +406,7 @@ jobs:
             if [ $((i % 5)) -eq 0 ]; then
               echo "📊 Progress: $i/20 attempts completed"
               echo "🔍 Checking container status..."
-              PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"; SSH_PORT=${PROD_SSH_PORT:-22}; SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o IdentitiesOnly=no"; ssh ${SSH_OPTS} ${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
+              PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"; SSH_PORT=${PROD_SSH_PORT:-22}; SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o IdentitiesOnly=yes -i ~/.ssh/ci_key"; ssh ${SSH_OPTS} ${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
             fi
             
             # Shorter intervals: 5 seconds for first 10 attempts, then 10 seconds
@@ -402,9 +420,9 @@ jobs:
         
         echo "❌ Health check failed after 20 attempts"
         echo "📋 Final container status:"
-        PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"; SSH_PORT=${PROD_SSH_PORT:-22}; SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o IdentitiesOnly=no"; ssh ${SSH_OPTS} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
+        PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"; SSH_PORT=${PROD_SSH_PORT:-22}; SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o IdentitiesOnly=yes -i ~/.ssh/ci_key"; ssh ${SSH_OPTS} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml ps"
         echo "📋 Recent container logs:"
-        PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"; SSH_PORT=${PROD_SSH_PORT:-22}; SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o IdentitiesOnly=no"; ssh ${SSH_OPTS} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml logs --tail=50"
+        PROD_SSH_PORT="${{ secrets.PROD_SERVER_PORT }}"; SSH_PORT=${PROD_SSH_PORT:-22}; SSH_OPTS="-p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o IdentitiesOnly=yes -i ~/.ssh/ci_key"; ssh ${SSH_OPTS} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/basa-app-prod && docker-compose -f docker-compose.prod.yml logs --tail=50"
         exit 1
 
     - name: Notify deployment success
