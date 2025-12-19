@@ -1,17 +1,44 @@
 import formData from 'form-data'
 import Mailgun from 'mailgun.js'
+import type { IMailgunClient } from 'mailgun.js/Interfaces'
 
-// Initialize Mailgun
-const mailgun = new Mailgun(formData)
-const mg = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY!,
-})
+// Lazy initialization to avoid build-time errors when env vars are not set
+let _mg: IMailgunClient | null = null
 
-const DOMAIN = process.env.MAILGUN_DOMAIN!
-const FROM_EMAIL = process.env.FROM_EMAIL || `noreply@${DOMAIN}`
-const FROM_NAME = process.env.FROM_NAME || 'BASA'
-const SITE_URL = process.env.NEXTAUTH_URL || 'https://basa.org'
+function getMailgunClient(): IMailgunClient {
+  if (!_mg) {
+    const apiKey = process.env.MAILGUN_API_KEY
+    if (!apiKey) {
+      throw new Error('Missing MAILGUN_API_KEY environment variable.')
+    }
+    const mailgun = new Mailgun(formData)
+    _mg = mailgun.client({
+      username: 'api',
+      key: apiKey,
+    })
+  }
+  return _mg
+}
+
+function getDomain(): string {
+  const domain = process.env.MAILGUN_DOMAIN
+  if (!domain) {
+    throw new Error('Missing MAILGUN_DOMAIN environment variable.')
+  }
+  return domain
+}
+
+function getFromEmail(): string {
+  return process.env.FROM_EMAIL || `noreply@${getDomain()}`
+}
+
+function getFromName(): string {
+  return process.env.FROM_NAME || 'BASA'
+}
+
+function getSiteUrl(): string {
+  return process.env.NEXTAUTH_URL || 'https://basa.org'
+}
 
 // Base email sending function
 async function sendEmail(to: string, subject: string, html: string, options: {
@@ -21,8 +48,13 @@ async function sendEmail(to: string, subject: string, html: string, options: {
   attachments?: Array<{ filename: string; data: Buffer; contentType: string }>
 } = {}) {
   try {
-    const fromName = options.fromName || FROM_NAME
-    const fromEmail = options.from || FROM_EMAIL
+    const mg = getMailgunClient()
+    const domain = getDomain()
+    const defaultFromEmail = getFromEmail()
+    const defaultFromName = getFromName()
+
+    const fromName = options.fromName || defaultFromName
+    const fromEmail = options.from || defaultFromEmail
     const from = fromName ? `${fromName} <${fromEmail}>` : fromEmail
 
     const messageData = {
@@ -41,7 +73,7 @@ async function sendEmail(to: string, subject: string, html: string, options: {
       (messageData as any).attachments = options.attachments
     }
 
-    const response = await mg.messages.create(DOMAIN, messageData)
+    const response = await mg.messages.create(domain, messageData)
     console.log(`Email sent successfully to ${to}:`, response.id)
     return response
   } catch (error) {
@@ -55,7 +87,7 @@ function generateWelcomeEmailHtml(firstName: string, activationUrl: string, opti
   siteUrl?: string
   logoUrl?: string
 } = {}) {
-  const siteUrl = options.siteUrl || SITE_URL
+  const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
   
   return `
@@ -415,7 +447,7 @@ export async function sendEventInvitationEmail(
   } = {}
 ) {
   // For now, use a simple template
-  const siteUrl = options.siteUrl || SITE_URL
+  const siteUrl = options.siteUrl || getSiteUrl()
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h1 style="color: #1B365D;">You're Invited: ${event.title}</h1>

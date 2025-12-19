@@ -1,17 +1,44 @@
 import formData from 'form-data'
 import Mailgun from 'mailgun.js'
+import type { IMailgunClient } from 'mailgun.js/Interfaces'
 
-// Initialize Mailgun
-const mailgun = new Mailgun(formData)
-const mg = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY!,
-})
+// Lazy initialization to avoid build-time errors when env vars are not set
+let _mg: IMailgunClient | null = null
 
-const DOMAIN = process.env.MAILGUN_DOMAIN!
-const FROM_EMAIL = process.env.FROM_EMAIL || `noreply@${DOMAIN}`
-const FROM_NAME = process.env.FROM_NAME || 'BASA'
-const SITE_URL = process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'development' ? 'https://dev.businessassociationsa.com' : 'https://app.businessassociationsa.com')
+function getMailgunClient(): IMailgunClient {
+  if (!_mg) {
+    const apiKey = process.env.MAILGUN_API_KEY
+    if (!apiKey) {
+      throw new Error('Missing MAILGUN_API_KEY environment variable.')
+    }
+    const mailgun = new Mailgun(formData)
+    _mg = mailgun.client({
+      username: 'api',
+      key: apiKey,
+    })
+  }
+  return _mg
+}
+
+function getDomain(): string {
+  const domain = process.env.MAILGUN_DOMAIN
+  if (!domain) {
+    throw new Error('Missing MAILGUN_DOMAIN environment variable.')
+  }
+  return domain
+}
+
+function getFromEmail(): string {
+  return process.env.FROM_EMAIL || `noreply@${getDomain()}`
+}
+
+function getFromName(): string {
+  return process.env.FROM_NAME || 'BASA'
+}
+
+function getSiteUrl(): string {
+  return process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'development' ? 'https://dev.businessassociationsa.com' : 'https://app.businessassociationsa.com')
+}
 
 // Base email sending function
 async function sendEmail(to: string, subject: string, html: string, options: {
@@ -21,8 +48,14 @@ async function sendEmail(to: string, subject: string, html: string, options: {
   attachments?: Array<{ filename: string; data: Buffer; contentType: string }>
 } = {}) {
   try {
-    const fromName = options.fromName || FROM_NAME
-    const fromEmail = options.from || FROM_EMAIL
+    const mg = getMailgunClient()
+    const domain = getDomain()
+    const defaultFromEmail = getFromEmail()
+    const defaultFromName = getFromName()
+    const siteUrl = getSiteUrl()
+
+    const fromName = options.fromName || defaultFromName
+    const fromEmail = options.from || defaultFromEmail
     const from = fromName ? `${fromName} <${fromEmail}>` : fromEmail
 
     const messageData = {
@@ -40,9 +73,9 @@ async function sendEmail(to: string, subject: string, html: string, options: {
     if (options.attachments) {
       (messageData as any).attachments = options.attachments
     }
-    console.log('Sending Test',DOMAIN,FROM_EMAIL,SITE_URL)
+    console.log('Sending Test', domain, defaultFromEmail, siteUrl)
 
-    const response = await mg.messages.create(DOMAIN, messageData)
+    const response = await mg.messages.create(domain, messageData)
     console.log(`Email sent successfully to ${to}:`, response.id)
     return response
   } catch (error) {
@@ -56,7 +89,7 @@ export function generateWelcomeEmailHtml(firstName: string, activationUrl: strin
   siteUrl?: string
   logoUrl?: string
 } = {}) {
-  const siteUrl = options.siteUrl || SITE_URL
+  const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOG%20-SIDE2%20-%20WHITE%20-PROOF.png`
   
   return `
@@ -688,7 +721,7 @@ export function generatePasswordResetEmailHtml(firstName: string, resetUrl: stri
   siteUrl?: string
   logoUrl?: string
 } = {}) {
-  const siteUrl = options.siteUrl || SITE_URL
+  const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOG%20-SIDE2%20-%20WHITE%20-PROOF.png`
   
   return `
@@ -870,7 +903,7 @@ export function generateEventInvitationEmailHtml(firstName: string, event: {
   siteUrl?: string
   logoUrl?: string
 } = {}) {
-  const siteUrl = options.siteUrl || SITE_URL
+  const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOG%20-SIDE2%20-%20WHITE%20-PROOF.png`
   
   return `
@@ -1293,7 +1326,7 @@ export function generatePaymentReceiptEmailHtml(firstName: string, paymentData: 
   siteUrl?: string
   logoUrl?: string
 } = {}) {
-  const siteUrl = options.siteUrl || SITE_URL
+  const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
   const paymentDate = new Date(paymentData.paymentDate).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -1538,7 +1571,7 @@ export function generateMembershipInvitationEmailHtml(name: string, tierId: stri
   siteUrl?: string
   logoUrl?: string
 } = {}) {
-  const siteUrl = options.siteUrl || SITE_URL
+  const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
   
   const tierNames: Record<string, string> = {
@@ -1724,7 +1757,7 @@ export function generateContactFormEmailHtml(contact: {
   userAgent?: string
   referrer?: string
 } = {}) {
-  const siteUrl = options.siteUrl || SITE_URL
+  const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
   const submissionDate = new Date()
   
@@ -1962,7 +1995,7 @@ export function generateAdminCreatedWelcomeEmailHtml(firstName: string, email: s
   siteUrl?: string
   logoUrl?: string
 } = {}) {
-  const siteUrl = options.siteUrl || SITE_URL
+  const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
   
   return `

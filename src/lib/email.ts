@@ -1,15 +1,36 @@
 import formData from 'form-data'
 import Mailgun from 'mailgun.js'
+import type { IMailgunClient } from 'mailgun.js/Interfaces'
 
-// Initialize Mailgun
-const mailgun = new Mailgun(formData)
-const mg = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY!,
-})
+// Lazy initialization to avoid build-time errors when env vars are not set
+let _mg: IMailgunClient | null = null
 
-const DOMAIN = process.env.MAILGUN_DOMAIN!
-const FROM_EMAIL = process.env.FROM_EMAIL || `noreply@${DOMAIN}`
+function getMailgunClient(): IMailgunClient {
+  if (!_mg) {
+    const apiKey = process.env.MAILGUN_API_KEY
+    if (!apiKey) {
+      throw new Error('Missing MAILGUN_API_KEY environment variable.')
+    }
+    const mailgun = new Mailgun(formData)
+    _mg = mailgun.client({
+      username: 'api',
+      key: apiKey,
+    })
+  }
+  return _mg
+}
+
+function getDomain(): string {
+  const domain = process.env.MAILGUN_DOMAIN
+  if (!domain) {
+    throw new Error('Missing MAILGUN_DOMAIN environment variable.')
+  }
+  return domain
+}
+
+function getFromEmail(): string {
+  return process.env.FROM_EMAIL || `noreply@${getDomain()}`
+}
 
 // Email templates
 export const emailTemplates = {
@@ -245,14 +266,18 @@ export const emailTemplates = {
 // Email sending functions
 export async function sendEmail(to: string, subject: string, html: string) {
   try {
+    const mg = getMailgunClient()
+    const domain = getDomain()
+    const fromEmail = getFromEmail()
+
     const msg = {
-      from: FROM_EMAIL,
+      from: fromEmail,
       to,
       subject,
       html
     }
 
-    const response = await mg.messages.create(DOMAIN, msg)
+    const response = await mg.messages.create(domain, msg)
     console.log('Email sent successfully:', response)
     return { success: true, messageId: response.id }
   } catch (error) {

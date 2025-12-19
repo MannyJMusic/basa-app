@@ -1,19 +1,46 @@
 import formData from 'form-data'
 import Mailgun from 'mailgun.js'
+import type { IMailgunClient } from 'mailgun.js/Interfaces'
 import fs from 'fs'
 import path from 'path'
 
-// Initialize Mailgun
-const mailgun = new Mailgun(formData)
-const mg = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY!,
-})
+// Lazy initialization to avoid build-time errors when env vars are not set
+let _mg: IMailgunClient | null = null
 
-const DOMAIN = process.env.MAILGUN_DOMAIN!
-const FROM_EMAIL = process.env.FROM_EMAIL || `noreply@${DOMAIN}`
-const FROM_NAME = process.env.FROM_NAME || 'BASA'
-const SITE_URL = process.env.NEXTAUTH_URL || 'https://basa.org'
+function getMailgunClient(): IMailgunClient {
+  if (!_mg) {
+    const apiKey = process.env.MAILGUN_API_KEY
+    if (!apiKey) {
+      throw new Error('Missing MAILGUN_API_KEY environment variable.')
+    }
+    const mailgun = new Mailgun(formData)
+    _mg = mailgun.client({
+      username: 'api',
+      key: apiKey,
+    })
+  }
+  return _mg
+}
+
+function getDomain(): string {
+  const domain = process.env.MAILGUN_DOMAIN
+  if (!domain) {
+    throw new Error('Missing MAILGUN_DOMAIN environment variable.')
+  }
+  return domain
+}
+
+function getFromEmail(): string {
+  return process.env.FROM_EMAIL || `noreply@${getDomain()}`
+}
+
+function getFromName(): string {
+  return process.env.FROM_NAME || 'BASA'
+}
+
+function getSiteUrl(): string {
+  return process.env.NEXTAUTH_URL || 'https://basa.org'
+}
 
 // Load email templates from the built Maizzle templates
 const loadTemplate = (templateName: string): string => {
@@ -66,8 +93,13 @@ async function sendEmail(to: string, subject: string, html: string, options: {
   attachments?: Array<{ filename: string; data: Buffer; contentType: string }>
 } = {}) {
   try {
-    const fromName = options.fromName || FROM_NAME
-    const fromEmail = options.from || FROM_EMAIL
+    const mg = getMailgunClient()
+    const domain = getDomain()
+    const defaultFromName = getFromName()
+    const defaultFromEmail = getFromEmail()
+
+    const fromName = options.fromName || defaultFromName
+    const fromEmail = options.from || defaultFromEmail
     const from = fromName ? `${fromName} <${fromEmail}>` : fromEmail
 
     const messageData = {
@@ -86,7 +118,7 @@ async function sendEmail(to: string, subject: string, html: string, options: {
       (messageData as any).attachments = options.attachments
     }
 
-    const response = await mg.messages.create(DOMAIN, messageData)
+    const response = await mg.messages.create(domain, messageData)
     console.log(`Email sent successfully to ${to}:`, response.id)
     return response
   } catch (error) {
@@ -114,8 +146,8 @@ export async function sendWelcomeEmail(
     user: { firstName },
     activationUrl,
     page: {
-      siteUrl: options.siteUrl || SITE_URL,
-      logoUrl: options.logoUrl || `${SITE_URL}/images/BASA-LOGO.png`
+      siteUrl: options.siteUrl || getSiteUrl(),
+      logoUrl: options.logoUrl || `${getSiteUrl()}/images/BASA-LOGO.png`
     }
   })
 
@@ -141,8 +173,8 @@ export async function sendPasswordResetEmail(
     user: { firstName },
     resetUrl,
     page: {
-      siteUrl: options.siteUrl || SITE_URL,
-      logoUrl: options.logoUrl || `${SITE_URL}/images/BASA-LOGO.png`
+      siteUrl: options.siteUrl || getSiteUrl(),
+      logoUrl: options.logoUrl || `${getSiteUrl()}/images/BASA-LOGO.png`
     }
   })
 
@@ -182,8 +214,8 @@ export async function sendEventInvitationEmail(
     user: { firstName },
     event,
     page: {
-      siteUrl: options.siteUrl || SITE_URL,
-      logoUrl: options.logoUrl || `${SITE_URL}/images/BASA-LOGO.png`
+      siteUrl: options.siteUrl || getSiteUrl(),
+      logoUrl: options.logoUrl || `${getSiteUrl()}/images/BASA-LOGO.png`
     }
   })
 
@@ -241,11 +273,11 @@ export async function sendNewsletterEmail(
   const html = env.renderString(template, {
     user: { firstName },
     newsletter,
-    unsubscribeUrl: options.unsubscribeUrl || `${SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}`,
-    preferencesUrl: options.preferencesUrl || `${SITE_URL}/preferences`,
+    unsubscribeUrl: options.unsubscribeUrl || `${getSiteUrl()}/unsubscribe?email=${encodeURIComponent(email)}`,
+    preferencesUrl: options.preferencesUrl || `${getSiteUrl()}/preferences`,
     page: {
-      siteUrl: options.siteUrl || SITE_URL,
-      logoUrl: options.logoUrl || `${SITE_URL}/images/BASA-LOGO.png`
+      siteUrl: options.siteUrl || getSiteUrl(),
+      logoUrl: options.logoUrl || `${getSiteUrl()}/images/BASA-LOGO.png`
     }
   })
 
