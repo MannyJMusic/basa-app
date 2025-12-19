@@ -1,14 +1,26 @@
 import Stripe from 'stripe'
 
-// Initialize Stripe with restricted key (preferred) or fallback to secret key
-const stripeKey = process.env.STRIPE_RESTRICTED_KEY || process.env.STRIPE_SECRET_KEY
+// Lazy initialization to avoid build-time errors when env vars are not set
+let _stripe: Stripe | null = null
 
-if (!stripeKey) {
-  throw new Error('Missing Stripe API key. Please set STRIPE_RESTRICTED_KEY or STRIPE_SECRET_KEY environment variable.')
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    const stripeKey = process.env.STRIPE_RESTRICTED_KEY || process.env.STRIPE_SECRET_KEY
+    if (!stripeKey) {
+      throw new Error('Missing Stripe API key. Please set STRIPE_RESTRICTED_KEY or STRIPE_SECRET_KEY environment variable.')
+    }
+    _stripe = new Stripe(stripeKey, {
+      apiVersion: '2023-10-16',
+    })
+  }
+  return _stripe
 }
 
-export const stripe = new Stripe(stripeKey, {
-  apiVersion: '2023-10-16',
+// For backward compatibility - lazy getter
+export const stripe = new Proxy({} as Stripe, {
+  get(_, prop) {
+    return (getStripe() as any)[prop]
+  }
 })
 
 // Stripe publishable key for client-side
