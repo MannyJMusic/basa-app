@@ -1,13 +1,13 @@
 import formData from 'form-data'
 import Mailgun from 'mailgun.js'
-import type { IMailgunClient } from 'mailgun.js/Interfaces'
+// Mailgun client type
 import fs from 'fs'
 import path from 'path'
 
 // Lazy initialization to avoid build-time errors when env vars are not set
-let _mg: IMailgunClient | null = null
+let _mg: ReturnType<InstanceType<typeof Mailgun>['client']> | null = null
 
-function getMailgunClient(): IMailgunClient {
+function getMailgunClient() {
   if (!_mg) {
     const apiKey = process.env.MAILGUN_API_KEY
     if (!apiKey) {
