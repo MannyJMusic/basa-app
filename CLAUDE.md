@@ -26,10 +26,56 @@ pnpm test:unit              # Unit tests only
 pnpm test:integration       # Integration tests with Testcontainers
 pnpm cypress:open           # Open Cypress for E2E
 
-# Docker (required for deployment)
-docker compose -f docker-compose.dev.yml up    # Development environment
+# Docker
+docker compose -f docker-compose.local.yml up  # Local development (PostgreSQL + App + Prisma Studio)
+docker compose -f docker-compose.dev.yml up    # Dev environment (for remote dev server)
 docker compose -f docker-compose.prod.yml up   # Production environment
 ```
+
+## Deployment
+
+### Local Development
+
+```bash
+# Start local environment with Docker
+docker compose -f docker-compose.local.yml up -d
+
+# Services available:
+# - App: http://localhost:3000
+# - Prisma Studio: http://localhost:5555
+# - PostgreSQL: localhost:5432
+```
+
+### Production (Hostinger CloudPanel)
+
+The app is deployed to `https://app.businessassociationsa.com` on a Hostinger VPS running CloudPanel.
+
+**Architecture:** CloudPanel (nginx reverse proxy + SSL) → Docker containers (Next.js + PostgreSQL)
+
+```bash
+# SSH to production server
+ssh root@31.97.214.26
+
+# Production commands on server
+docker compose -f /opt/basa-app/docker-compose.prod.yml ps      # Check status
+docker compose -f /opt/basa-app/docker-compose.prod.yml logs -f # View logs
+docker compose -f /opt/basa-app/docker-compose.prod.yml restart # Restart services
+
+# Manual backup
+/opt/basa-app/scripts/backup-db.sh
+```
+
+### CI/CD (GitHub Actions)
+Automated deployment via `.github/workflows/deploy.yml`:
+
+1. **Trigger:** Push to `main` or `master` branch
+2. **Build & Test:** Install deps, type-check, lint, build
+3. **Deploy:** SSH to server, pull latest code, rebuild Docker images, run migrations
+
+**Required GitHub Secrets:**
+- `SSH_PRIVATE_KEY` - Deploy key for server access
+- `SSH_HOST` - Server IP (31.97.214.26)
+- `SSH_USER` - SSH user (root)
 
 ## Architecture
 
