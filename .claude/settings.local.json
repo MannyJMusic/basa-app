@@ -3,7 +3,14 @@
     "allow": [
       "Bash(ssh:*)",
       "Bash(curl:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\ndocs: update CLAUDE.md with deployment and CI/CD documentation\n\n- Add local development section with Docker commands\n- Add production deployment info for Hostinger CloudPanel\n- Document CI/CD workflow and required GitHub secrets\n- Include useful server commands for monitoring and backups\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
