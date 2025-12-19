@@ -74,14 +74,14 @@ jobs:
             echo "Please add SSH_PRIVATE_KEY to your repository secrets"
             exit 1
           fi
-          if [ -z "${{ secrets.SSH_HOST }}" ]; then
-            echo "ERROR: SSH_HOST secret is not set"
-            echo "Please add SSH_HOST (server IP) to your repository secrets"
+          if [ -z "${{ secrets.SERVER_HOST }}" ]; then
+            echo "ERROR: SERVER_HOST secret is not set"
+            echo "Please add SERVER_HOST (server IP) to your repository secrets"
             exit 1
           fi
-          if [ -z "${{ secrets.SSH_USER }}" ]; then
-            echo "ERROR: SSH_USER secret is not set"
-            echo "Please add SSH_USER to your repository secrets"
+          if [ -z "${{ secrets.SERVER_USER }}" ]; then
+            echo "ERROR: SERVER_USER secret is not set"
+            echo "Please add SERVER_USER to your repository secrets"
             exit 1
           fi
           echo "All required secrets are configured"
@@ -91,15 +91,15 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Test SSH Connection
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo 'SSH connection successful'"
 
       - name: Deploy to Server
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'DEPLOY_SCRIPT'
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'DEPLOY_SCRIPT'
             set -e
 
             echo "=== Starting Deployment ==="
@@ -153,7 +153,7 @@ jobs:
         run: |
           echo "Verifying deployment..."
           sleep 10
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             docker compose -f /opt/basa-app/docker-compose.prod.yml ps
             curl -f http://localhost:3000/api/health || echo "Health check endpoint not responding"
           EOF

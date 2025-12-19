@@ -74,8 +74,8 @@ Automated deployment via `.github/workflows/deploy.yml`:
 
 **Required GitHub Secrets:**
 - `SSH_PRIVATE_KEY` - Deploy key for server access
-- `SSH_HOST` - Server IP (31.97.214.26)
-- `SSH_USER` - SSH user (root)
+- `SERVER_HOST` - Server IP (31.97.214.26)
+- `SERVER_USER` - SSH user (root)
 
 ## Architecture
 
