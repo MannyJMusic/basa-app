@@ -43,7 +43,6 @@ import {
 } from "lucide-react"
 import { StripeForm } from "@/components/payments/stripe-form"
 import { TestDataPopulator } from "@/components/ui/test-data-populator"
-import { DevControlPanel } from "@/components/dev/DevControlPanel"
 
 // Load Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -518,10 +517,7 @@ export default function JoinPage() {
   }, [currentStep, clientSecret, paymentLoading, paymentError])
 
   return (
-    <DevControlPanel
-      paymentData={cart.length > 0 ? { cart, total: subtotal } : undefined}
-      emailStatus={{ active: true, customerEmail: contactInfo.email }}
-    >
+    <>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       
       {/* Compact Header */}
@@ -1472,6 +1468,6 @@ export default function JoinPage() {
         </div>
       </section>
     </div>
-    </DevControlPanel>
+    </>
   )
 } 
