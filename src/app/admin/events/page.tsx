@@ -136,7 +136,6 @@ export default function AdminEventsPage() {
     }
 
     try {
-      console.log('Submitting event data:', createFormData)
       await createEvent(createFormData)
       setShowCreateDialog(false)
       setCreateFormData({

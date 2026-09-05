@@ -96,28 +96,20 @@ export default function AccountPage() {
 
   // Fetch user data
   useEffect(() => {
-    console.log('Account page useEffect - session:', session)
-    console.log('Session user:', session?.user)
-    console.log('Session status:', status)
     
     if (status === 'loading') {
-      console.log('Session is loading...')
       return
     }
     
     if (session?.user) {
-      console.log('User authenticated, fetching data...')
       fetchUserData()
     } else if (status === 'unauthenticated') {
-      console.log('User not authenticated, setting loading to false')
       setLoading(false)
     }
   }, [session, status])
 
   const fetchUserData = async () => {
     try {
-      console.log('Fetching user data, session:', session)
-      console.log('Session user:', session?.user)
       
       const response = await fetch('/api/account', {
         credentials: 'include', // Ensure cookies are sent
@@ -126,12 +118,9 @@ export default function AccountPage() {
         },
       })
       
-      console.log('Response status:', response.status)
-      console.log('Response ok:', response.ok)
       
       if (response.ok) {
         const data = await response.json()
-        console.log('Account data received:', data)
         setUserData(data)
         // Set initial settings from API response
         setNotificationSettings(data.notificationSettings)

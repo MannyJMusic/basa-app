@@ -23,18 +23,11 @@ export async function POST(request: NextRequest) {
     if (isResponse(session)) return session
 
     const body = await request.json()
-    console.log('Received request body:', JSON.stringify(body, null, 2))
     const { memberData, paymentData } = body
 
     // Validate member data
-    console.log('Validating member data:', {
-      firstName: memberData.firstName,
-      lastName: memberData.lastName,
-      email: memberData.email
-    })
     
     if (!memberData.firstName || !memberData.lastName || !memberData.email) {
-      console.log('Validation failed: Missing required fields')
       return NextResponse.json(
         { error: 'Missing required member information' },
         { status: 400 }
@@ -42,20 +35,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    console.log('Checking for existing user with email:', memberData.email)
     const existingUser = await prisma.user.findUnique({
       where: { email: memberData.email }
     })
 
     if (existingUser) {
-      console.log('User already exists:', existingUser.id)
       return NextResponse.json(
         { error: 'User with this email already exists' },
         { status: 400 }
       )
     }
     
-    console.log('No existing user found, proceeding with creation')
 
     // Generate random password and verification token
     const randomPassword = randomBytes(12).toString('base64').replace(/[^a-zA-Z0-9]/g, '').substring(0, 12)

@@ -178,24 +178,20 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   if (type === 'membership') {
     // Update user membership in database
     // await updateUserMembership(paymentIntent.customer as string, tier)
-    console.log(`Membership payment successful for tier: ${tier}`)
   } else if (type === 'event_ticket') {
     // Create event tickets in database
     // await createEventTickets(paymentIntent.customer as string, eventId, ticketCount)
-    console.log(`Event ticket payment successful for event: ${eventId}`)
   }
 }
 
 // Handle subscription payment
 async function handleSubscriptionPayment(invoice: Stripe.Invoice) {
   // Handle recurring membership payment
-  console.log(`Subscription payment successful for customer: ${invoice.customer}`)
 }
 
 // Handle subscription cancellation
 async function handleSubscriptionCancellation(subscription: Stripe.Subscription) {
   // Update user membership status
-  console.log(`Subscription cancelled for customer: ${subscription.customer}`)
 }
 
 // Format amount for display

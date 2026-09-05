@@ -34,16 +34,11 @@ export default function DashboardNav() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // Debug logging
-  console.log("DashboardNav - Session data:", session?.user)
-  console.log("DashboardNav - User role:", session?.user?.role)
-  console.log("DashboardNav - Account status:", session?.user?.accountStatus)
-  console.log("DashboardNav - Session status:", status)
 
   // Determine what navigation items to show based on user status
   const getVisibleNavigation = () => {
     // If session is loading, show all items temporarily
     if (status === "loading") {
-      console.log("DashboardNav - Session loading, showing all navigation")
       return navigation
     }
 
@@ -51,23 +46,19 @@ export default function DashboardNav() {
 
     // If user is pending verification, only show Profile and Account
     if (session.user.accountStatus === "PENDING_VERIFICATION") {
-      console.log("DashboardNav - User is pending verification, showing limited navigation")
       return navigation.filter(item => !item.requiresMember)
     }
 
     // If user is a guest, show Profile, Account, Resources, Events, and Directory
     if (session.user.role === "GUEST") {
-      console.log("DashboardNav - User is guest, showing limited navigation")
       return navigation.filter(item => !item.requiresMember || item.name === "Events" || item.name === "Directory")
     }
 
     // For active members, show all navigation items
-    console.log("DashboardNav - User is active member, showing all navigation")
     return navigation
   }
 
   const visibleNavigation = getVisibleNavigation()
-  console.log("DashboardNav - Visible navigation items:", visibleNavigation.map(item => item.name))
 
   // Show loading state if session is loading
   if (status === "loading") {

@@ -20,16 +20,6 @@ export async function sendEmailFallback(
 ): Promise<EmailResult> {
   try {
     // Log the email details
-    console.log('\n📧 EMAIL SENT (Fallback Mode):');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`From: ${options.from || 'noreply@member.businessassociationsa.com'}`);
-    console.log(`To: ${to}`);
-    console.log(`Subject: ${subject}`);
-    console.log(`Reply-To: ${options.replyTo || 'info@businessassociationsa.com'}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('HTML Content:');
-    console.log(html);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     // Generate a fake message ID
     const messageId = `fallback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

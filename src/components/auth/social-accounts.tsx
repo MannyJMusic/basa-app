@@ -43,7 +43,6 @@ export default function SocialAccounts() {
   const handleConnect = async (provider: string) => {
     // This would typically redirect to the OAuth provider
     // For now, we'll just show a message
-    console.log(`Connecting to ${provider}...`)
   }
 
   const handleDisconnect = async (accountId: string) => {

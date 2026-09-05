@@ -278,7 +278,6 @@ export async function sendEmail(to: string, subject: string, html: string) {
     }
 
     const response = await mg.messages.create(domain, msg)
-    console.log('Email sent successfully:', response)
     return { success: true, messageId: response.id }
   } catch (error) {
     console.error('Failed to send email:', error)
