@@ -26,6 +26,9 @@ pnpm test:unit              # Unit tests only
 pnpm test:integration       # Integration tests with Testcontainers
 pnpm cypress:open           # Open Cypress for E2E
 
+# Stripe webhooks (needs Stripe CLI, logged in, STRIPE_WEBHOOK_SECRET in .env.local)
+./scripts/dev-with-webhooks.sh  # Dev server + `stripe listen` forwarding to /api/webhooks/stripe
+
 # Docker
 docker compose -f docker-compose.local.yml up  # Local development (PostgreSQL + App + Prisma Studio)
 docker compose -f docker-compose.dev.yml up    # Dev environment (for remote dev server)
@@ -104,6 +107,11 @@ API routes are in `src/app/api/`. Key domains:
 - `/api/admin/` - Admin-only operations
 - `/api/dev/` - Development tools (email preview, database inspection)
 
+### Route Protection
+`middleware.ts` (repo root) wraps NextAuth's `auth()` and only guards **page** routes: `/dashboard` requires a session and `/admin` requires `role === "ADMIN"`; everything else is treated as public. It returns early for every `/api/*` path and the matcher excludes `api` as well, so **API route handlers must check `auth()` themselves**. Do not rely on the middleware for API authorization.
+
+There are two Stripe webhook handlers: `/api/webhooks/stripe` (the one the dev script and Stripe are pointed at, verifies the signature with `STRIPE_WEBHOOK_SECRET` and sends welcome/receipt emails) and the older `/api/payments/webhook`. Change the former.
+
 ### Database Schema
 Key models in `prisma/schema.prisma`:
 - User/Member - User accounts with membership details
@@ -130,6 +138,22 @@ Integration tests use Testcontainers for isolated PostgreSQL instances:
 - Tests in `src/__tests__/integration/` use `jest.config.testcontainers.js`
 - Unit tests in `src/__tests__/unit/` use `jest.config.js`
 - Test setup helpers in `src/__tests__/integration/helpers/`
+
+```bash
+pnpm test:unit -- src/__tests__/unit/utils.test.ts                       # single unit test file
+pnpm test:integration -- src/__tests__/integration/api-events.test.ts    # single integration test file
+pnpm test:unit -- -t "generateRandomData"                                # filter by test name
+```
+
+Integration tests spin up a real PostgreSQL via Testcontainers, so they need Docker running locally or a Testcontainers Cloud token (`pnpm setup:testcontainers`). They run serially (`maxWorkers: 1`) with a 2-minute timeout; a hang usually means the container never started. Unit tests use jsdom and ignore the `integration/` folder entirely.
+
+## Sentry
+
+Import as `import * as Sentry from "@sentry/nextjs"`. `Sentry.init` is called only in `src/instrumentation-client.ts` (browser), `sentry.server.config.ts`, and `sentry.edge.config.ts`; never add another init.
+
+- Wrap expected failures with `Sentry.captureException(error)` inside `try/catch`.
+- Wrap meaningful actions (button handlers, API calls, expensive functions) in `Sentry.startSpan({ op, name }, span => ...)` with descriptive `op`/`name` (e.g. `ui.click`, `http.client`) and `span.setAttribute` for useful context. Child spans may nest inside a parent.
+- For structured logs use `const { logger } = Sentry` and `logger.fmt` template literals; logging requires `_experiments: { enableLogs: true }` in init. `Sentry.consoleLoggingIntegration` can forward `console.*` calls instead of instrumenting each one.
 
 ## Path Alias
 
