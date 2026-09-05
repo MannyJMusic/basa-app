@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
-import { sendEmailVerification } from "@/lib/email"
+import { sendEmailVerification } from "@/lib/basa-emails"
 import { generateVerificationToken } from "@/lib/utils"
 import { requireAdmin, requireSession, isResponse } from "@/lib/api-auth"
 
