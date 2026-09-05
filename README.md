@@ -94,17 +94,11 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 For comprehensive testing with Testcontainers Cloud:
 
 ```bash
-# Set up Testcontainers Cloud (recommended for CI/CD)
-pnpm setup:testcontainers
-
-# Verify Testcontainers Cloud setup
-pnpm verify:testcontainers
-
-# Run integration tests
+# Run integration tests (needs Docker running locally)
 pnpm test:integration
 ```
 
-**Note**: Testcontainers Cloud provides managed containers for testing, eliminating the need for Docker on CI/CD runners. See [Testcontainers Cloud Setup Guide](./docs/TESTCONTAINERS_CLOUD_SETUP.md) for detailed instructions.
+See [`docs/TESTING.md`](./docs/TESTING.md) for running a single test file and what CI does and does not run.
 
 ## 📚 Quick Reference
 
@@ -134,13 +128,10 @@ BASA uses a dual documentation system for optimal organization:
 - **[📋 License Information](https://github.com/MannyJMusic/basa-app/wiki/License-Information)** - Usage terms
 
 ### 📚 [Technical Documentation](./docs/README.md) - Developer & Setup Guides
-- **[🚀 Technology Stack](./docs/TECH_STACK.md)** - What powers BASA
-- **[⚙️ Developer Control Panel](./docs/DEVELOPER_CONTROL_PANEL.md)** - Development utilities
+- **[🚀 Deployment](./docs/DEPLOYMENT.md)** - CI/CD, the production host, troubleshooting
 - **[🎨 Design System](./docs/BASA_DESIGN_SYSTEM.md)** - UI/UX guidelines
-- **[📧 Email System](./docs/BASA_EMAIL_SYSTEM.md)** - Email functionality
-- **[💳 Stripe Setup](./docs/STRIPE_SETUP.md)** - Payment processing
-- **[🐳 Docker Guide](./docs/DOCKER.md)** - Containerization
-- **[📧 Mailgun Setup](./docs/MAILGUN_SETUP.md)** - Email service configuration
+- **[📧 Email](./docs/EMAIL.md)** - Mailgun configuration and email templates
+- **[💳 Stripe](./docs/STRIPE.md)** - Payment processing and webhook testing
 - **[🔧 Admin Settings](./docs/ADMIN_SETTINGS.md)** - Administrative features
 
 ## 🤝 Contributing
@@ -181,7 +172,6 @@ For commercial licensing inquiries, please contact BASA.
 For support and questions:
 - **📖 Check the [GitHub Wiki](https://github.com/MannyJMusic/basa-app/wiki)** - User guides and community documentation
 - **🔧 Review the [Technical Documentation](./docs/README.md)** - Developer guides and setup instructions
-- **🛠️ Use the [Developer Control Panel](./docs/DEVELOPER_CONTROL_PANEL.md)** - Interactive development tools
 - **📧 Contact the development team** - For additional support
 
 ---
