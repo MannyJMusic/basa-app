@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
+import { requireSession, isResponse } from '@/lib/api-auth'
 
 export async function GET(request: NextRequest) {
+  const session = await requireSession()
+  if (isResponse(session)) return session
+
   const { searchParams } = new URL(request.url)
   const paymentId = searchParams.get('paymentId')
 
@@ -12,6 +16,16 @@ export async function GET(request: NextRequest) {
   try {
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentId)
     if (!paymentIntent || !paymentIntent.metadata) {
+      return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
+    }
+
+    // Only the payer (matched by user id or email in the intent metadata) or an admin may read a receipt
+    const meta = paymentIntent.metadata
+    const metaEmail = (() => {
+      try { return meta.customerInfo ? JSON.parse(meta.customerInfo).email : undefined } catch { return undefined }
+    })() ?? paymentIntent.receipt_email ?? undefined
+    const isOwner = meta.userId === session.user.id || (!!metaEmail && metaEmail === session.user.email)
+    if (!isOwner && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
     }
 

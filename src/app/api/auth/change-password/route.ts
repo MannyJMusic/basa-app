@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 import { hashPassword, verifyPassword } from "@/lib/utils"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
+import { requireSession, isResponse } from "@/lib/api-auth"
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
@@ -11,10 +11,8 @@ const changePasswordSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireSession()
+    if (isResponse(session)) return session
 
     const body = await request.json()
     const { currentPassword, newPassword } = changePasswordSchema.parse(body)
