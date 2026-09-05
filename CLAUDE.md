@@ -155,6 +155,10 @@ Import as `import * as Sentry from "@sentry/nextjs"`. `Sentry.init` is called on
 - Wrap meaningful actions (button handlers, API calls, expensive functions) in `Sentry.startSpan({ op, name }, span => ...)` with descriptive `op`/`name` (e.g. `ui.click`, `http.client`) and `span.setAttribute` for useful context. Child spans may nest inside a parent.
 - For structured logs use `const { logger } = Sentry` and `logger.fmt` template literals; logging requires `_experiments: { enableLogs: true }` in init. `Sentry.consoleLoggingIntegration` can forward `console.*` calls instead of instrumenting each one.
 
+## Project Tracking
+
+Work is tracked in GitHub Issues on this repo with one milestone per phase of `.claude/PLAN.md`. Reference the issue number in branch names and commit messages (`fix: gate dev routes (#25)`). Labels: `security`, `cleanup`, `infra`, `deps`, `migration`, `feature`, `decision`, `retirement`.
+
 ## Path Alias
 
 Use `@/` for imports from `src/`:

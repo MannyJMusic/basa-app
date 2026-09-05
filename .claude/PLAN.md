@@ -128,19 +128,23 @@ Phases 0 and 1 are sequential and should be done first. Phases 2 to 4 can overla
 7. **Harness scope.** Confirm the Phase 1 deletion list, and name anything else that counts as "the old harness".
 8. **AI-CREW VPS IP** and confirmation that nothing else runs on that host.
 
-## 5. Proposed first issues (Phase 0 and 1)
+## 5. Tracking
 
-Each is sized to one PR.
+Work is tracked as GitHub Issues on `MannyJMusic/basa-app`, one milestone per phase. Filed 2026-09-05:
 
-1. Gate/delete dev and debug routes; add `auth()` to `api/payments/receipt`; remove `DevControlPanel` from production pages.
-2. Audit all API routes for session + role checks; add a shared `requireAdmin()` helper.
-3. Remove `console.log` from auth, middleware, and webhook paths; adopt Sentry logger.
-4. Single lockfile, Node 22 in `engines`, Dockerfile, and CI; Docker build runs full `pnpm build`.
-5. Reconcile `main`/`dev`; delete stale branches; document branch policy in `CLAUDE.md`.
-6. Delete scaffolding: `wiki/`, `components/examples`, `docs/techstack.ts`, root one-off scripts, stale markdown.
-7. Collapse `scripts/` to the four kept scripts.
-8. Prune `docs/` to current, true documents.
-9. Consolidate the five email modules into one.
-10. CloudPanel vhost + cert for the app subdomain; confirm `/api/health` responds over HTTPS.
+| # | Milestone | Issue |
+|---|---|---|
+| 25 | Phase 0 | Gate or delete dev/debug routes; remove DevControlPanel from production pages |
+| 26 | Phase 0 | Add `auth()` to `api/payments/receipt`; audit all API routes for session and role checks |
+| 27 | Phase 0 | Remove `console.log` from auth, middleware, webhook paths; adopt Sentry logger |
+| 28 | Phase 0 | Single lockfile, Node 22 everywhere, full type-checked build in Docker |
+| 29 | Phase 0 | Branch policy and PR-only `main` |
+| 30 | Phase 1 | Delete template scaffolding |
+| 31 | Phase 1 | Collapse `scripts/` |
+| 32 | Phase 1 | Prune `docs/` |
+| 33 | Phase 1 | Consolidate the five email modules |
+| 34 | Phase 2 | Serve the app subdomain over HTTPS from CloudPanel |
+| 35 | — | Owner decisions that gate Phases 3 to 6 (section 4 as a checklist) |
+| 36 | Phase 5 | Shut down the AI crew VPS (blocked on IP) |
 
-Phase 3 to 6 issues get scoped after the decisions in section 4.
+Phase 3, 4, and 6 issues get filed once #35 is answered.
