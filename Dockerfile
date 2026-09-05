@@ -1,5 +1,5 @@
 # Production Dockerfile
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
 
 # Install pnpm and OpenSSL dependencies for Prisma
 RUN apk add --no-cache openssl
@@ -28,8 +28,8 @@ RUN pnpm prisma generate
 # Copy source code
 COPY . .
 
-# Build the application (skip type checking for now)
-RUN pnpm run build:no-check
+# Build the application (prebuild runs type-check and lint)
+RUN pnpm run build
 
 # Copy Prisma client to a location that won't be excluded by .dockerignore
 RUN find node_modules -name ".prisma" -type d | head -1 | xargs -I {} cp -r {} /tmp/prisma-client || \
@@ -39,7 +39,7 @@ RUN find node_modules -name ".prisma" -type d | head -1 | xargs -I {} cp -r {} /
      (echo "Prisma client still not found" && find node_modules -name "*prisma*" -type d && exit 1))
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:22-alpine AS production
 
 # Install pnpm and OpenSSL dependencies for Prisma
 RUN apk add --no-cache openssl

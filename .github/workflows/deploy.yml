@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -51,7 +51,7 @@ jobs:
         continue-on-error: true
 
       - name: Build application
-        run: pnpm run build:no-check
+        run: pnpm exec next build
         env:
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder' }}
           NEXT_PUBLIC_APP_URL: https://app.businessassociationsa.com
