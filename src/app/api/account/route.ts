@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
+import { requireSession, isResponse } from "@/lib/api-auth"
 
 // Validation schema for account settings updates
 const accountSettingsSchema = z.object({
@@ -22,11 +22,8 @@ const accountSettingsSchema = z.object({
 
 export async function GET() {
   try {
-    const session = await auth()
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireSession()
+    if (isResponse(session)) return session
 
     // Get user with account-level data
     const user = await prisma.user.findUnique({
@@ -117,10 +114,8 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireSession()
+    if (isResponse(session)) return session
 
     const body = await request.json()
     const validatedData = accountSettingsSchema.parse(body)

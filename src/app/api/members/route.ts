@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { sendEmailVerification } from "@/lib/email"
 import { generateVerificationToken } from "@/lib/utils"
+import { requireAdmin, requireSession, isResponse } from "@/lib/api-auth"
 
 // Validation schemas
 const createMemberSchema = z.object({
@@ -39,10 +39,8 @@ const searchParamsSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireSession()
+    if (isResponse(session)) return session
 
     const { searchParams } = new URL(request.url)
     const params = searchParamsSchema.parse(Object.fromEntries(searchParams))
@@ -163,10 +161,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     const body = await request.json()
     const validatedData = createMemberSchema.parse(body)

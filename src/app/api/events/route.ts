@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 import { z } from "zod"
+import { requireAdmin, isResponse } from "@/lib/api-auth"
 
 // Get Prisma client dynamically to support test injection
 const getPrisma = () => {
@@ -195,10 +195,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     // Debug: Log request details
     console.log('API /api/events POST - Request details:')

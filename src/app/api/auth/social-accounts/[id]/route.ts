@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { requireSession, isResponse } from "@/lib/api-auth"
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
+    const session = await requireSession()
+    if (isResponse(session)) return session
     const { id } = await params
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
-    }
 
     // Verify the account belongs to the user
     const account = await prisma.account.findFirst({

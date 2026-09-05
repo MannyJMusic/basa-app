@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { requireSession, isResponse } from '@/lib/api-auth'
 
 // GET /api/tickets - Get support ticket audit logs
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const session = await requireSession()
+    if (isResponse(session)) return session
 
     const supportLogs = await prisma.auditLog.findMany({
       where: {
@@ -45,11 +42,8 @@ export async function GET(request: NextRequest) {
 // POST /api/tickets - Create a new support ticket
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const session = await requireSession()
+    if (isResponse(session)) return session
 
     const body = await request.json()
     

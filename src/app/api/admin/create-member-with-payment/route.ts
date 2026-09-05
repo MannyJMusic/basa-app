@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/db'
 import { sendAdminCreatedWelcomeEmail, sendPaymentReceiptEmail } from '@/lib/basa-emails'
 import { hash } from 'bcryptjs'
 import { randomBytes } from 'crypto'
+import { requireAdmin, isResponse } from '@/lib/api-auth'
 
 // Membership tier mapping
 const TIER_MAPPING: Record<string, 'BASIC' | 'PREMIUM' | 'VIP'> = {
@@ -19,13 +19,8 @@ const TIER_MAPPING: Record<string, 'BASIC' | 'PREMIUM' | 'VIP'> = {
 export async function POST(request: NextRequest) {
   try {
     // Check admin authentication
-    const session = await auth()
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
-        { status: 401 }
-      )
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     const body = await request.json()
     console.log('Received request body:', JSON.stringify(body, null, 2))

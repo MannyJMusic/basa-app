@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
+import { requireAdmin, requireSession, isResponse } from "@/lib/api-auth"
 
 const updateMemberSchema = z.object({
   firstName: z.string().min(1, "First name is required").optional(),
@@ -28,10 +28,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireSession()
+    if (isResponse(session)) return session
 
     const { id } = await params
     console.log('Fetching member with ID:', id)
@@ -114,10 +112,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     const { id } = await params
     const body = await request.json()
@@ -244,10 +240,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     const { id } = await params
 

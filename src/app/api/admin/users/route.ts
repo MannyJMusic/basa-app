@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { requireAdmin, isResponse } from '@/lib/api-auth'
 
 // GET /api/admin/users - Get all admin users
 export async function GET() {
   try {
-    const session = await auth()
-    
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     const adminUsers = await prisma.user.findMany({
       where: {
@@ -47,11 +44,8 @@ export async function GET() {
 // POST /api/admin/users - Create new admin user
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     const body = await request.json()
     

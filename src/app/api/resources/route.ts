@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { requireAdmin, requireSession, isResponse } from '@/lib/api-auth'
 
 // GET /api/resources - Get all resources
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const session = await requireSession()
+    if (isResponse(session)) return session
 
     const resources = await prisma.resource.findMany({
       where: { isActive: true },
@@ -43,11 +40,8 @@ export async function GET(request: NextRequest) {
 // POST /api/resources - Create a new resource (admin only)
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     const body = await request.json()
     
