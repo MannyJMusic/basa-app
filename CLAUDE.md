@@ -155,6 +155,13 @@ Import as `import * as Sentry from "@sentry/nextjs"`. `Sentry.init` is called on
 - Wrap meaningful actions (button handlers, API calls, expensive functions) in `Sentry.startSpan({ op, name }, span => ...)` with descriptive `op`/`name` (e.g. `ui.click`, `http.client`) and `span.setAttribute` for useful context. Child spans may nest inside a parent.
 - For structured logs use `const { logger } = Sentry` and `logger.fmt` template literals; logging requires `_experiments: { enableLogs: true }` in init. `Sentry.consoleLoggingIntegration` can forward `console.*` calls instead of instrumenting each one.
 
+## Branching
+
+- `main` is production. Every push to `main` deploys via GitHub Actions. It is protected: PR only, the **Build and Test** check must pass, no force pushes.
+- `dev` is integration. Branch from `dev` (`fix/<issue>-<slug>`, `feat/<issue>-<slug>`, `chore/<issue>-<slug>`), open a PR into `dev`, squash-merge.
+- Release by opening a PR from `dev` into `main`. Merging it is the deploy.
+- The **Build and Test** job (install, type-check, lint, `next build`) runs on every PR into `dev` or `main`; the deploy job runs only on pushes to `main`.
+
 ## Project Tracking
 
 Work is tracked in GitHub Issues on this repo with one milestone per phase of `.claude/PLAN.md`. Reference the issue number in branch names and commit messages (`fix: gate dev routes (#25)`). Labels: `security`, `cleanup`, `infra`, `deps`, `migration`, `feature`, `decision`, `retirement`.
