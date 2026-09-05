@@ -3,6 +3,15 @@
     "next/core-web-vitals"
   ],
   "rules": {
+    "no-console": [
+      "error",
+      {
+        "allow": [
+          "warn",
+          "error"
+        ]
+      }
+    ],
     "@typescript-eslint/no-duplicate-enum-values": "off",
     "no-unused-vars": "off",
     "@typescript-eslint/no-unused-vars": "off",
@@ -11,5 +20,17 @@
     "react-hooks/exhaustive-deps": "off",
     "@typescript-eslint/no-empty-object-type": "off",
     "prefer-const": "off"
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/__tests__/**/*",
+        "scripts/**/*",
+        "prisma/seed.ts"
+      ],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
 }

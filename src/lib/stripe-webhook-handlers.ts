@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import { prisma } from '@/lib/db'
 import { sendWelcomeEmail, sendPaymentReceiptEmail, sendMembershipInvitationEmail } from '@/lib/basa-emails'
 import { sendWelcomeEmailFallback, sendPaymentReceiptEmailFallback, sendMembershipInvitationEmailFallback } from '@/lib/email-fallback'
@@ -5,25 +6,22 @@ import { sendWelcomeEmailFallback, sendPaymentReceiptEmailFallback, sendMembersh
 /**
  * Stripe webhook event handlers, shared by /api/webhooks/stripe and /api/payments/webhook.
  * Kept out of the route files because Next.js only allows HTTP method exports there.
+
  */
+const { logger } = Sentry
 async function handlePaymentIntentSucceeded(paymentIntent: any) {
-  console.log('🔔 PAYMENT SUCCEEDED:', paymentIntent.id)
-  console.log('📋 Payment metadata:', paymentIntent.metadata)
+  logger.info('Stripe payment succeeded', { paymentIntentId: paymentIntent.id, type: paymentIntent.metadata?.type })
   
   // Development notification
   if (process.env.NODE_ENV === 'development') {
-    console.log('🚀 DEV MODE: Processing payment webhook')
-    console.log('📧 Email notifications will be sent for this payment')
   }
   
   const { userId, cart, additionalMembers, customerInfo, businessInfo, contactInfo, type, isNewUser } = paymentIntent.metadata
 
   if (type === 'membership') {
-    console.log('Processing membership payment for user:', userId)
     
     // Check if this is a new user signup
     const isNewUserSignup = isNewUser === 'true'
-    console.log('Is new user signup:', isNewUserSignup)
     
     try {
       if (isNewUserSignup) {
@@ -59,7 +57,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
           }
         })
 
-        console.log('Updated user record for new user signup')
 
         // Send welcome email to new user
         const user = await prisma.user.findUnique({
@@ -68,7 +65,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
         })
 
         if (user && user.email) {
-          console.log('Found user for welcome email:', user.email)
           const activationUrl = user.verificationToken 
             ? `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${user.verificationToken}&email=${user.email}`
             : `${process.env.NEXTAUTH_URL}/auth/sign-in`
@@ -77,7 +73,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
           
           // Try main email system first, fallback if it fails
           try {
-            console.log('Attempting to send welcome email via main system')
             await sendWelcomeEmail(
               user.email,
               firstName,
@@ -87,9 +82,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
                 logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
               }
             )
-            console.log(`✅ Welcome email sent successfully to ${user.email}`)
           } catch (emailError) {
-            console.log(`❌ Main email system failed, using fallback for ${user.email}:`, emailError)
             try {
               await sendWelcomeEmailFallback(
                 user.email,
@@ -100,7 +93,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
                   logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
                 }
               )
-              console.log(`✅ Fallback welcome email sent to ${user.email}`)
             } catch (fallbackError) {
               console.error('❌ Both email systems failed:', fallbackError)
             }
@@ -130,7 +122,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
             }
           }
         })
-        console.log('Updated existing user membership')
       }
 
       // Send payment receipt email to all users
@@ -140,7 +131,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       })
 
       if (user && user.email) {
-        console.log('Sending payment receipt email to:', user.email)
         
         // Parse cart and other data safely
         let parsedCart: any[] = []
@@ -158,7 +148,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
         const firstName = user.firstName || parsedCustomerInfo.name?.split(' ')[0] || 'Member'
         
         try {
-          console.log('Attempting to send payment receipt email')
           await sendPaymentReceiptEmail(
             user.email,
             firstName,
@@ -176,7 +165,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
               logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
             }
           )
-          console.log(`✅ Payment receipt email sent successfully to ${user.email}`)
         } catch (emailError) {
           console.error(`❌ Payment receipt email failed:`, emailError)
           console.error(`❌ Email details:`, { userEmail: user.email, paymentId: paymentIntent.id })
@@ -198,7 +186,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
                 logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
               }
             )
-            console.log(`✅ Fallback payment receipt email sent to ${user.email}`)
           } catch (fallbackError) {
             console.error('❌ Both payment receipt email systems failed:', fallbackError)
           }
@@ -232,7 +219,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
               }
             })
           }
-          console.log('Updated membership tiers based on cart')
         } catch (parseError) {
           console.error('Failed to parse cart for membership tiers:', parseError)
         }
@@ -260,7 +246,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
               // Send invitation email to additional members
               try {
-                console.log('Sending invitation email to additional member:', member.email)
                 await sendMembershipInvitationEmail(
                   member.email,
                   member.name,
@@ -270,7 +255,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
                     logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
                   }
                 )
-                console.log(`✅ Invitation email sent to ${member.email}`)
               } catch (emailError) {
                 console.error(`❌ Failed to send invitation email to ${member.email}:`, emailError)
                 try {
@@ -283,7 +267,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
                       logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
                     }
                   )
-                  console.log(`✅ Fallback invitation email sent to ${member.email}`)
                 } catch (fallbackError) {
                   console.error(`❌ Both invitation email systems failed for ${member.email}:`, fallbackError)
                 }
@@ -311,19 +294,17 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
         }
       })
       
-      console.log('✅ Payment processing completed successfully')
       
     } catch (error) {
-      console.error('❌ Error processing payment success:', error)
+      Sentry.captureException(error, { tags: { source: 'stripe-webhook', handler: 'payment_intent.succeeded' } })
       throw error
     }
   } else {
-    console.log('Payment type not membership, skipping email processing')
   }
 }
 
 async function handlePaymentIntentFailed(paymentIntent: any) {
-  console.log('Payment failed:', paymentIntent.id)
+  logger.warn('Stripe payment failed', { paymentIntentId: paymentIntent.id })
   
   const { userId } = paymentIntent.metadata
 
@@ -346,7 +327,6 @@ async function handlePaymentIntentFailed(paymentIntent: any) {
 }
 
 async function handleSubscriptionCreated(subscription: any) {
-  console.log('Subscription created:', subscription.id)
   
   // Handle subscription creation if implementing recurring payments
   const { userId } = subscription.metadata
@@ -367,7 +347,6 @@ async function handleSubscriptionCreated(subscription: any) {
 }
 
 async function handleSubscriptionUpdated(subscription: any) {
-  console.log('Subscription updated:', subscription.id)
   
   const { userId } = subscription.metadata
 
@@ -386,7 +365,6 @@ async function handleSubscriptionUpdated(subscription: any) {
 }
 
 async function handleSubscriptionDeleted(subscription: any) {
-  console.log('Subscription deleted:', subscription.id)
   
   const { userId } = subscription.metadata
 
@@ -405,21 +383,17 @@ async function handleSubscriptionDeleted(subscription: any) {
 }
 
 async function handleInvoicePaymentSucceeded(invoice: any) {
-  console.log('Invoice payment succeeded:', invoice.id)
   
   // Handle recurring payment success
   if (invoice.subscription) {
     // Update subscription status or extend membership
-    console.log('Recurring payment successful for subscription:', invoice.subscription)
   }
 }
 
 async function handleInvoicePaymentFailed(invoice: any) {
-  console.log('Invoice payment failed:', invoice.id)
   
   // Handle recurring payment failure
   if (invoice.subscription) {
-    console.log('Recurring payment failed for subscription:', invoice.subscription)
   }
 }
 
@@ -455,10 +429,10 @@ export async function handleWebhookEvent(event: any) {
         break
 
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        logger.debug('Unhandled Stripe event type', { eventType: event.type })
     }
   } catch (error) {
-    console.error('Error processing webhook:', error)
+    Sentry.captureException(error, { tags: { source: 'stripe-webhook' }, extra: { eventType: event?.type, eventId: event?.id } })
     throw error
   }
 }

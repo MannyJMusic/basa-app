@@ -74,7 +74,6 @@ async function sendEmail(to: string, subject: string, html: string, options: {
     }
 
     const response = await mg.messages.create(domain, messageData)
-    console.log(`Email sent successfully to ${to}:`, response.id)
     return response
   } catch (error) {
     console.error(`Failed to send email to ${to}:`, error)

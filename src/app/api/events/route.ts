@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const params = searchParamsSchema.parse(Object.fromEntries(searchParams))
-    console.log('API /api/events GET params:', params)
 
     // Build where clause for filtering
     const where: any = {}
@@ -86,7 +85,6 @@ export async function GET(request: NextRequest) {
       where.isFeatured = params.isFeatured
     }
 
-    console.log('API /api/events GET where:', JSON.stringify(where, null, 2))
 
     // Build order by clause
     const orderBy: any = {}
@@ -100,13 +98,11 @@ export async function GET(request: NextRequest) {
     let total = 0;
     
     try {
-      console.log('API /api/events GET - Attempting to fetch events...');
       
       const prisma = getPrisma();
       
       // First, try a simple count
       total = await prisma.event.count({ where });
-      console.log('API /api/events GET - Count successful:', total);
       
       // Then, try to fetch events
       events = await prisma.event.findMany({
@@ -142,7 +138,6 @@ export async function GET(request: NextRequest) {
         take: params.limit,
       });
       
-      console.log('API /api/events GET - Events fetch successful:', events.length);
     } catch (dbError) {
       console.error('API /api/events GET - Database error:', dbError);
       throw dbError;
@@ -159,10 +154,6 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    console.log('API /api/events GET - Prisma query results:')
-    console.log('  Total events found:', total)
-    console.log('  Events returned:', eventsWithOrganizer.length)
-    console.log('  First event (if any):', eventsWithOrganizer[0] ? { id: eventsWithOrganizer[0].id, title: eventsWithOrganizer[0].title, status: eventsWithOrganizer[0].status, endDate: eventsWithOrganizer[0].endDate } : 'none')
 
     // Calculate pagination info
     const totalPages = Math.ceil(total / params.limit)
@@ -181,7 +172,6 @@ export async function GET(request: NextRequest) {
       },
     }
 
-    console.log('API /api/events GET - Response:', JSON.stringify(response, null, 2))
 
     return NextResponse.json(response)
   } catch (error) {
@@ -199,15 +189,10 @@ export async function POST(request: NextRequest) {
     if (isResponse(session)) return session
 
     // Debug: Log request details
-    console.log('API /api/events POST - Request details:')
-    console.log('  Content-Type:', request.headers.get('content-type'))
-    console.log('  Method:', request.method)
-    console.log('  URL:', request.url)
 
     let body;
     try {
       body = await request.json()
-      console.log('API /api/events POST - Request body:', JSON.stringify(body, null, 2))
     } catch (parseError) {
       console.error('API /api/events POST - Failed to parse request body:', parseError)
       return NextResponse.json(
@@ -225,7 +210,6 @@ export async function POST(request: NextRequest) {
     }
 
     const validatedData = createEventSchema.parse(body)
-    console.log('API /api/events POST - Validated data:', JSON.stringify(validatedData, null, 2))
 
     const prisma = getPrisma();
     

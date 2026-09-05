@@ -119,7 +119,6 @@ async function sendEmail(to: string, subject: string, html: string, options: {
     }
 
     const response = await mg.messages.create(domain, messageData)
-    console.log(`Email sent successfully to ${to}:`, response.id)
     return response
   } catch (error) {
     console.error(`Failed to send email to ${to}:`, error)
@@ -295,11 +294,9 @@ export async function buildBasaTemplates() {
     const util = require('util')
     const execAsync = util.promisify(exec)
     
-    console.log('Building BASA email templates...')
     await execAsync('node bootstrap.js build --config config.basa.js', {
       cwd: path.join(process.cwd(), 'mail-templates')
     })
-    console.log('BASA templates built successfully!')
   } catch (error) {
     console.error('Failed to build BASA templates:', error)
     throw error

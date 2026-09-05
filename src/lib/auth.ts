@@ -38,14 +38,11 @@ export const authConfig: NextAuthConfig = {
           password: { label: "Password", type: "password" }
         },
         async authorize(credentials) {
-          console.log("Credentials login attempt for:", credentials?.email);
           
           if (!credentials?.email || !credentials?.password) {
-            console.log("Missing email or password");
             return null
           }
           if (typeof credentials.email !== "string") {
-            console.log("Invalid email format");
             return null
           }
           
@@ -55,17 +52,14 @@ export const authConfig: NextAuthConfig = {
             })
 
             if (!user) {
-              console.log("User not found:", credentials.email);
               return null
             }
 
             if (!user.hashedPassword) {
-              console.log("User has no password set:", credentials.email);
               return null
             }
 
             if (!user.isActive) {
-              console.log("User account is not active:", credentials.email);
               return null
             }
 
@@ -75,11 +69,9 @@ export const authConfig: NextAuthConfig = {
             )
 
             if (!isPasswordValid) {
-              console.log("Invalid password for user:", credentials.email);
               return null
             }
 
-            console.log("Credentials login successful for:", credentials.email);
             return {
               id: user.id,
               email: user.email || '',
@@ -128,17 +120,14 @@ export const authConfig: NextAuthConfig = {
         return session
       },
       async redirect({ url, baseUrl }) {
-        console.log("Redirect callback - url:", url, "baseUrl:", baseUrl);
         
         // Handle OAuth callbacks specifically
         if (url.includes("/api/auth/callback")) {
-          console.log("OAuth callback detected, redirecting to dashboard");
           return `${baseUrl}/dashboard`;
         }
         
         // If the url is relative, prefix it with the base url
         if (url.startsWith("/")) {
-          console.log("Relative URL, prefixing with baseUrl");
           return `${baseUrl}${url}`;
         }
         
@@ -146,27 +135,17 @@ export const authConfig: NextAuthConfig = {
         try {
           const urlObj = new URL(url);
           if (urlObj.origin === baseUrl) {
-            console.log("Same origin URL, allowing");
             return url;
           }
         } catch (error) {
-          console.log("Invalid URL, redirecting to dashboard");
         }
         
         // For external URLs, redirect to dashboard
-        console.log("External URL, redirecting to dashboard");
         return `${baseUrl}/dashboard`;
       },
       async signIn({ user, account, profile }: { user: any; account?: any; profile?: any }) {
         if (user) {
           try {
-            console.log("SignIn callback - User data:", {
-              id: user.id,
-              email: user.email,
-              name: user.name,
-              image: user.image,
-              provider: account?.provider
-            });
 
             // For credentials login, we don't need to do anything special
             // as the authorize function already handles validation
@@ -181,7 +160,6 @@ export const authConfig: NextAuthConfig = {
             });
 
             if (existingUser) {
-              console.log("Existing user found by email:", existingUser.id);
               
               // Check if this provider account already exists for this user
               if (account?.providerAccountId) {
@@ -243,7 +221,6 @@ export const authConfig: NextAuthConfig = {
               return true;
             } else {
               // User doesn't exist - automatically create account for social login
-              console.log("Creating new user account for social login");
               
               // Split name into first and last name
               const { firstName, lastName } = splitName(user.name);
@@ -294,7 +271,6 @@ export const authConfig: NextAuthConfig = {
                 }
               });
 
-              console.log("New user account created:", newUser.id);
               return true;
             }
 

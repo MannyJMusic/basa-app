@@ -125,10 +125,8 @@ export function useEvents() {
       )
 
       const url = `/api/events?${params}`
-      console.log('useEvents: fetching events from', url)
       
       const response = await fetch(url)
-      console.log('useEvents: response status', response.status, response.ok)
       
       if (!response.ok) {
         const errorText = await response.text()
@@ -137,8 +135,6 @@ export function useEvents() {
       }
 
       const data: EventListResponse = await response.json()
-      console.log('useEvents: received data', data)
-      console.log('useEvents: events count', data.events?.length)
       
       setEvents(data.events)
       setPagination(data.pagination)
@@ -183,7 +179,6 @@ export function useEvents() {
   const createEvent = useCallback(async (data: CreateEventData) => {
     setLoading(true)
     try {
-      console.log('useEvents: creating event with data:', JSON.stringify(data, null, 2))
       
       const response = await fetch('/api/events', {
         method: 'POST',
@@ -193,7 +188,6 @@ export function useEvents() {
         body: JSON.stringify(data),
       })
 
-      console.log('useEvents: create event response status:', response.status, response.ok)
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -202,7 +196,6 @@ export function useEvents() {
       }
 
       const event: Event = await response.json()
-      console.log('useEvents: created event successfully:', event.id)
       
       toast({
         title: "Success",

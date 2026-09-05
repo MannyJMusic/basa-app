@@ -81,13 +81,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the email sending for development
-    console.log('🔔 DEV EMAIL SENT:', {
-      paymentId,
-      email,
-      emailType,
-      timestamp: new Date().toISOString(),
-      messageId: emailResult.messageId
-    })
 
     return NextResponse.json({
       success: true,

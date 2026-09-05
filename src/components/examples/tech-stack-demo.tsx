@@ -82,12 +82,10 @@ export function TechStackDemo() {
       duration: 5000
     })
 
-    console.log('Form data:', data)
   }
 
   // Auto-save handler
   const handleAutoSave = async (data: DemoFormData) => {
-    console.log('Auto-saving:', data)
     // Simulate auto-save API call
     await new Promise(resolve => setTimeout(resolve, 1000))
   }
