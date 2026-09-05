@@ -25,19 +25,9 @@
     "test:unit": "jest --config jest.config.js",
     "test:integration": "jest --config jest.config.testcontainers.js",
     "test:all": "pnpm test:integration",
-    "email:test": "node scripts/test-system.js email",
-    "email:quick": "node scripts/test-system.js email",
     "email:preview": "echo 'Visit http://localhost:3000/dev/email-preview'",
     "setup:dev": "node scripts/setup-dev.js",
-    "test:system": "node scripts/test-system.js",
-    "test:health": "node scripts/test-system.js health",
-    "test:api": "node scripts/test-system.js api",
-    "test:db": "node scripts/test-system.js db",
-    "setup:testcontainers": "node scripts/setup-testcontainers-cloud.js",
-    "verify:testcontainers": "node scripts/verify-testcontainers-cloud.js",
-    "verify:prisma": "node scripts/verify-prisma-engine.js",
-    "db:setup": "node scripts/setup-database.js",
-    "db:fix": "./scripts/fix-database.sh"
+    "db:setup": "node scripts/setup-database.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
