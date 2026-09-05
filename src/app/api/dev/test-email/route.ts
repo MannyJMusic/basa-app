@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireDevAdmin, isResponse } from '@/lib/api-auth'
 import { sendWelcomeEmail, sendPasswordResetEmail, sendEventInvitationEmail, sendPaymentReceiptEmail, sendContactFormEmail } from '@/lib/basa-emails'
 
 export async function POST(request: NextRequest) {
-  // Only allow in development
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Not available in production' }, { status: 403 })
-  }
+  const guard = await requireDevAdmin()
+  if (isResponse(guard)) return guard
 
   try {
     const body = await request.json()

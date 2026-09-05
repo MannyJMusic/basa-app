@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     )
 
     // Use the new detailed webhook handlers from the other endpoint
-    const { handleWebhookEvent } = await import('../../webhooks/stripe/route')
+    const { handleWebhookEvent } = await import('@/lib/stripe-webhook-handlers')
     await handleWebhookEvent(event)
 
     return NextResponse.json({ received: true })

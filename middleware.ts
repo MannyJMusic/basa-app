@@ -32,8 +32,7 @@ export default auth((req) => {
     "/auth/verify-email",
     "/join",
     "/networking",
-    "/testimonials",
-    "/tech-demo"
+    "/testimonials"
   ]
 
   // Check if the current path is public
