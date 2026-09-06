@@ -1,7 +1,13 @@
 import * as Sentry from '@sentry/nextjs'
 import { prisma } from '@/lib/db'
-import { sendWelcomeEmail, sendPaymentReceiptEmail, sendMembershipInvitationEmail } from '@/lib/basa-emails'
-import { sendWelcomeEmailFallback, sendPaymentReceiptEmailFallback, sendMembershipInvitationEmailFallback } from '@/lib/email-fallback'
+import {
+  sendWelcomeEmail,
+  sendPaymentReceiptEmail,
+  sendMembershipInvitationEmail,
+  sendWelcomeEmailFallback,
+  sendPaymentReceiptEmailFallback,
+  sendMembershipInvitationEmailFallback,
+} from '@/lib/basa-emails'
 
 /**
  * Stripe webhook event handlers, shared by /api/webhooks/stripe and /api/payments/webhook.
@@ -84,15 +90,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
             )
           } catch (emailError) {
             try {
-              await sendWelcomeEmailFallback(
-                user.email,
-                firstName,
-                activationUrl,
-                {
-                  siteUrl: process.env.NEXTAUTH_URL,
-                  logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
-                }
-              )
+              await sendWelcomeEmailFallback(user.email, firstName, activationUrl)
             } catch (fallbackError) {
               console.error('❌ Both email systems failed:', fallbackError)
             }
@@ -169,23 +167,11 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
           console.error(`❌ Payment receipt email failed:`, emailError)
           console.error(`❌ Email details:`, { userEmail: user.email, paymentId: paymentIntent.id })
           try {
-            await sendPaymentReceiptEmailFallback(
-              user.email,
-              firstName,
-              {
-                paymentId: paymentIntent.id,
-                amount: paymentIntent.amount / 100,
-                currency: paymentIntent.currency,
-                cart: parsedCart,
-                customerInfo: parsedCustomerInfo,
-                businessInfo: parsedBusinessInfo,
-                paymentDate: new Date().toISOString()
-              },
-              {
-                siteUrl: process.env.NEXTAUTH_URL,
-                logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
-              }
-            )
+            await sendPaymentReceiptEmailFallback(user.email, firstName, {
+              paymentId: paymentIntent.id,
+              amount: paymentIntent.amount / 100,
+              currency: paymentIntent.currency,
+            })
           } catch (fallbackError) {
             console.error('❌ Both payment receipt email systems failed:', fallbackError)
           }
@@ -258,15 +244,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
               } catch (emailError) {
                 console.error(`❌ Failed to send invitation email to ${member.email}:`, emailError)
                 try {
-                  await sendMembershipInvitationEmailFallback(
-                    member.email,
-                    member.name,
-                    member.tierId,
-                    {
-                      siteUrl: process.env.NEXTAUTH_URL,
-                      logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
-                    }
-                  )
+                  await sendMembershipInvitationEmailFallback(member.email, member.name, member.tierId)
                 } catch (fallbackError) {
                   console.error(`❌ Both invitation email systems failed for ${member.email}:`, fallbackError)
                 }

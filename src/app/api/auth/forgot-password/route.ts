@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { passwordResetRequestSchema } from "@/lib/validations"
 import { prisma } from "@/lib/db"
-import { sendPasswordResetEmail } from "@/lib/email"
+import { sendPasswordResetEmail } from "@/lib/basa-emails"
 import crypto from "crypto"
 
 export async function POST(request: NextRequest) {
@@ -36,8 +36,9 @@ export async function POST(request: NextRequest) {
     })
 
     // Send password reset email using Mailgun
+    const resetUrl = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`
     try {
-      await sendPasswordResetEmail(email, user.firstName || 'User', resetToken)
+      await sendPasswordResetEmail(email, user.firstName || 'User', resetUrl)
     } catch (emailError) {
       console.error("Failed to send password reset email:", emailError)
       return NextResponse.json(
