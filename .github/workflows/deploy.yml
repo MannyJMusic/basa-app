@@ -48,11 +48,9 @@ jobs:
 
       - name: Run type check
         run: pnpm run type-check
-        continue-on-error: true
 
       - name: Run linter
         run: pnpm run lint
-        continue-on-error: true
 
       - name: Build application
         run: pnpm exec next build
@@ -103,7 +101,7 @@ jobs:
 
       - name: Deploy to Server
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'DEPLOY_SCRIPT'
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} '
             set -e
 
             echo "=== Starting Deployment ==="
@@ -136,7 +134,7 @@ jobs:
 
             # Health check
             echo "Checking application health..."
-            for i in {1..10}; do
+            for i in 1 2 3 4 5 6 7 8 9 10; do
               if curl -f http://localhost:3000/api/health; then
                 echo ""
                 echo "Health check passed!"
@@ -151,16 +149,16 @@ jobs:
             docker image prune -f
 
             echo "=== Deployment Complete ==="
-          DEPLOY_SCRIPT
+          '
 
       - name: Verify Deployment
         run: |
           echo "Verifying deployment..."
           sleep 10
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} '
             docker compose -f /opt/basa-app/docker-compose.prod.yml ps
-            curl -f http://localhost:3000/api/health || echo "Health check endpoint not responding"
-          EOF
+            curl -f https://app.businessassociationsa.com/api/health || echo "Health check endpoint not responding"
+          '
 
       - name: Notify on Failure
         if: failure()
