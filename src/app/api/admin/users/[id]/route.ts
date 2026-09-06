@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { requireAdmin, isResponse } from '@/lib/api-auth'
 
 // GET /api/admin/users/[id] - Get specific admin user
 export async function GET(
@@ -9,12 +9,9 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
     const params = await context.params
-    
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const user = await prisma.user.findUnique({
       where: { id: params.id },
@@ -51,12 +48,9 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
     const params = await context.params
-    
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const body = await request.json()
     
@@ -128,12 +122,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
     const params = await context.params
-    
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     // Prevent deleting yourself
     if (session.user.id === params.id) {

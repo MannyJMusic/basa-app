@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
+import { requireAdmin, isResponse } from "@/lib/api-auth"
 
 // Validation schema for updating resources
 const updateResourceSchema = z.object({
@@ -21,11 +21,9 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
     const params = await context.params
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
 
     const resource = await prisma.resource.findUnique({
       where: { id: params.id },
@@ -64,11 +62,9 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
     const params = await context.params
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
 
     const body = await request.json()
     const validatedData = updateResourceSchema.parse(body)
@@ -123,11 +119,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
     const params = await context.params
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
 
     // Check if resource exists
     const existingResource = await prisma.resource.findUnique({

@@ -1,5 +1,8 @@
 import formData from 'form-data'
 import Mailgun from 'mailgun.js'
+import * as Sentry from '@sentry/nextjs'
+
+const { logger } = Sentry
 // Mailgun client type
 
 // Lazy initialization to avoid build-time errors when env vars are not set
@@ -73,10 +76,8 @@ async function sendEmail(to: string, subject: string, html: string, options: {
     if (options.attachments) {
       (messageData as any).attachments = options.attachments
     }
-    console.log('Sending Test', domain, defaultFromEmail, siteUrl)
 
     const response = await mg.messages.create(domain, messageData)
-    console.log(`Email sent successfully to ${to}:`, response.id)
     return response
   } catch (error) {
     console.error(`Failed to send email to ${to}:`, error)
@@ -685,6 +686,86 @@ export async function sendContactFormEmail(
       error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
+}
+
+// Verification / newsletter emails (moved from the former src/lib/email.ts, #33)
+
+export async function sendEmailVerification(email: string, firstName: string, verificationToken: string) {
+  const verificationUrl = `${process.env.NEXTAUTH_URL}/auth/verify?token=${verificationToken}`
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h1>Verify your email, ${firstName}</h1>
+      <p>Please confirm your email address for your BASA account:</p>
+      <p><a href="${verificationUrl}">Verify Email Address</a></p>
+      <p>If you didn't request this, you can ignore this email.</p>
+    </div>
+  `
+  return sendEmail(email, 'Verify Your BASA Email Address', html)
+}
+
+export async function sendNewsletter(email: string, firstName: string, content: string) {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h1>BASA Newsletter</h1>
+      <p>Hi ${firstName},</p>
+      <div>${content}</div>
+      <p>Best regards,<br>The BASA Team</p>
+    </div>
+  `
+  return sendEmail(email, 'BASA Newsletter', html)
+}
+
+export async function sendBulkEmail(recipients: Array<{ email: string; firstName: string }>, subject: string, content: string) {
+  const results = []
+  for (const recipient of recipients) {
+    try {
+      const result = await sendNewsletter(recipient.email, recipient.firstName, content)
+      results.push({ email: recipient.email, success: true, result })
+    } catch (error) {
+      results.push({ email: recipient.email, success: false, error })
+    }
+  }
+  return results
+}
+
+// Fallback emails used when the primary Mailgun call throws (moved from
+// the former src/lib/email-fallback.ts, #33). These do not send anything;
+// they exist so a failed primary send doesn't also throw, and log to
+// Sentry so a run of fallbacks is visible instead of silently swallowed.
+export interface EmailFallbackResult {
+  success: boolean
+  messageId?: string
+  error?: string
+}
+
+async function sendEmailFallback(
+  to: string,
+  subject: string,
+  options: { logExtra?: Record<string, unknown> } = {}
+): Promise<EmailFallbackResult> {
+  logger.warn('Sending fallback (non-delivered) email', { to, subject, ...options.logExtra })
+  return {
+    success: true,
+    messageId: `fallback_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+  }
+}
+
+export async function sendWelcomeEmailFallback(email: string, firstName: string, activationUrl: string) {
+  return sendEmailFallback(email, 'Welcome to BASA - Activate Your Account', { logExtra: { firstName, activationUrl } })
+}
+
+export async function sendPaymentReceiptEmailFallback(
+  email: string,
+  firstName: string,
+  paymentData: { paymentId: string; amount: number; currency: string }
+) {
+  return sendEmailFallback(email, 'BASA Membership Payment Receipt', {
+    logExtra: { firstName, paymentId: paymentData.paymentId, amount: paymentData.amount, currency: paymentData.currency },
+  })
+}
+
+export async function sendMembershipInvitationEmailFallback(email: string, name: string, tierId: string) {
+  return sendEmailFallback(email, "You're Invited to Join BASA", { logExtra: { name, tierId } })
 }
 
 // Email validation and rate limiting

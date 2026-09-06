@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
+import { requireAdmin, requireSession, isResponse } from "@/lib/api-auth"
 
 const updateMemberSchema = z.object({
   firstName: z.string().min(1, "First name is required").optional(),
@@ -28,14 +28,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireSession()
+    if (isResponse(session)) return session
 
     const { id } = await params
-    console.log('Fetching member with ID:', id)
-    console.log('User role:', session.user.role)
 
     const member = await prisma.member.findUnique({
       where: { id },
@@ -83,10 +79,7 @@ export async function GET(
       },
     })
 
-    console.log('Member found:', member ? 'Yes' : 'No')
     if (member) {
-      console.log('Member showInDirectory:', member.showInDirectory)
-      console.log('User role:', session.user.role)
     }
 
     if (!member) {
@@ -95,7 +88,6 @@ export async function GET(
 
     // For non-admins, only allow viewing if showInDirectory is true
     if (session.user.role !== "ADMIN" && !member.showInDirectory) {
-      console.log('Access denied: member not in directory')
       return NextResponse.json({ error: "Not allowed" }, { status: 403 })
     }
 
@@ -114,10 +106,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     const { id } = await params
     const body = await request.json()
@@ -244,10 +234,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     const { id } = await params
 

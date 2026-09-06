@@ -186,10 +186,8 @@ export function useMembers() {
       )
 
       const url = `/api/members?${params}`
-      console.log('useMembers: fetching members from', url)
       
       const response = await fetch(url)
-      console.log('useMembers: response status', response.status, response.ok)
       
       if (!response.ok) {
         const errorText = await response.text()
@@ -198,8 +196,6 @@ export function useMembers() {
       }
 
       const data: MemberListResponse = await response.json()
-      console.log('useMembers: received data', data)
-      console.log('useMembers: members count', data.members?.length)
       
       setMembers(data.members)
       setPagination(data.pagination)

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/db"
-import { sendNewsletter, sendBulkEmail } from "@/lib/email"
+import { sendNewsletter, sendBulkEmail } from "@/lib/basa-emails"
 import { getSystemUser } from "@/lib/system-user"
+import { requireSession, isResponse } from "@/lib/api-auth"
 
 const newsletterSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -263,14 +264,22 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await requireSession()
+    if (isResponse(session)) return session
+
     const { searchParams } = new URL(request.url)
-    const email = searchParams.get('email')
+    const email = searchParams.get('email') ?? session.user.email
     
     if (!email) {
       return NextResponse.json(
         { error: "Email parameter is required" },
         { status: 400 }
       )
+    }
+
+    // Members may only unsubscribe themselves; admins may unsubscribe anyone
+    if (email !== session.user.email && session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
     
     // Unsubscribe from newsletter

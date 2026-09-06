@@ -2,10 +2,12 @@
   "name": "basa-website",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
-    "build:no-check": "next build",
     "prebuild": "pnpm run type-check && pnpm run lint",
     "check": "pnpm run type-check && pnpm run lint",
     "start": "next start",
@@ -23,23 +25,9 @@
     "test:unit": "jest --config jest.config.js",
     "test:integration": "jest --config jest.config.testcontainers.js",
     "test:all": "pnpm test:integration",
-    "cypress:open": "cypress open",
-    "cypress:run": "cypress run",
-    "e2e": "cypress run",
-    "webhook:test": "node scripts/test-webhooks.js",
-    "email:test": "node scripts/test-system.js email",
-    "email:quick": "node scripts/test-system.js email",
     "email:preview": "echo 'Visit http://localhost:3000/dev/email-preview'",
     "setup:dev": "node scripts/setup-dev.js",
-    "test:system": "node scripts/test-system.js",
-    "test:health": "node scripts/test-system.js health",
-    "test:api": "node scripts/test-system.js api",
-    "test:db": "node scripts/test-system.js db",
-    "setup:testcontainers": "node scripts/setup-testcontainers-cloud.js",
-    "verify:testcontainers": "node scripts/verify-testcontainers-cloud.js",
-    "verify:prisma": "node scripts/verify-prisma-engine.js",
-    "db:setup": "node scripts/setup-database.js",
-    "db:fix": "./scripts/fix-database.sh"
+    "db:setup": "node scripts/setup-database.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -95,7 +83,6 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
-    "@cypress/code-coverage": "^3.12.6",
     "@testcontainers/postgresql": "^11.1.0",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.1",
@@ -107,7 +94,6 @@
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
     "autoprefixer": "^10.4.17",
-    "cypress": "^13.6.6",
     "eslint": "^8.56.0",
     "eslint-config-next": "15.3.4",
     "jest": "^29.7.0",

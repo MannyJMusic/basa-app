@@ -119,7 +119,6 @@ export default function GuestPassRequestPage() {
 
     try {
       // In a real app, this would send the data to your backend
-      console.log('Guest pass request submitted:', formData)
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))

@@ -59,7 +59,6 @@ export default function SuccessGuideDownloadPage() {
     try {
       // In a real app, this would send the data to your backend
       // and trigger the download
-      console.log('Form submitted:', formData)
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))

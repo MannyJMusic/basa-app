@@ -52,16 +52,12 @@ export default function EventsPage() {
     )
   }, [fetchEvents, searchQuery, filterType])
 
-  console.log('EventsPage: render', { events, loading, eventsLength: events?.length })
   
   // Debug: Log each event
   if (events && events.length > 0) {
-    console.log('EventsPage: Events received:')
     events.forEach((event, index) => {
-      console.log(`  ${index + 1}. ${event.title} - ${event.endDate}`)
     })
   } else {
-    console.log('EventsPage: No events received')
   }
 
   return (

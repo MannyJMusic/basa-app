@@ -43,13 +43,11 @@ import {
 } from "lucide-react"
 import { StripeForm } from "@/components/payments/stripe-form"
 import { TestDataPopulator } from "@/components/ui/test-data-populator"
-import { DevControlPanel } from "@/components/dev/DevControlPanel"
 
 // Load Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 // Debug Stripe key
-console.log('Stripe key available:', !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
 
 // Chapter Membership Tiers
 const chapterTiers = [
@@ -316,22 +314,9 @@ export default function JoinPage() {
 
   const createPaymentIntent = async () => {
     if (!canProceedToNextStep()) {
-      console.log('Cannot proceed - validation failed:', {
-        currentStep,
-        cartLength: cart.length,
-        businessInfoValid: isBusinessInfoValid(),
-        contactInfoValid: isContactInfoValid()
-      })
       return
     }
 
-    console.log('Creating payment intent...', {
-      cart,
-      contactInfo,
-      businessInfo,
-      subtotal,
-      currentStep
-    })
 
     setPaymentLoading(true)
     setPaymentError(null)
@@ -351,7 +336,6 @@ export default function JoinPage() {
         autoRenew: false,
       }
 
-      console.log('Sending request body:', requestBody)
 
       const response = await fetch('/api/payments/membership', {
         method: 'POST',
@@ -363,15 +347,8 @@ export default function JoinPage() {
         signal: AbortSignal.timeout(30000) // 30 second timeout
       })
 
-      console.log('Response status:', response.status)
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
-      console.log('Response ok:', response.ok)
-      console.log('Response statusText:', response.statusText)
 
       const data = await response.json()
-      console.log('Payment intent response:', data)
-      console.log('Response data type:', typeof data)
-      console.log('Response data keys:', Object.keys(data))
 
       if (!response.ok) {
         console.error('API Error Response:', {
@@ -382,7 +359,6 @@ export default function JoinPage() {
         throw new Error(data.error || data.details || 'Failed to create payment')
       }
 
-      console.log('Setting client secret:', data.clientSecret ? 'secret received' : 'no secret')
       setClientSecret(data.clientSecret)
     } catch (err) {
       console.error('Payment intent creation failed:', err)
@@ -417,7 +393,6 @@ export default function JoinPage() {
 
   // Test function to verify button clicks
   const testButtonClick = (tierId: string, action: string) => {
-    console.log('Button clicked:', { tierId, action })
   }
 
   // Add tier to cart
@@ -518,10 +493,7 @@ export default function JoinPage() {
   }, [currentStep, clientSecret, paymentLoading, paymentError])
 
   return (
-    <DevControlPanel
-      paymentData={cart.length > 0 ? { cart, total: subtotal } : undefined}
-      emailStatus={{ active: true, customerEmail: contactInfo.email }}
-    >
+    <>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       
       {/* Compact Header */}
@@ -1472,6 +1444,6 @@ export default function JoinPage() {
         </div>
       </section>
     </div>
-    </DevControlPanel>
+    </>
   )
 } 

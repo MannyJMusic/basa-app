@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import * as Sentry from '@sentry/nextjs'
 import { stripe } from '@/lib/stripe'
 import { headers } from 'next/headers'
 
@@ -23,12 +24,12 @@ export async function POST(request: NextRequest) {
     )
 
     // Use the new detailed webhook handlers from the other endpoint
-    const { handleWebhookEvent } = await import('../../webhooks/stripe/route')
+    const { handleWebhookEvent } = await import('@/lib/stripe-webhook-handlers')
     await handleWebhookEvent(event)
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error('Webhook error:', error)
+    Sentry.captureException(error, { tags: { source: 'stripe-webhook-legacy' } })
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 400 }
@@ -72,16 +73,14 @@ async function handleWebhookEvent(event: any) {
         break
 
       default:
-        console.log(`Unhandled event type: ${event.type}`)
     }
   } catch (error) {
-    console.error('Error processing webhook:', error)
+    Sentry.captureException(error, { tags: { source: 'stripe-webhook' } })
     throw error
   }
 }
 
 async function handlePaymentIntentSucceeded(paymentIntent: any) {
-  console.log('Payment succeeded:', paymentIntent.id)
   
   const { prisma } = await import('@/lib/db')
   const { sendWelcomeEmail, sendPaymentReceiptEmail, sendMembershipInvitationEmail } = await import('@/lib/basa-emails')
@@ -139,7 +138,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
               }
             )
           }
-          console.log(`Welcome email sent to ${user.email || 'unknown'}`)
         }
       } catch (emailError) {
         console.error('Failed to send welcome email:', emailError)
@@ -199,7 +197,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
             logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
           }
         )
-        console.log(`Payment receipt email sent to ${user.email}`)
       }
     } catch (emailError) {
       console.error('Failed to send payment receipt email:', emailError)
@@ -261,7 +258,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
                 logoUrl: `${process.env.NEXTAUTH_URL}/images/BASA-LOGO.png`
               }
             )
-            console.log(`Invitation email sent to ${member.email}`)
           } catch (emailError) {
             console.error('Failed to send invitation email:', emailError)
           }
@@ -288,7 +284,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 }
 
 async function handlePaymentIntentFailed(paymentIntent: any) {
-  console.log('Payment failed:', paymentIntent.id)
   
   const { prisma } = await import('@/lib/db')
   const { userId } = paymentIntent.metadata
@@ -312,7 +307,6 @@ async function handlePaymentIntentFailed(paymentIntent: any) {
 }
 
 async function handleSubscriptionCreated(subscription: any) {
-  console.log('Subscription created:', subscription.id)
   
   const { prisma } = await import('@/lib/db')
   const { userId } = subscription.metadata
@@ -333,7 +327,6 @@ async function handleSubscriptionCreated(subscription: any) {
 }
 
 async function handleSubscriptionUpdated(subscription: any) {
-  console.log('Subscription updated:', subscription.id)
   
   const { prisma } = await import('@/lib/db')
   const { userId } = subscription.metadata
@@ -353,7 +346,6 @@ async function handleSubscriptionUpdated(subscription: any) {
 }
 
 async function handleSubscriptionDeleted(subscription: any) {
-  console.log('Subscription deleted:', subscription.id)
   
   const { prisma } = await import('@/lib/db')
   const { userId } = subscription.metadata
@@ -373,20 +365,16 @@ async function handleSubscriptionDeleted(subscription: any) {
 }
 
 async function handleInvoicePaymentSucceeded(invoice: any) {
-  console.log('Invoice payment succeeded:', invoice.id)
   
   // Handle recurring payment success
   if (invoice.subscription) {
     // Update subscription status or extend membership
-    console.log('Recurring payment successful for subscription:', invoice.subscription)
   }
 }
 
 async function handleInvoicePaymentFailed(invoice: any) {
-  console.log('Invoice payment failed:', invoice.id)
   
   // Handle recurring payment failure
   if (invoice.subscription) {
-    console.log('Recurring payment failed for subscription:', invoice.subscription)
   }
 } 

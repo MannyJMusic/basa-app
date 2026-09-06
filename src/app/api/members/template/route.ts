@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { requireAdmin, isResponse } from "@/lib/api-auth"
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     // CSV template with headers and example data
     const csvContent = `firstName,lastName,email,password,businessName,businessType,industry,businessEmail,businessPhone,businessAddress,city,state,zipCode,website,membershipTier,role

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { parse } from "csv-parse/sync"
+import { requireAdmin, isResponse } from "@/lib/api-auth"
 
 // Validation schema for CSV row
 const csvRowSchema = z.object({
@@ -46,10 +46,8 @@ const expectedHeaders = [
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const session = await requireAdmin()
+    if (isResponse(session)) return session
 
     const formData = await request.formData()
     const file = formData.get("file") as File

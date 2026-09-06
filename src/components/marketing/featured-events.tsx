@@ -7,7 +7,6 @@ import { prisma } from "@/lib/db"
 
 async function getFeaturedEvents() {
   try {
-    console.log('Fetching featured events from database...')
     
     const events = await prisma.event.findMany({
       where: {
@@ -41,7 +40,6 @@ async function getFeaturedEvents() {
       take: 3, // Limit to 3 featured events
     })
 
-    console.log(`Found ${events.length} featured events`)
     return events
   } catch (error) {
     console.error("Error fetching featured events:", error)

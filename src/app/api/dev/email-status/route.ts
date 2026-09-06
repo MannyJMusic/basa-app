@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireDevAdmin, isResponse } from '@/lib/api-auth'
 
 export async function GET(request: NextRequest) {
-  // Only allow in development
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Not available in production' }, { status: 403 })
-  }
+  const guard = await requireDevAdmin()
+  if (isResponse(guard)) return guard
   try {
     const { searchParams } = new URL(request.url)
     const paymentId = searchParams.get('paymentId')
@@ -56,10 +55,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Only allow in development
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Not available in production' }, { status: 403 })
-  }
+  const guard = await requireDevAdmin()
+  if (isResponse(guard)) return guard
 
   try {
     const body = await request.json()
@@ -84,13 +81,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the email sending for development
-    console.log('🔔 DEV EMAIL SENT:', {
-      paymentId,
-      email,
-      emailType,
-      timestamp: new Date().toISOString(),
-      messageId: emailResult.messageId
-    })
 
     return NextResponse.json({
       success: true,

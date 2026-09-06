@@ -1,5 +1,5 @@
 # Local Development Dockerfile
-FROM node:18-alpine
+FROM node:22-alpine
 
 # Install pnpm and OpenSSL dependencies for Prisma
 RUN apk add --no-cache openssl
