@@ -16,17 +16,8 @@ async function getFeaturedEvents() {
         },
       },
       include: {
-        organizer: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        },
+        organizer: true,
+        venue: true,
         registrations: {
           select: {
             id: true,
