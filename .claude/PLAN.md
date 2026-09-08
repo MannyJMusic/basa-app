@@ -43,11 +43,11 @@ What does not:
 | Events calendar + registration + tickets | MEC, 100+ published events, actively used (latest event 2026-08-31) | `Event`, `EventRegistration`, `EventSpeaker`, `EventSponsor` models; public list/calendar/detail/register pages; admin CRUD | Import of existing events, venues, organizers; recurring events; ticket tiers per event; iCal feed. **Core migration blocker.** |
 | Memberships + payments | PMPro: 20 annual levels = 5 tiers (Meeting $95, Associate $245, Market $495, Mission $745, Action $995) × 4 chapter prefixes (SS, CC, SO, SS W). Stripe via WooCommerce. | `MembershipTier` enum (BASIC/PREMIUM/VIP + MEETING_MEMBER, ASSOCIATE_MEMBER, TRIO_MEMBER, CLASS_RESOURCE_MEMBER, NAG_RESOURCE_MEMBER), three Stripe price IDs (Essential/Professional/Corporate) in env | Tier model does not match reality. Need chapter concept, the 5 real tiers, renewal handling, and a member import from PMPro with expiry dates. |
 | Member directory / profiles | PeepSo profiles + `/members` | Dashboard directory + profile pages | Close. Import needed. |
-| Community (groups, activity feed, messages, notifications) | PeepSo groups (e.g. South2West, South2East), activity, messaging | `/networking` page only | **Decision needed:** replicate, replace with an external tool (Slack/Discord/Circle), or drop. |
-| News / blog | 2,418 posts, almost all auto-aggregated "San Antonio News" (Feedzy RSS); 3 podcasts, 1 BASA News | `BlogPost` model, `/blog` pages | Decide whether the RSS aggregate is worth keeping; import only real BASA content otherwise. |
-| Perks / member listings | WPAdverts `/perks`, `/adverts` | `Resource` model, `/dashboard/resources` | Probably map perks → resources; confirm. |
-| Shop | WooCommerce `/shop`, `/cart` | none | Confirm whether anything sells besides memberships. Likely drop. |
-| Badges | BadgeOS | none | Likely drop. |
+| Community (groups, activity feed, messages, notifications) | PeepSo groups (e.g. South2West, South2East), activity, messaging | `/networking` page only | **Decided: dropped entirely** (section 4). No replacement, in-app or external. |
+| News / blog | 2,418 posts, almost all auto-aggregated "San Antonio News" (Feedzy RSS); 3 podcasts, 1 BASA News | `BlogPost` model, `/blog` pages | **Decided: no carryover** (section 4). Whole news feature gets rescoped later; no importer. |
+| Perks / member listings | WPAdverts `/perks`, `/adverts` | `Resource` model, `/dashboard/resources` | **Decided: not migrated** (section 4). |
+| Shop | WooCommerce `/shop`, `/cart` | none | **Decided: dropped** (section 4). Memberships and tickets are the only things sold. |
+| Badges | BadgeOS | none | **Decided: dropped** (section 4). |
 | Leads / contact / newsletter | WPForms, Jetpack | `Lead` model, `/api/contact`, `/api/newsletter` | Close. |
 | SEO / redirects | AIOSEO, 43 public pages, established URLs | none | Need a redirect map from old URLs to new ones at cutover. |
 
@@ -93,8 +93,8 @@ Phases 0 and 1 are sequential and should be done first. Phases 2 to 4 can overla
 
 - Remodel memberships: `Chapter` (SS, CC, SO, SS W: get real names from the owner), `MembershipTier` = Meeting / Associate / Market / Mission / Action with prices, annual expiry, renewal. Replace the three Stripe price IDs with one product per tier (chapter as metadata) or per tier×chapter if pricing differs.
 - Event model gaps: recurring events, per-event ticket tiers with Stripe prices, venue and organizer entities, iCal export, public calendar feed.
-- Write `scripts/migrate/` importers against the WP REST API (`wp/v2/mec-events`, `mec_location`, `mec_organizer`, `pmpro/v1/membership_levels`, PMPro members via DB export, `wp/v2/posts` filtered to BASA-authored content, `wpadverts` → resources). Each importer: dry-run, idempotent upsert by WP ID, reconciliation report.
-- Decide and implement the community answer (see Decisions).
+- Write `scripts/migrate/` importers against the WP REST API (`wp/v2/mec-events`, `mec_location`, `mec_organizer`, `pmpro/v1/membership_levels`, PMPro members via DB export). Each importer: dry-run, idempotent upsert by WP ID, reconciliation report. **Events and members only** — per section 4 there is no news, perks, shop, or badge import.
+- Drop the community surface (`/networking` placeholder) per section 4.
 
 ### Phase 4. Modernize the stack
 
@@ -102,13 +102,14 @@ Phases 0 and 1 are sequential and should be done first. Phases 2 to 4 can overla
 - Tests that mean something: Playwright end-to-end for sign-up → join → pay → event register; integration tests for webhook handling and membership expiry; delete the empty Cypress setup.
 - Apply the Sentry conventions in `CLAUDE.md` (spans on payment and registration flows, `captureException` in catch blocks).
 - Replace remaining `any` in `lib/` and API routes with Zod-derived types.
+- Hosting, per section 4: back up the Hostinger VPS in full and verify a restore, then reprovision it and replace the inline-SSH deploy with build-in-CI, push to a registry, pull a tagged image on the host, health check, rollback on failure. Sequence the reprovision against Phase 6 deliberately — doing it after WordPress retires avoids restoring WordPress onto a fresh box just to delete it.
 
 ### Phase 5. Retire BASA-AI-CREW
 
-- Owner provides the VPS IP. Snapshot `/opt/basa-ai-crew` (`.env`, `*.db`, logs) to a private archive, then `systemctl disable --now basa-orchestrator basa-dashboard`, close port 8080, and remove the Azure AD app / WordPress application password it used.
+- Owner provides the VPS IP. Note per section 4: **other services run on that host**, so the shutdown is service-scoped, not box-scoped, and the host itself gets reprovisioned later. Snapshot `/opt/basa-ai-crew` (`.env`, `*.db`, logs) to a private archive, then `systemctl disable --now basa-orchestrator basa-dashboard`, close port 8080, and remove the Azure AD app / WordPress application password it used.
 - Deactivate and delete the `basa-mec-api` plugin on WordPress if installed.
 - Archive the `BASA-AI-CREW` repo (or delete the local copy; upstream is `coleam00/your-claude-engineer`).
-- Decide whether the original need (Jen emails an event flyer → an event appears) becomes a basa-app feature. Recommended: an admin "create event from flyer" upload in basa-app that uses Claude to extract fields into a pre-filled form for human confirmation. Small, contained, and it removes the need for any email polling.
+- Build the replacement (decided, section 4): an admin "create event from flyer" upload in basa-app that uses Claude to extract fields into a pre-filled form for human confirmation. No email polling, no Azure AD app, no MEC REST plugin.
 
 ### Phase 6. Cut over and retire WordPress
 
@@ -117,16 +118,16 @@ Phases 0 and 1 are sequential and should be done first. Phases 2 to 4 can overla
 - Point `businessassociationsa.com` at basa-app; keep WP reachable on an internal hostname for 60 days, then take a final All-in-One WP Migration export and shut it down.
 - Cancel PMPro / PeepSo / Elementor / MEC licences.
 
-## 4. Decisions needed from the owner
+## 4. Owner decisions (answered 2026-09-08, issue #35)
 
-1. **Community features.** Keep PeepSo-style groups/activity/messaging in basa-app (large build), move members to an external community tool, or drop? This is the biggest scope lever in the plan.
-2. **Chapters.** What are SS, CC, SO, SS W? Are prices identical across them (they appear to be)? Do members belong to exactly one chapter?
-3. **News aggregate.** Is the 2,418-post RSS news feed worth carrying over, or does the new site only publish BASA-authored news and podcasts?
-4. **Shop / badges / perks.** Anything sold besides memberships and event tickets? Are badges used? Are perks (WPAdverts) still active?
-5. **Email-to-event replacement.** Is the "flyer → event" admin tool (Phase 5) wanted, or do events get entered by hand?
-6. **Hosting.** Stay on the Hostinger CloudPanel VPS with Docker, or move basa-app to Vercel + managed Postgres? The current deploy pipeline is fragile; Vercel would remove most of Phase 2 but changes cost and data residency.
-7. **Harness scope.** Confirm the Phase 1 deletion list, and name anything else that counts as "the old harness".
-8. **AI-CREW VPS IP** and confirmation that nothing else runs on that host.
+1. **Community features: drop entirely.** No PeepSo-style groups, activity feed, or messaging in basa-app, and no external community tool either. basa-app is membership + events only. This is the largest scope reduction in the plan.
+2. **Chapters: confirmed.** SS, CC, SO, SS W are chapters. First pass assumes **one primary chapter per member**; multi-chapter membership is deferred. Real display names for the four prefixes are still needed.
+3. **News: no carryover.** The 2,418-post RSS aggregate does not come over, and neither does BASA-authored news for now — the whole news/blog feature gets rescoped later. No news importer in Phase 3.
+4. **Shop / badges / perks: memberships and event tickets only.** No WooCommerce shop, no BadgeOS badges, no WPAdverts perks to migrate.
+5. **Flyer-to-event tool: build it.** An admin uploads a flyer, Claude pre-fills the event form, a human confirms. Replaces the AI crew's mailbox polling.
+6. **Hosting: stay on Hostinger.** Not moving to Vercel. Back up the current VPS, reprovision it, and replace the fragile inline-SSH deploy with a build-and-pull pipeline.
+7. **Harness scope: remove all of it,** not just the Phase 1 deletion list. Needs a sweep for what Phase 1 missed.
+8. **AI-CREW VPS: other services run on that host** besides the orchestrator, and the box will eventually be reprovisioned too. Shutdown must not disrupt the rest. Still blocked on explicit IP confirmation and an inventory of what else is on it.
 
 ## 5. Tracking
 
@@ -144,7 +145,35 @@ Work is tracked as GitHub Issues on `MannyJMusic/basa-app`, one milestone per ph
 | 32 | Phase 1 | Prune `docs/` |
 | 33 | Phase 1 | Consolidate the five email modules |
 | 34 | Phase 2 | Serve the app subdomain over HTTPS from CloudPanel |
-| 35 | — | Owner decisions that gate Phases 3 to 6 (section 4 as a checklist) |
-| 36 | Phase 5 | Shut down the AI crew VPS (blocked on IP) |
+| 35 | — | Owner decisions that gate Phases 3 to 6 — **answered and closed 2026-09-08**, see section 4 |
+| 36 | Phase 5 | Shut down the AI crew VPS (blocked on IP confirmation + host inventory) |
 
-Phase 3, 4, and 6 issues get filed once #35 is answered.
+Filed 2026-09-08, once the decisions in section 4 were answered:
+
+| # | Milestone | Issue |
+|---|---|---|
+| 51 | Phase 3 | Model chapters and the five real membership tiers |
+| 52 | Phase 3 | Membership renewal and annual expiry lifecycle |
+| 53 | Phase 3 | Add Venue and Organizer entities for events |
+| 54 | Phase 3 | Per-event ticket tiers with Stripe prices |
+| 55 | Phase 3 | Recurring events |
+| 56 | Phase 3 | iCal export and public calendar feed |
+| 57 | Phase 3 | Importer: MEC events, venues, organizers |
+| 58 | Phase 3 | Importer: PMPro members, tiers, chapters, expiry dates |
+| 59 | Phase 3 | Drop community features; remove the `/networking` placeholder |
+| 60 | Phase 4 | Upgrade Prisma 5 → 7 |
+| 61 | Phase 4 | Upgrade Next 15 → 16 and React 18 → 19 |
+| 62 | Phase 4 | Upgrade Tailwind 3 → 4 |
+| 63 | Phase 4 | Bump Sentry, Stripe, Mailgun, hookform/resolvers |
+| 64 | Phase 4 | Move next-auth off the 5.0.0 beta to stable Auth.js |
+| 65 | Phase 4 | Playwright end-to-end tests, plus webhook and expiry integration tests |
+| 66 | Phase 4 | Sentry conventions and Zod-derived types in place of `any` |
+| 67 | Phase 4 | Full backup of the Hostinger VPS before any reprovision |
+| 68 | Phase 4 | Reprovision the VPS and rebuild the deploy pipeline |
+| 69 | Phase 5 | Admin tool: create an event from an uploaded flyer |
+| 70 | Phase 6 | Build the 301 redirect map from WordPress URLs |
+| 71 | Phase 6 | Cut over `businessassociationsa.com` and retire WordPress |
+| 72 | Phase 6 | Cancel PMPro, PeepSo, Elementor, MEC licences |
+| 73 | Phase 1 | Audit and remove what is left of the old harness |
+
+Suggested order within Phase 3: #51 → #52, then #53 → #54 → #55 → #56, then the importers (#57, #58) last since they depend on the models. #59 and #73 are small and can go any time. In Phase 4, #67 must close before #68 starts.
