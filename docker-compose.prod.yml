@@ -31,7 +31,9 @@ services:
       dockerfile: Dockerfile
     container_name: basa-app-prod
     ports:
-      - "3000:3000"
+      # Localhost only: nginx reverse-proxies to this. Publishing on 0.0.0.0 put the
+      # app straight on the internet, bypassing nginx's TLS, logging and rate limits.
+      - "127.0.0.1:3000:3000"
     env_file:
       - .env.production
     environment:
@@ -52,6 +54,11 @@ services:
 
   # Prisma Studio (Production - Admin Only)
   prisma-studio:
+    # Opt-in only. A database browser has no business running continuously in
+    # production; start it deliberately when needed:
+    #   docker compose --env-file .env.production -f docker-compose.prod.yml \
+    #     --profile tools up -d prisma-studio
+    profiles: ["tools"]
     image: node:22-alpine
     container_name: basa-prisma-studio-prod
     working_dir: /app
@@ -63,7 +70,11 @@ services:
       - ./package.json:/app/package.json:delegated
       - ./pnpm-lock.yaml:/app/pnpm-lock.yaml:delegated
     ports:
-      - "5555:5555"
+      # Prisma Studio is an unauthenticated database browser. It was published on
+      # 0.0.0.0 and was reachable from the internet on the live host. Localhost only,
+      # reached over an SSH tunnel when actually needed:
+      #   ssh -L 5555:127.0.0.1:5555 root@<host>
+      - "127.0.0.1:5555:5555"
     networks:
       - basa-network
     depends_on:

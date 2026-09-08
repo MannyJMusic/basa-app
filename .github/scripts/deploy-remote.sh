@@ -16,23 +16,30 @@ git reset --hard origin/main || git reset --hard origin/master
 
 # Build and deploy with Docker
 echo "Building Docker images..."
-docker compose -f docker-compose.prod.yml build --no-cache
+docker compose --env-file .env.production -f docker-compose.prod.yml build --no-cache
 
 # Stop old containers gracefully
 echo "Stopping old containers..."
-docker compose -f docker-compose.prod.yml down
+docker compose --env-file .env.production -f docker-compose.prod.yml down
 
 # Start new containers
 echo "Starting new containers..."
-docker compose -f docker-compose.prod.yml up -d
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 
 # Wait for services to be healthy
 echo "Waiting for services to start..."
 sleep 30
 
-# Run database migrations
+# Run database migrations.
+# Deliberately NOT `|| true`: a failed migration used to be swallowed here, so the
+# deploy reported success while the app ran against an unmigrated schema. A schema
+# that did not apply is a failed deploy.
 echo "Running database migrations..."
-docker compose -f docker-compose.prod.yml exec -T basa-app npx prisma migrate deploy || true
+if ! docker compose --env-file .env.production -f docker-compose.prod.yml exec -T basa-app npx prisma migrate deploy; then
+  echo "Migration failed - aborting deploy. The previous containers are still defined;"
+  echo "inspect with: docker compose --env-file .env.production -f docker-compose.prod.yml logs basa-app"
+  exit 1
+fi
 
 # Health check
 echo "Checking application health..."
