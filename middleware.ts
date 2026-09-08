@@ -28,7 +28,6 @@ export default auth((req) => {
     "/auth/verify",
     "/auth/verify-email",
     "/join",
-    "/networking",
     "/testimonials"
   ]
 
