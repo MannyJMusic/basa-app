@@ -411,6 +411,26 @@ async function main() {
     }
   }
 
+  // Events are organized by an Organizer, not a Member directly - an organizer is
+  // often a member but can also be BASA itself or a partner.
+  const createdOrganizers = []
+  for (const member of createdMembers) {
+    const existing = await prisma.organizer.findFirst({ where: { memberId: member.id } })
+    createdOrganizers.push(
+      existing ??
+        (await prisma.organizer.create({
+          data: {
+            name: member.businessName || 'Organizer',
+            email: member.businessEmail,
+            phone: member.businessPhone,
+            website: member.website,
+            memberId: member.id,
+          },
+        }))
+    )
+  }
+  console.log(`Seeded ${createdOrganizers.length} organizers`)
+
   // Create sample events
   const sampleEvents = [
     {
@@ -433,7 +453,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: true,
       image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800',
-      organizerId: createdMembers[0]?.id,
+      organizerId: createdOrganizers[0]?.id,
       tags: ['networking', 'business', 'san-antonio', 'mixer'],
     },
     {
@@ -456,7 +476,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: true,
       image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
-      organizerId: createdMembers[1]?.id,
+      organizerId: createdOrganizers[1]?.id,
       tags: ['technology', 'innovation', 'summit', 'san-antonio'],
     },
     {
@@ -479,7 +499,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800',
-      organizerId: createdMembers[2]?.id,
+      organizerId: createdOrganizers[2]?.id,
       tags: ['ribbon-cutting', 'grand-opening', 'downtown', 'san-antonio'],
     },
     {
@@ -502,7 +522,7 @@ async function main() {
       status: 'DRAFT' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800',
-      organizerId: createdMembers[2]?.id,
+      organizerId: createdOrganizers[2]?.id,
       tags: ['community-service', 'volunteer', 'san-antonio', 'giving-back'],
     },
     {
@@ -525,7 +545,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
-      organizerId: createdMembers[1]?.id,
+      organizerId: createdOrganizers[1]?.id,
       tags: ['workshop', 'business-growth', 'education', 'san-antonio'],
     },
     // June 2025 Events
@@ -549,7 +569,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: true,
       image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800',
-      organizerId: createdMembers[0]?.id,
+      organizerId: createdOrganizers[0]?.id,
       tags: ['networking', 'summer', 'business', 'san-antonio'],
     },
     {
@@ -572,7 +592,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: true,
       image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
-      organizerId: createdMembers[1]?.id,
+      organizerId: createdOrganizers[1]?.id,
       tags: ['startup', 'technology', 'innovation', 'san-antonio'],
     },
     {
@@ -595,7 +615,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800',
-      organizerId: createdMembers[2]?.id,
+      organizerId: createdOrganizers[2]?.id,
       tags: ['ribbon-cutting', 'restaurant', 'grand-opening', 'pearl-district'],
     },
     // July 2025 Events
@@ -619,7 +639,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800',
-      organizerId: createdMembers[0]?.id,
+      organizerId: createdOrganizers[0]?.id,
       tags: ['networking', 'independence-day', 'veterans', 'patriotic'],
     },
     {
@@ -642,7 +662,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: true,
       image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800',
-      organizerId: createdMembers[1]?.id,
+      organizerId: createdOrganizers[1]?.id,
       tags: ['healthcare', 'innovation', 'technology', 'medical'],
     },
     {
@@ -665,10 +685,12 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800',
-      organizerId: createdMembers[2]?.id,
+      organizerId: createdOrganizers[2]?.id,
       tags: ['volunteer', 'community-garden', 'environment', 'team-building'],
     },
   ]
+
+  const venuesByName = new Map<string, string>()
 
   for (const eventData of sampleEvents) {
     if (!eventData.organizerId) continue
@@ -678,8 +700,26 @@ async function main() {
     })
 
     if (!existingEvent) {
+      // Several sample events share a location; create each venue once.
+      let venueId = venuesByName.get(eventData.location)
+      if (!venueId) {
+        const venue =
+          (await prisma.venue.findFirst({ where: { name: eventData.location } })) ??
+          (await prisma.venue.create({
+            data: {
+              name: eventData.location,
+              address: eventData.address,
+              city: eventData.city,
+              state: eventData.state,
+              zipCode: eventData.zipCode,
+            },
+          }))
+        venueId = venue.id
+        venuesByName.set(eventData.location, venueId)
+      }
+
       const event = await prisma.event.create({
-        data: eventData,
+        data: { ...eventData, venueId },
       })
       console.log(`Created event: ${eventData.title}`)
     } else {

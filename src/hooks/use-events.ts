@@ -24,18 +24,20 @@ export interface Event {
   status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
   isFeatured: boolean
   image?: string
-  organizerId: string
   tags: string[]
   createdAt: string
   updatedAt: string
-  organizer: {
+  organizerId?: string
+  organizer?: {
     id: string
-    businessName?: string
-    user: {
-      firstName?: string
-      lastName?: string
-      email?: string
-    }
+    name: string
+    email?: string
+  }
+  venueId?: string
+  venue?: {
+    id: string
+    name: string
+    city?: string
   }
   registrations: Array<{
     id: string

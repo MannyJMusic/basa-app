@@ -595,10 +595,11 @@ export function EventDetailDialog({
                     </div>
                     <div>
                       <p className="font-medium">
-                        {event.organizer.businessName || 
-                         `${event.organizer.user.firstName} ${event.organizer.user.lastName}`}
+                        {event.organizer?.name || 'Unknown organizer'}
                       </p>
-                      <p className="text-sm text-gray-600">{event.organizer.user.email}</p>
+                      {event.organizer?.email && (
+                        <p className="text-sm text-gray-600">{event.organizer.email}</p>
+                      )}
                     </div>
                   </div>
                 </div>

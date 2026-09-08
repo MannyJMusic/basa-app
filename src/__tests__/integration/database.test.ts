@@ -165,11 +165,14 @@ describe('Database Integration Tests', () => {
         const user = await TestUtils.createTestUser(prisma, 'organizer@test.com', 'MEMBER');
         const member = await TestUtils.createTestMember(prisma, user.id, 'Event Organizer');
 
-        const event = await TestUtils.createTestEvent(prisma, member.id, 'Test Event');
+        const event = await TestUtils.createTestEventForMember(prisma, member.id, 'Test Event');
 
         expect(event.title).toBe('Test Event');
         expect(event.status).toBe('PUBLISHED');
-        expect(event.organizerId).toBe(member.id);
+        // organizerId is the Organizer's id now, not the Member's; the link back to
+        // the member is on the organizer.
+        const organizer = await prisma.organizer.findUnique({ where: { id: event.organizerId } });
+        expect(organizer?.memberId).toBe(member.id);
 
         // Test event retrieval with organizer
         const eventWithOrganizer = await prisma.event.findUnique({
@@ -177,7 +180,7 @@ describe('Database Integration Tests', () => {
           include: { organizer: true },
         });
 
-        expect(eventWithOrganizer?.organizer.businessName).toBe('Event Organizer');
+        expect(eventWithOrganizer?.organizer?.name).toBe('Event Organizer');
       })
     );
 
@@ -188,7 +191,7 @@ describe('Database Integration Tests', () => {
 
         const user = await TestUtils.createTestUser(prisma, 'status@test.com', 'MEMBER');
         const member = await TestUtils.createTestMember(prisma, user.id, 'Status Business');
-        const event = await TestUtils.createTestEvent(prisma, member.id, 'Status Event');
+        const event = await TestUtils.createTestEventForMember(prisma, member.id, 'Status Event');
 
         expect(event.status).toBe('PUBLISHED');
 
@@ -225,7 +228,7 @@ describe('Database Integration Tests', () => {
 
         const user = await TestUtils.createTestUser(prisma, 'pricing@test.com', 'MEMBER');
         const member = await TestUtils.createTestMember(prisma, user.id, 'Pricing Business');
-        const event = await TestUtils.createTestEvent(prisma, member.id, 'Pricing Event');
+        const event = await TestUtils.createTestEventForMember(prisma, member.id, 'Pricing Event');
 
         expect(event.capacity).toBe(50);
         expect(Number(event.price)).toBe(25.00);
@@ -318,7 +321,7 @@ describe('Database Integration Tests', () => {
         const member = await TestUtils.createTestMember(prisma, user.id, 'Integrity Business');
 
         // Create event and resource
-        const event = await TestUtils.createTestEvent(prisma, member.id, 'Integrity Event');
+        const event = await TestUtils.createTestEventForMember(prisma, member.id, 'Integrity Event');
         const resource = await TestUtils.createTestResource(prisma, 'Integrity Resource', member.id);
 
         // Verify relationships
@@ -326,14 +329,15 @@ describe('Database Integration Tests', () => {
           where: { id: member.id },
           include: {
             user: true,
-            events: true,
+            organizerProfiles: { include: { events: true } },
             resources: true,
           },
         });
 
         expect(memberWithRelations?.user.id).toBe(user.id);
-        expect(memberWithRelations?.events).toHaveLength(1);
-        expect(memberWithRelations?.events[0].id).toBe(event.id);
+        expect(memberWithRelations?.organizerProfiles).toHaveLength(1);
+        expect(memberWithRelations?.organizerProfiles[0].events).toHaveLength(1);
+        expect(memberWithRelations?.organizerProfiles[0].events[0].id).toBe(event.id);
         expect(memberWithRelations?.resources).toHaveLength(1);
         expect(memberWithRelations?.resources[0].id).toBe(resource.id);
 
@@ -361,61 +365,56 @@ describe('Database Integration Tests', () => {
 
         // Create events for each member
         const events = await Promise.all([
-          TestUtils.createTestEvent(prisma, members[0].id, 'Event 1'),
-          TestUtils.createTestEvent(prisma, members[0].id, 'Event 2'),
-          TestUtils.createTestEvent(prisma, members[1].id, 'Event 3'),
+          TestUtils.createTestEventForMember(prisma, members[0].id, 'Event 1'),
+          TestUtils.createTestEventForMember(prisma, members[0].id, 'Event 2'),
+          TestUtils.createTestEventForMember(prisma, members[1].id, 'Event 3'),
         ]);
 
         // Complex query: Get all members with their event counts
-        const membersWithEventCounts = await prisma.member.findMany({
+        const membersWithProfiles = await prisma.member.findMany({
           include: {
-            _count: {
-              select: { events: true },
-            },
-            events: true,
+            organizerProfiles: { include: { _count: { select: { events: true } } } },
           },
         });
 
-        expect(membersWithEventCounts).toHaveLength(2);
-        
+        expect(membersWithProfiles).toHaveLength(2);
+
+        const eventCountFor = (m: any) =>
+          m.organizerProfiles.reduce((total: number, o: any) => total + o._count.events, 0);
+
         // Find members by their event counts instead of assuming order
-        const memberWithTwoEvents = membersWithEventCounts.find(m => m._count.events === 2);
-        const memberWithOneEvent = membersWithEventCounts.find(m => m._count.events === 1);
-        
+        const memberWithTwoEvents = membersWithProfiles.find((m: any) => eventCountFor(m) === 2);
+        const memberWithOneEvent = membersWithProfiles.find((m: any) => eventCountFor(m) === 1);
+
         expect(memberWithTwoEvents).toBeDefined();
         expect(memberWithOneEvent).toBeDefined();
-        expect(memberWithTwoEvents?._count.events).toBe(2);
-        expect(memberWithOneEvent?._count.events).toBe(1);
 
         // Complex query: Get all active members with published events
         const activeMembersWithEvents = await prisma.member.findMany({
           where: {
             membershipStatus: 'ACTIVE',
-            events: {
-              some: {
-                status: 'PUBLISHED',
-              },
+            organizerProfiles: {
+              some: { events: { some: { status: 'PUBLISHED' } } },
             },
           },
           include: {
-            events: {
-              where: { status: 'PUBLISHED' },
+            organizerProfiles: {
+              include: { events: { where: { status: 'PUBLISHED' } } },
             },
           },
         });
 
-        // The issue might be that members don't have ACTIVE status by default
-        // Let's check the actual data and adjust the test accordingly
         expect(activeMembersWithEvents.length).toBeGreaterThan(0);
-        
+
+        const publishedCountFor = (m: any) =>
+          m.organizerProfiles.reduce((total: number, o: any) => total + o.events.length, 0);
+
         // Find the member with 2 events
-        const memberWithTwoEventsInQuery = activeMembersWithEvents.find(m => m.events.length === 2);
-        const memberWithOneEventInQuery = activeMembersWithEvents.find(m => m.events.length === 1);
-        
+        const memberWithTwoEventsInQuery = activeMembersWithEvents.find((m: any) => publishedCountFor(m) === 2);
+        const memberWithOneEventInQuery = activeMembersWithEvents.find((m: any) => publishedCountFor(m) === 1);
+
         expect(memberWithTwoEventsInQuery).toBeDefined();
         expect(memberWithOneEventInQuery).toBeDefined();
-        expect(memberWithTwoEventsInQuery?.events).toHaveLength(2);
-        expect(memberWithOneEventInQuery?.events).toHaveLength(1);
       })
     );
   });

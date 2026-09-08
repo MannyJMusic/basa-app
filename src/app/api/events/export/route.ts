@@ -57,17 +57,8 @@ export async function GET(request: NextRequest) {
     const events = await prisma.event.findMany({
       where,
       include: {
-        organizer: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        },
+        organizer: true,
+        venue: true,
         registrations: {
           select: {
             id: true,
@@ -145,8 +136,8 @@ export async function GET(request: NextRequest) {
       event.type,
       event.status,
       event.isFeatured ? "Yes" : "No",
-      `${event.organizer.user.firstName || ""} ${event.organizer.user.lastName || ""}`.trim(),
-      event.organizer.user.email || "",
+      event.organizer?.name || "",
+      event.organizer?.email || "",
       (event.tags || []).join(", "),
       event.registrations.length,
       event.speakers.length,

@@ -124,7 +124,7 @@ model Member {
   showAddress                Boolean             @default(false)
   newsletterSubscribed       Boolean             @default(false)
   membershipPaymentConfirmed Boolean             @default(false)
-  events                     Event[]
+  organizerProfiles          Organizer[]
   eventRegistrations         EventRegistration[]
   eventSponsors              EventSponsor[]
   leads                      Lead[]
@@ -208,11 +208,13 @@ model Event {
   status           EventStatus         @default(DRAFT)
   isFeatured       Boolean             @default(false)
   image            String?
-  organizerId      String
+  organizerId      String?
+  venueId          String?
   tags             String[]
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
-  organizer        Member              @relation(fields: [organizerId], references: [id])
+  organizer        Organizer?          @relation(fields: [organizerId], references: [id])
+  venue            Venue?              @relation(fields: [venueId], references: [id])
   registrations    EventRegistration[]
   speakers         EventSpeaker[]
   sponsors         EventSponsor[]
@@ -221,6 +223,47 @@ model Event {
   @@index([category])
   @@index([status])
   @@index([organizerId])
+  @@index([venueId])
+}
+
+/// A reusable place an event happens. MEC keeps these as `mec_location` posts shared
+/// across events; `wpId` lets the importer upsert instead of duplicating them.
+model Venue {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  city      String?
+  state     String?
+  zipCode   String?
+  latitude  Float?
+  longitude Float?
+  capacity  Int?
+  website   String?
+  wpId      Int?     @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  events    Event[]
+
+  @@index([name])
+}
+
+/// Whoever runs an event. Often a BASA member, but frequently not - BASA itself,
+/// or a partner organisation - which is why this is not a Member relation.
+model Organizer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  website   String?
+  memberId  String?
+  wpId      Int?     @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  member    Member?  @relation(fields: [memberId], references: [id])
+  events    Event[]
+
+  @@index([name])
+  @@index([memberId])
 }
 
 model EventRegistration {
