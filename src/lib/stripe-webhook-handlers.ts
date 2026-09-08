@@ -9,6 +9,7 @@ import {
   sendMembershipInvitationEmailFallback,
 } from '@/lib/basa-emails'
 import { tierFromSlug } from '@/lib/membership-tiers'
+import { renewalDateForPayment } from '@/lib/membership-lifecycle'
 
 /**
  * Stripe webhook event handlers, shared by /api/webhooks/stripe and /api/payments/webhook.
@@ -58,6 +59,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
                 businessName: parsedBusinessInfo.businessName || customerInfo?.company || 'Business',
                 membershipTier: 'MEETING_MEMBER',
                 membershipStatus: 'ACTIVE',
+                renewalDate: renewalDateForPayment(),
                 stripeCustomerId: paymentIntent.customer
               }
             }
@@ -111,10 +113,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
                   membershipTier: 'MEETING_MEMBER',
                   membershipStatus: 'ACTIVE',
                   joinedAt: new Date(),
+                  renewalDate: renewalDateForPayment(),
                   stripeCustomerId: paymentIntent.customer
                 },
                 update: {
                   membershipStatus: 'ACTIVE',
+                  renewalDate: renewalDateForPayment(),
                   stripeCustomerId: paymentIntent.customer
                 }
               }
@@ -193,7 +197,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
               where: { userId },
               data: {
                 membershipTier: membershipTier,
-                membershipStatus: 'ACTIVE'
+                membershipStatus: 'ACTIVE',
+                renewalDate: renewalDateForPayment()
               }
             })
           }
