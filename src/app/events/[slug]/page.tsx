@@ -8,8 +8,9 @@ import { ArrowLeft, Calendar, Clock, MapPin, Users, Building } from 'lucide-reac
 import { prisma } from '@/lib/db'
 import { soldCounts } from '@/lib/ticket-tiers'
 
-// Events change when an admin edits them, so serve fresh rather than build-time HTML.
-export const dynamic = 'force-dynamic'
+// No generateStaticParams, so this route is already dynamic - `force-dynamic` was
+// redundant and made Next commit a 200 while streaming before notFound() threw,
+// so missing events answered 200 instead of 404.
 
 async function getEvent(slug: string) {
   return prisma.event.findFirst({
