@@ -216,6 +216,7 @@ model Event {
   organizer        Organizer?          @relation(fields: [organizerId], references: [id])
   venue            Venue?              @relation(fields: [venueId], references: [id])
   registrations    EventRegistration[]
+  ticketTiers      TicketTier[]
   speakers         EventSpeaker[]
   sponsors         EventSponsor[]
 
@@ -282,10 +283,53 @@ model EventRegistration {
   updatedAt       DateTime           @updatedAt
   event           Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
   member          Member?            @relation(fields: [memberId], references: [id])
+  items           EventRegistrationItem[]
 
   @@index([eventId])
   @@index([memberId])
   @@index([status])
+}
+
+/// What can actually be bought for an event. MEC sells several named tickets per
+/// event (member, non-member, table, sponsor levels), which a single price on
+/// Event cannot represent. `wpId` lets the #57 importer upsert MEC ticket ids.
+model TicketTier {
+  id           String    @id @default(cuid())
+  eventId      String
+  name         String
+  description  String?
+  price        Decimal   @db.Decimal(10, 2)
+  memberPrice  Decimal?  @db.Decimal(10, 2)
+  /// null means unlimited, still bounded by the event's own capacity
+  quantity     Int?
+  salesStartAt DateTime?
+  salesEndAt   DateTime?
+  sortOrder    Int       @default(0)
+  isActive     Boolean   @default(true)
+  wpId         Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  event        Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items        EventRegistrationItem[]
+
+  @@index([eventId])
+  @@index([wpId])
+}
+
+/// One line of a registration: how many of which tier, at the price charged.
+/// unitPrice is a snapshot - changing a tier's price must not rewrite history.
+model EventRegistrationItem {
+  id             String            @id @default(cuid())
+  registrationId String
+  ticketTierId   String
+  quantity       Int
+  unitPrice      Decimal           @db.Decimal(10, 2)
+  createdAt      DateTime          @default(now())
+  registration   EventRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  ticketTier     TicketTier        @relation(fields: [ticketTierId], references: [id])
+
+  @@index([registrationId])
+  @@index([ticketTierId])
 }
 
 model EventSpeaker {
