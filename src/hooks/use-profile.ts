@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
+import type { MembershipTier } from "@prisma/client"
 
 export interface ProfileData {
   id: string
@@ -25,7 +26,7 @@ export interface ProfileData {
     state?: string
     zipCode?: string
     website?: string
-    membershipTier?: "BASIC" | "PREMIUM" | "VIP"
+    membershipTier?: MembershipTier
     membershipStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED"
     joinedAt: string
     description?: string

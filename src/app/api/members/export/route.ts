@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireAdmin, isResponse } from "@/lib/api-auth"
+import { MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
 
 const exportParamsSchema = z.object({
   search: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
-  membershipTier: z.enum(["BASIC", "PREMIUM", "VIP"]).optional(),
+  membershipTier: z.enum(MEMBERSHIP_TIER_VALUES).optional(),
   industry: z.string().optional(),
   format: z.enum(["csv", "json"]).default("csv"),
 })

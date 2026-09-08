@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { parse } from "csv-parse/sync"
 import { requireAdmin, isResponse } from "@/lib/api-auth"
+import { MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
 
 // Validation schema for CSV row
 const csvRowSchema = z.object({
@@ -20,7 +21,7 @@ const csvRowSchema = z.object({
   state: z.string().optional(),
   zipCode: z.string().optional(),
   website: z.string().url().optional(),
-  membershipTier: z.enum(["BASIC", "PREMIUM", "VIP"]).optional(),
+  membershipTier: z.enum(MEMBERSHIP_TIER_VALUES).optional(),
   role: z.enum(["MEMBER", "MODERATOR", "ADMIN"]).optional(),
 })
 
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
                 state: validatedData.state,
                 zipCode: validatedData.zipCode,
                 website: validatedData.website,
-                membershipTier: validatedData.membershipTier || "BASIC",
+                membershipTier: validatedData.membershipTier ?? "MEETING_MEMBER",
               },
               create: {
                 userId: existingUser.id,
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
                 state: validatedData.state,
                 zipCode: validatedData.zipCode,
                 website: validatedData.website,
-                membershipTier: validatedData.membershipTier || "BASIC",
+                membershipTier: validatedData.membershipTier ?? "MEETING_MEMBER",
                 membershipStatus: "ACTIVE",
                 joinedAt: new Date(),
               },
@@ -240,7 +241,7 @@ export async function POST(request: NextRequest) {
                 state: validatedData.state,
                 zipCode: validatedData.zipCode,
                 website: validatedData.website,
-                membershipTier: validatedData.membershipTier || "BASIC",
+                membershipTier: validatedData.membershipTier ?? "MEETING_MEMBER",
                 membershipStatus: "ACTIVE",
                 joinedAt: new Date(),
               },

@@ -28,6 +28,8 @@ import {
 } from "lucide-react"
 import { type Member, type UpdateMemberData } from "@/hooks/use-members"
 import { formatDate } from "@/lib/utils"
+import type { MembershipTier } from "@prisma/client"
+import { MEMBERSHIP_TIERS, MEMBERSHIP_TIER_VALUES } from "@/lib/membership-tiers"
 
 interface MemberDetailDialogProps {
   member: Member | null
@@ -65,7 +67,7 @@ export function MemberDetailDialog({
     state: "",
     zipCode: "",
     website: "",
-    membershipTier: "BASIC",
+    membershipTier: "MEETING_MEMBER",
     membershipStatus: "ACTIVE",
     role: "MEMBER"
   })
@@ -88,7 +90,7 @@ export function MemberDetailDialog({
         state: member.state || "",
         zipCode: member.zipCode || "",
         website: member.website || "",
-        membershipTier: member.membershipTier || "BASIC",
+        membershipTier: member.membershipTier ?? "MEETING_MEMBER",
         membershipStatus: member.membershipStatus || "ACTIVE",
         role: (member.user.role === "ADMIN" || member.user.role === "MODERATOR" || member.user.role === "MEMBER") 
           ? member.user.role 
@@ -147,16 +149,11 @@ export function MemberDetailDialog({
   }
 
   const getTierBadge = (tier?: string) => {
-    switch (tier) {
-      case "BASIC":
-        return <Badge variant="secondary">Basic</Badge>
-      case "PREMIUM":
-        return <Badge className="bg-blue-100 text-blue-800">Premium</Badge>
-      case "VIP":
-        return <Badge className="bg-purple-100 text-purple-800">VIP</Badge>
-      default:
-        return <Badge variant="outline">No Tier</Badge>
-    }
+    const def = tier ? MEMBERSHIP_TIERS[tier as MembershipTier] : undefined
+    if (!def) return <Badge variant="outline">No Tier</Badge>
+    return def.kind === "CHAPTER"
+      ? <Badge className="bg-blue-100 text-blue-800">{def.label}</Badge>
+      : <Badge className="bg-purple-100 text-purple-800">{def.label}</Badge>
   }
 
   if (!member) return null
@@ -453,7 +450,7 @@ export function MemberDetailDialog({
                     <Label htmlFor="membershipTier">Membership Tier</Label>
                     <Select
                       value={formData.membershipTier}
-                      onValueChange={(value: "BASIC" | "PREMIUM" | "VIP") => 
+                      onValueChange={(value: MembershipTier) => 
                         setFormData(prev => ({ ...prev, membershipTier: value }))
                       }
                       disabled={!isEditing || isLoading}
@@ -462,9 +459,9 @@ export function MemberDetailDialog({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="BASIC">Basic</SelectItem>
-                        <SelectItem value="PREMIUM">Premium</SelectItem>
-                        <SelectItem value="VIP">VIP</SelectItem>
+                        {MEMBERSHIP_TIER_VALUES.map(t => (
+                          <SelectItem key={t} value={t}>{MEMBERSHIP_TIERS[t].label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

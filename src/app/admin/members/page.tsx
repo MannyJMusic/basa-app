@@ -12,6 +12,8 @@ import { useMembers, type Member, type MemberFilters, type BulkUploadResult } fr
 import { MemberDetailDialog } from "@/components/members/member-detail-dialog"
 import { EnhancedMemberForm } from "@/components/admin/enhanced-member-form"
 import { formatDate } from "@/lib/utils"
+import type { MembershipTier } from "@prisma/client"
+import { MEMBERSHIP_TIERS, MEMBERSHIP_TIER_VALUES } from "@/lib/membership-tiers"
 
 export default function MembersPage() {
   const { fetchMembers, createMember, deleteMember, updateMember, exportMembers, bulkUploadMembers, loading } = useMembers()
@@ -157,16 +159,11 @@ export default function MembersPage() {
   }
 
   const getTierBadge = (tier?: string) => {
-    switch (tier) {
-      case "BASIC":
-        return <Badge variant="secondary">Basic</Badge>
-      case "PREMIUM":
-        return <Badge className="bg-blue-100 text-blue-800">Premium</Badge>
-      case "VIP":
-        return <Badge className="bg-purple-100 text-purple-800">VIP</Badge>
-      default:
-        return <Badge variant="outline">No Tier</Badge>
-    }
+    const def = tier ? MEMBERSHIP_TIERS[tier as MembershipTier] : undefined
+    if (!def) return <Badge variant="outline">No Tier</Badge>
+    return def.kind === "CHAPTER"
+      ? <Badge className="bg-blue-100 text-blue-800">{def.label}</Badge>
+      : <Badge className="bg-purple-100 text-purple-800">{def.label}</Badge>
   }
 
   return (
@@ -514,9 +511,9 @@ export default function MembersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">All tiers</SelectItem>
-                  <SelectItem value="BASIC">Basic</SelectItem>
-                  <SelectItem value="PREMIUM">Premium</SelectItem>
-                  <SelectItem value="VIP">VIP</SelectItem>
+                  {MEMBERSHIP_TIER_VALUES.map(t => (
+                    <SelectItem key={t} value={t}>{MEMBERSHIP_TIERS[t].label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

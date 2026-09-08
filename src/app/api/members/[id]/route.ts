@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireAdmin, requireSession, isResponse } from "@/lib/api-auth"
+import { MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
 
 const updateMemberSchema = z.object({
   firstName: z.string().min(1, "First name is required").optional(),
@@ -17,7 +18,7 @@ const updateMemberSchema = z.object({
   state: z.string().optional(),
   zipCode: z.string().optional(),
   website: z.string().url().optional(),
-  membershipTier: z.enum(["BASIC", "PREMIUM", "VIP", "MEETING_MEMBER", "ASSOCIATE_MEMBER", "TRIO_MEMBER", "CLASS_RESOURCE_MEMBER", "NAG_RESOURCE_MEMBER", "TRAINING_RESOURCE_MEMBER"]).optional(),
+  membershipTier: z.enum(MEMBERSHIP_TIER_VALUES).optional(),
   membershipStatus: z.enum(["PENDING", "ACTIVE", "EXPIRED", "INACTIVE"]).optional(),
   role: z.enum(["MEMBER", "MODERATOR", "ADMIN"]).optional(),
   isActive: z.boolean().optional(),

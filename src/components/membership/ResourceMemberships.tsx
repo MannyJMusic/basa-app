@@ -1,10 +1,10 @@
 import React from "react";
 import Link from "next/link";
+import { MEMBERSHIP_TIERS, formatTierPrice } from "@/lib/membership-tiers";
 
 const resources = [
   {
-    name: "Class Resource Member",
-    price: "$120",
+    tier: "CLASS_RESOURCE_MEMBER" as const,
     priceNote: "Annual Rate",
     border: "border-blue-500",
     bg: "bg-blue-800",
@@ -22,8 +22,7 @@ const resources = [
     ]
   },
   {
-    name: "NAG Resource Member",
-    price: "Included",
+    tier: "NAG_RESOURCE_MEMBER" as const,
     priceNote: "Best Value",
     border: "border-red-500",
     bg: "bg-red-700 scale-105 shadow-xl z-10",
@@ -36,8 +35,7 @@ const resources = [
     ]
   },
   {
-    name: "Training Resource Member",
-    price: "$225",
+    tier: "TRAINING_RESOURCE_MEMBER" as const,
     priceNote: "Annual Rate",
     border: "border-yellow-500",
     bg: "bg-yellow-700",
@@ -56,7 +54,11 @@ const resources = [
       "Welcome post on social media outlets"
     ]
   }
-];
+].map(r => ({
+  ...r,
+  name: MEMBERSHIP_TIERS[r.tier].label,
+  price: formatTierPrice(MEMBERSHIP_TIERS[r.tier].priceCents),
+}));
 
 const ResourceMemberships = () => {
   return (

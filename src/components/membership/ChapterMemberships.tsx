@@ -1,10 +1,10 @@
 import React from "react";
 import Link from "next/link";
+import { MEMBERSHIP_TIERS, formatTierPrice } from "@/lib/membership-tiers";
 
 const tiers = [
   {
-    name: "Meeting Member",
-    price: "$149",
+    tier: "MEETING_MEMBER" as const,
     border: "border-blue-400",
     badge: "Perfect for New Members",
     badgeColor: "bg-blue-100 text-blue-700",
@@ -22,8 +22,7 @@ const tiers = [
     ]
   },
   {
-    name: "Associate Member",
-    price: "$245",
+    tier: "ASSOCIATE_MEMBER" as const,
     border: "border-green-400",
     badge: "Most Popular",
     badgeColor: "bg-green-500 text-white",
@@ -44,8 +43,7 @@ const tiers = [
     ]
   },
   {
-    name: "TRIO Member",
-    price: "$295",
+    tier: "TRIO_MEMBER" as const,
     border: "border-purple-500",
     badge: "All Chapters Access",
     badgeColor: "bg-purple-500 text-white",
@@ -63,7 +61,11 @@ const tiers = [
       "Membership Certificate"
     ]
   }
-];
+].map(t => ({
+  ...t,
+  name: MEMBERSHIP_TIERS[t.tier].label,
+  price: formatTierPrice(MEMBERSHIP_TIERS[t.tier].priceCents),
+}));
 
 const ChapterMemberships = () => {
   return (
