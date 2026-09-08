@@ -83,6 +83,11 @@ COPY --from=base /app/next.config.js ./
 COPY scripts/setup-prod.js ./
 COPY scripts/setup-database.js ./
 
+# prisma/seed.ts imports shared definitions (chapters, membership tiers) from
+# src/lib. The seed runs at container start via tsx, so that module has to ship
+# with the runtime image or seeding fails with MODULE_NOT_FOUND.
+COPY src/lib ./src/lib
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001
