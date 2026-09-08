@@ -1,7 +1,5 @@
 import {
-  GRACE_PERIOD_DAYS,
-  gracePeriodEnd,
-  isPastGracePeriod,
+  isExpired,
   membershipTermEnd,
   renewalDateForPayment,
 } from "@/lib/membership-lifecycle"
@@ -9,7 +7,7 @@ import {
 describe("membershipTermEnd", () => {
   it("adds a year", () => {
     expect(membershipTermEnd(new Date("2026-03-10T12:00:00Z")).toISOString())
-      .toBe(new Date("2027-03-10T12:00:00Z").toISOString())
+      .toBe("2027-03-10T12:00:00.000Z")
   })
 
   it("does not mutate its argument", () => {
@@ -31,44 +29,35 @@ describe("membershipTermEnd", () => {
   })
 })
 
-describe("gracePeriodEnd", () => {
-  it("adds the grace period to the renewal date", () => {
-    const renewal = new Date("2026-01-01T00:00:00Z")
-    const expected = new Date(renewal)
-    expected.setUTCDate(expected.getUTCDate() + GRACE_PERIOD_DAYS)
-    expect(gracePeriodEnd(renewal).toISOString()).toBe(expected.toISOString())
-  })
-})
-
-describe("isPastGracePeriod", () => {
+describe("isExpired", () => {
   const renewal = new Date("2026-01-01T00:00:00Z")
 
-  it("is false before the renewal date", () => {
-    expect(isPastGracePeriod(renewal, new Date("2025-12-01T00:00:00Z"))).toBe(false)
+  it("is false well before the renewal date", () => {
+    expect(isExpired(renewal, new Date("2025-12-01T00:00:00Z"))).toBe(false)
   })
 
-  it("is false during the grace period", () => {
-    expect(isPastGracePeriod(renewal, new Date("2026-01-15T00:00:00Z"))).toBe(false)
+  it("is false a second before the renewal date", () => {
+    expect(isExpired(renewal, new Date("2025-12-31T23:59:59Z"))).toBe(false)
   })
 
-  it("is false on the last day of grace", () => {
-    const lastDay = gracePeriodEnd(renewal)
-    lastDay.setUTCHours(lastDay.getUTCHours() - 1)
-    expect(isPastGracePeriod(renewal, lastDay)).toBe(false)
+  it("is false exactly on the renewal date", () => {
+    expect(isExpired(renewal, renewal)).toBe(false)
   })
 
-  it("is true once grace has passed", () => {
-    const after = gracePeriodEnd(renewal)
-    after.setUTCDate(after.getUTCDate() + 1)
-    expect(isPastGracePeriod(renewal, after)).toBe(true)
+  it("is true a second after the renewal date", () => {
+    // No grace period: a membership lapses the moment its term ends.
+    expect(isExpired(renewal, new Date("2026-01-01T00:00:01Z"))).toBe(true)
+  })
+
+  it("is true well after the renewal date", () => {
+    expect(isExpired(renewal, new Date("2026-02-01T00:00:00Z"))).toBe(true)
   })
 })
 
 describe("renewalDateForPayment", () => {
   it("gives a term from the payment date", () => {
     const now = new Date("2026-06-15T09:30:00Z")
-    expect(renewalDateForPayment(now).toISOString())
-      .toBe(new Date("2027-06-15T09:30:00Z").toISOString())
+    expect(renewalDateForPayment(now).toISOString()).toBe("2027-06-15T09:30:00.000Z")
   })
 
   it("is idempotent for a given payment time", () => {

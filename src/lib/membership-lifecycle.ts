@@ -4,14 +4,10 @@ import { prisma } from "@/lib/db"
  * BASA memberships are a one-time annual charge, not a subscription: every PMPro
  * level carried `billing_amount = 0` with a 1-year expiry. Nothing recurring will
  * arrive from Stripe to end a membership, so expiry is driven from here.
+ *
+ * There is no grace period - a membership lapses the moment its term ends.
  */
 export const MEMBERSHIP_TERM_YEARS = 1
-
-/**
- * Days a lapsed member keeps access after `renewalDate` before being marked
- * EXPIRED. A placeholder default - confirm the real grace period with BASA.
- */
-export const GRACE_PERIOD_DAYS = 30
 
 // UTC throughout: local-time date arithmetic drifts by an hour across a DST
 // boundary, so the same code would produce different results on a UTC server
@@ -22,14 +18,8 @@ export function membershipTermEnd(from: Date): Date {
   return end
 }
 
-export function gracePeriodEnd(renewalDate: Date): Date {
-  const end = new Date(renewalDate)
-  end.setUTCDate(end.getUTCDate() + GRACE_PERIOD_DAYS)
-  return end
-}
-
-export function isPastGracePeriod(renewalDate: Date, now: Date = new Date()): boolean {
-  return now.getTime() > gracePeriodEnd(renewalDate).getTime()
+export function isExpired(renewalDate: Date, now: Date = new Date()): boolean {
+  return now.getTime() > renewalDate.getTime()
 }
 
 /**
@@ -53,21 +43,18 @@ export interface ExpirySweepResult {
 }
 
 /**
- * Moves ACTIVE members whose grace period has passed to EXPIRED.
+ * Moves ACTIVE members whose term has ended to EXPIRED.
  *
  * Members with a null `renewalDate` are counted but deliberately left alone -
  * every membership activated before this lifecycle existed has one, and guessing
  * a date for them would silently revoke access.
  */
 export async function expireLapsedMemberships(now: Date = new Date()): Promise<ExpirySweepResult> {
-  const cutoff = new Date(now)
-  cutoff.setUTCDate(cutoff.getUTCDate() - GRACE_PERIOD_DAYS)
-
   const [{ count }, missingRenewalDate] = await Promise.all([
     prisma.member.updateMany({
       where: {
         membershipStatus: "ACTIVE",
-        renewalDate: { not: null, lt: cutoff },
+        renewalDate: { not: null, lt: now },
       },
       data: { membershipStatus: "EXPIRED" },
     }),
