@@ -8,9 +8,14 @@ import { ArrowLeft, Calendar, Clock, MapPin, Users, Building } from 'lucide-reac
 import { prisma } from '@/lib/db'
 import { soldCounts } from '@/lib/ticket-tiers'
 
-// No generateStaticParams, so this route is already dynamic - `force-dynamic` was
-// redundant and made Next commit a 200 while streaming before notFound() threw,
-// so missing events answered 200 instead of 404.
+// `force-dynamic` was removed as redundant: without generateStaticParams this route
+// is already dynamic.
+//
+// Note for anyone tempted to reintroduce a root `app/loading.tsx`: doing so wraps
+// every route in a Suspense boundary, Next flushes the shell before this component
+// runs, and notFound() can then only swap the body - the 200 is already committed.
+// That is why missing events used to answer 200. Scope loading.tsx to a segment
+// that needs it, never the app root.
 
 async function getEvent(slug: string) {
   return prisma.event.findFirst({
