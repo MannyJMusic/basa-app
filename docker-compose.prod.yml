@@ -8,9 +8,11 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-basa_prod}
       POSTGRES_USER: ${POSTGRES_USER:-basa_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-basa_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     ports:
-      - "5432:5432"
+      # Localhost only: the app reaches Postgres over the Docker network, and
+      # migrations/backups run via docker exec. Nothing needs this published.
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -34,7 +36,7 @@ services:
       - .env.production
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-basa_user}:${POSTGRES_PASSWORD:-basa_password}@postgres:5432/${POSTGRES_DB:-basa_prod}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-basa_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-basa_prod}
     networks:
       - basa-network
     depends_on:
