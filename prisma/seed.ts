@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
 import { LAUNCH_CHAPTERS, tierRequiresChapter } from '../src/lib/membership-tiers'
 
 const prisma = new PrismaClient()
@@ -46,26 +47,6 @@ async function main() {
   const chapters = await prisma.chapter.findMany({ orderBy: { displayOrder: 'asc' } })
   console.log(`Seeded ${chapters.length} chapters`)
 
-  // Create test guest user
-  const guestEmail = 'guest@test.com'
-  const existingGuest = await prisma.user.findUnique({ where: { email: guestEmail } })
-  if (!existingGuest) {
-    await prisma.user.create({
-      data: {
-        firstName: 'Test',
-        lastName: 'Guest',
-        email: guestEmail,
-        hashedPassword: await bcrypt.hash('password123', 10),
-        role: 'GUEST',
-        isActive: true,
-        accountStatus: 'ACTIVE',
-      },
-    })
-    console.log('Created test guest user: guest@test.com (password: password123)')
-  } else {
-    console.log('Test guest user already exists: guest@test.com')
-  }
-
   // Initialize default settings if none exist
   const existingSettings = await prisma.settings.findFirst()
   if (!existingSettings) {
@@ -102,13 +83,42 @@ async function main() {
     console.log('Settings already exist')
   }
 
+  // Everything below is demo data. It must never reach a real environment: these
+  // accounts are active logins and were previously created in production (#77).
+  if (process.env.NODE_ENV === 'production') {
+    console.log('NODE_ENV=production - skipping demo users, events, and content')
+    return
+  }
+
+  // Demo accounts share one generated password, printed below. Set SEED_DEMO_PASSWORD
+  // to pin it for local convenience.
+  const demoPassword = process.env.SEED_DEMO_PASSWORD || randomBytes(9).toString('base64url')
+
+  const guestEmail = 'guest@test.com'
+  const existingGuest = await prisma.user.findUnique({ where: { email: guestEmail } })
+  if (!existingGuest) {
+    await prisma.user.create({
+      data: {
+        firstName: 'Test',
+        lastName: 'Guest',
+        email: guestEmail,
+        hashedPassword: await bcrypt.hash(demoPassword, 10),
+        role: 'GUEST',
+        isActive: true,
+        accountStatus: 'ACTIVE',
+      },
+    })
+    console.log('Created demo guest user: guest@test.com')
+  } else {
+    console.log('Demo guest user already exists: guest@test.com')
+  }
+
   // Create sample members for events
   const sampleMembers = [
     {
       firstName: 'John',
       lastName: 'Smith',
       email: 'john.smith@techcorp.com',
-      password: 'password123',
       businessName: 'TechCorp Solutions',
       businessType: 'Technology',
       industry: ['Technology', 'Software'],
@@ -132,7 +142,6 @@ async function main() {
       firstName: 'Sarah',
       lastName: 'Johnson',
       email: 'sarah.johnson@innovatebiz.com',
-      password: 'password123',
       businessName: 'Innovate Business Solutions',
       businessType: 'Consulting',
       industry: ['Consulting', 'Business Services'],
@@ -156,7 +165,6 @@ async function main() {
       firstName: 'Mike',
       lastName: 'Davis',
       email: 'mike.davis@localchamber.org',
-      password: 'password123',
       businessName: 'San Antonio Chamber of Commerce',
       businessType: 'Non-Profit',
       industry: ['Non-Profit', 'Community'],
@@ -180,7 +188,6 @@ async function main() {
       firstName: 'Jennifer',
       lastName: 'Chen',
       email: 'jennifer.chen@marketingpros.com',
-      password: 'password123',
       businessName: 'Marketing Pros SA',
       businessType: 'Marketing',
       industry: ['Marketing', 'Digital Marketing'],
@@ -204,7 +211,6 @@ async function main() {
       firstName: 'David',
       lastName: 'Thompson',
       email: 'david.thompson@thompsonconstruction.com',
-      password: 'password123',
       businessName: 'Thompson Construction Co.',
       businessType: 'Construction',
       industry: ['Construction', 'Real Estate'],
@@ -228,7 +234,6 @@ async function main() {
       firstName: 'Lisa',
       lastName: 'Garcia',
       email: 'lisa.garcia@garciarealty.com',
-      password: 'password123',
       businessName: 'Garcia Realty Group',
       businessType: 'Real Estate',
       industry: ['Real Estate', 'Property Management'],
@@ -252,7 +257,6 @@ async function main() {
       firstName: 'Robert',
       lastName: 'Williams',
       email: 'robert.williams@williamsaccounting.com',
-      password: 'password123',
       businessName: 'Williams Accounting Services',
       businessType: 'Accounting',
       industry: ['Accounting', 'Financial Services'],
@@ -276,7 +280,6 @@ async function main() {
       firstName: 'Amanda',
       lastName: 'Martinez',
       email: 'amanda.martinez@martinezdesign.com',
-      password: 'password123',
       businessName: 'Martinez Design Studio',
       businessType: 'Design',
       industry: ['Design', 'Creative Services'],
@@ -300,7 +303,6 @@ async function main() {
       firstName: 'James',
       lastName: 'Anderson',
       email: 'james.anderson@andersonconsulting.com',
-      password: 'password123',
       businessName: 'Anderson Business Consulting',
       businessType: 'Consulting',
       industry: ['Consulting', 'Business Services'],
@@ -324,7 +326,6 @@ async function main() {
       firstName: 'Maria',
       lastName: 'Lopez',
       email: 'maria.lopez@lopezinsurance.com',
-      password: 'password123',
       businessName: 'Lopez Insurance Agency',
       businessType: 'Insurance',
       industry: ['Insurance', 'Financial Services'],
@@ -358,7 +359,7 @@ async function main() {
           firstName: memberData.firstName,
           lastName: memberData.lastName,
           email: memberData.email,
-          hashedPassword: await bcrypt.hash(memberData.password, 10),
+          hashedPassword: await bcrypt.hash(demoPassword, 10),
           role: 'MEMBER',
           isActive: true,
           accountStatus: 'ACTIVE',
@@ -966,6 +967,7 @@ async function main() {
   }
 
   console.log('Seed data creation completed!')
+  console.log(`Demo accounts use password: ${demoPassword}`)
 }
 
 main()
