@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { LAUNCH_CHAPTERS, tierRequiresChapter } from '../src/lib/membership-tiers'
 
 const prisma = new PrismaClient()
 
@@ -34,6 +35,16 @@ async function main() {
 
   await createAdmin('ADMIN1')
   await createAdmin('ADMIN2')
+
+  for (const chapter of LAUNCH_CHAPTERS) {
+    await prisma.chapter.upsert({
+      where: { code: chapter.code },
+      update: { name: chapter.name, displayOrder: chapter.displayOrder },
+      create: chapter,
+    })
+  }
+  const chapters = await prisma.chapter.findMany({ orderBy: { displayOrder: 'asc' } })
+  console.log(`Seeded ${chapters.length} chapters`)
 
   // Create test guest user
   const guestEmail = 'guest@test.com'
@@ -91,16 +102,6 @@ async function main() {
     console.log('Settings already exist')
   }
 
-  // Map old membership tiers to new ones
-  function mapTier(oldTier: string): string {
-    switch (oldTier) {
-      case 'BASIC': return 'MEETING_MEMBER'
-      case 'PREMIUM': return 'ASSOCIATE_MEMBER'
-      case 'VIP': return 'TRIO_MEMBER'
-      default: return 'MEETING_MEMBER'
-    }
-  }
-
   // Create sample members for events
   const sampleMembers = [
     {
@@ -113,7 +114,7 @@ async function main() {
       industry: ['Technology', 'Software'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'PREMIUM' as const,
+      membershipTier: 'ASSOCIATE_MEMBER' as const,
       businessEmail: 'john@techcorp.com',
       businessPhone: '(210) 555-0101',
       businessAddress: '123 Tech Blvd, Suite 100',
@@ -137,7 +138,7 @@ async function main() {
       industry: ['Consulting', 'Business Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'VIP' as const,
+      membershipTier: 'TRIO_MEMBER' as const,
       businessEmail: 'sarah@innovatebiz.com',
       businessPhone: '(210) 555-0202',
       businessAddress: '456 Business Ave, Floor 3',
@@ -161,7 +162,7 @@ async function main() {
       industry: ['Non-Profit', 'Community'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'BASIC' as const,
+      membershipTier: 'MEETING_MEMBER' as const,
       businessEmail: 'mike@localchamber.org',
       businessPhone: '(210) 555-0303',
       businessAddress: '789 Chamber Way',
@@ -185,7 +186,7 @@ async function main() {
       industry: ['Marketing', 'Digital Marketing'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'PREMIUM' as const,
+      membershipTier: 'ASSOCIATE_MEMBER' as const,
       businessEmail: 'jennifer@marketingpros.com',
       businessPhone: '(210) 555-0404',
       businessAddress: '321 Marketing Ave',
@@ -209,7 +210,7 @@ async function main() {
       industry: ['Construction', 'Real Estate'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'BASIC' as const,
+      membershipTier: 'MEETING_MEMBER' as const,
       businessEmail: 'david@thompsonconstruction.com',
       businessPhone: '(210) 555-0505',
       businessAddress: '654 Construction Way',
@@ -233,7 +234,7 @@ async function main() {
       industry: ['Real Estate', 'Property Management'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'PREMIUM' as const,
+      membershipTier: 'ASSOCIATE_MEMBER' as const,
       businessEmail: 'lisa@garciarealty.com',
       businessPhone: '(210) 555-0606',
       businessAddress: '987 Real Estate Blvd',
@@ -257,7 +258,7 @@ async function main() {
       industry: ['Accounting', 'Financial Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'BASIC' as const,
+      membershipTier: 'MEETING_MEMBER' as const,
       businessEmail: 'robert@williamsaccounting.com',
       businessPhone: '(210) 555-0707',
       businessAddress: '147 Accounting Circle',
@@ -281,7 +282,7 @@ async function main() {
       industry: ['Design', 'Creative Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'BASIC' as const,
+      membershipTier: 'MEETING_MEMBER' as const,
       businessEmail: 'amanda@martinezdesign.com',
       businessPhone: '(210) 555-0808',
       businessAddress: '258 Design Street',
@@ -305,7 +306,7 @@ async function main() {
       industry: ['Consulting', 'Business Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'VIP' as const,
+      membershipTier: 'TRIO_MEMBER' as const,
       businessEmail: 'james@andersonconsulting.com',
       businessPhone: '(210) 555-0909',
       businessAddress: '369 Consulting Drive',
@@ -329,7 +330,7 @@ async function main() {
       industry: ['Insurance', 'Financial Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'PREMIUM' as const,
+      membershipTier: 'ASSOCIATE_MEMBER' as const,
       businessEmail: 'maria@lopezinsurance.com',
       businessPhone: '(210) 555-1010',
       businessAddress: '741 Insurance Lane',
@@ -343,14 +344,12 @@ async function main() {
       allowContact: true,
       showAddress: false,
     }
-  ].map(m => ({
-    ...m,
-    membershipTier: mapTier(m.membershipTier as string)
-  }))
+  ]
 
   const createdMembers = []
 
-  for (const memberData of sampleMembers) {
+  for (let index = 0; index < sampleMembers.length; index++) {
+    const memberData = sampleMembers[index]
     const existingUser = await prisma.user.findUnique({ where: { email: memberData.email } })
 
     if (!existingUser) {
@@ -379,7 +378,10 @@ async function main() {
           state: memberData.state,
           zipCode: memberData.zipCode,
           website: memberData.website,
-          membershipTier: mapTier(memberData.membershipTier as string) as any,
+          membershipTier: memberData.membershipTier,
+          chapterId: tierRequiresChapter(memberData.membershipTier)
+            ? chapters[index % chapters.length]?.id
+            : null,
           membershipStatus: 'ACTIVE',
           joinedAt: new Date(),
           renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now

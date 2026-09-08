@@ -5,16 +5,7 @@ import { sendAdminCreatedWelcomeEmail, sendPaymentReceiptEmail } from '@/lib/bas
 import { hash } from 'bcryptjs'
 import { randomBytes } from 'crypto'
 import { requireAdmin, isResponse } from '@/lib/api-auth'
-
-// Membership tier mapping
-const TIER_MAPPING: Record<string, 'BASIC' | 'PREMIUM' | 'VIP'> = {
-  'meeting-member': 'BASIC',
-  'associate-member': 'PREMIUM',
-  'trio-member': 'VIP',
-  'class-resource-member': 'BASIC',
-  'nag-resource-member': 'BASIC',
-  'training-resource-member': 'PREMIUM'
-}
+import { tierFromSlug } from '@/lib/membership-tiers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,7 +60,7 @@ export async function POST(request: NextRequest) {
         member: {
           create: {
             businessName: memberData.businessName || '',
-            membershipTier: TIER_MAPPING[memberData.membershipTier] || 'BASIC',
+            membershipTier: tierFromSlug(memberData.membershipTier) ?? 'MEETING_MEMBER',
             membershipStatus: 'PENDING',
             joinedAt: new Date()
           }

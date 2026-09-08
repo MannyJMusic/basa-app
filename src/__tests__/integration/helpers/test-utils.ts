@@ -67,7 +67,7 @@ export class TestUtils {
         businessEmail: 'test@business.com',
         city: 'Test City',
         state: 'CA',
-        membershipTier: 'BASIC',
+        membershipTier: 'MEETING_MEMBER',
         membershipStatus: 'ACTIVE',
         showInDirectory: true,
         allowContact: true,

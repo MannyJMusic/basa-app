@@ -102,6 +102,7 @@ model Member {
   zipCode                    String?
   website                    String?
   membershipTier             MembershipTier?
+  chapterId                  String?
   membershipStatus           Status              @default(PENDING)
   joinedAt                   DateTime            @default(now())
   renewalDate                DateTime?
@@ -127,6 +128,7 @@ model Member {
   eventRegistrations         EventRegistration[]
   eventSponsors              EventSponsor[]
   leads                      Lead[]
+  chapter                    Chapter?            @relation(fields: [chapterId], references: [id])
   user                       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   referralsReceived          Referral[]          @relation("referred")
   referralsGiven             Referral[]          @relation("referrer")
@@ -136,6 +138,18 @@ model Member {
 
   @@index([businessType, membershipStatus])
   @@index([industry])
+  @@index([chapterId])
+}
+
+model Chapter {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  name         String
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  members      Member[]
 }
 
 model Resource {
@@ -407,9 +421,6 @@ model Payment {
 }
 
 enum MembershipTier {
-  BASIC
-  PREMIUM
-  VIP
   MEETING_MEMBER
   ASSOCIATE_MEMBER
   TRIO_MEMBER

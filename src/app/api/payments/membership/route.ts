@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/db'
 import { MEMBERSHIP_PRICES } from '@/lib/stripe'
+import { tierFromSlug } from '@/lib/membership-tiers'
 
 interface CartItem {
   tierId: string
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
             member: {
               create: {
                 businessName: businessInfo?.businessName || customerInfo.company || 'Temporary Business',
-                membershipTier: 'BASIC',
+                membershipTier: 'MEETING_MEMBER',
                 membershipStatus: 'ACTIVE',
                 joinedAt: new Date(),
                 stripeCustomerId: customer.id
@@ -184,7 +185,7 @@ export async function POST(request: NextRequest) {
           member: {
             upsert: {
               create: {
-                membershipTier: 'BASIC', // Default tier, will be updated based on cart
+                membershipTier: 'MEETING_MEMBER', // Default tier, will be updated based on cart
                 membershipStatus: 'ACTIVE',
                 joinedAt: new Date(),
                 stripeCustomerId: customer.id
@@ -200,17 +201,7 @@ export async function POST(request: NextRequest) {
 
       // Create membership records for each cart item
       for (const item of cart) {
-        // Map tier ID to membership tier enum
-        const tierMapping: Record<string, 'BASIC' | 'PREMIUM' | 'VIP'> = {
-          'meeting-member': 'BASIC',
-          'associate-member': 'PREMIUM',
-          'trio-member': 'VIP',
-          'class-resource-member': 'BASIC',
-          'nag-resource-member': 'BASIC',
-          'training-resource-member': 'PREMIUM'
-        }
-
-        const membershipTier = tierMapping[item.tierId] || 'BASIC'
+        const membershipTier = tierFromSlug(item.tierId) ?? 'MEETING_MEMBER'
 
         // Update member record with tier information
         await prisma.member.update({

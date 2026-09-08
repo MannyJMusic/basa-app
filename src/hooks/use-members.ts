@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { toast } from "@/components/ui/use-toast"
+import type { MembershipTier } from "@prisma/client"
 
 export interface Member {
   id: string
@@ -20,7 +21,7 @@ export interface Member {
   state?: string
   zipCode?: string
   website?: string
-  membershipTier?: "BASIC" | "PREMIUM" | "VIP"
+  membershipTier?: MembershipTier
   membershipStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED"
   joinedAt: string
   renewalDate?: string
@@ -98,7 +99,7 @@ export interface CreateMemberData {
   state?: string
   zipCode?: string
   website?: string
-  membershipTier?: "BASIC" | "PREMIUM" | "VIP"
+  membershipTier?: MembershipTier
   role?: "MEMBER" | "MODERATOR" | "ADMIN"
 }
 
@@ -117,7 +118,7 @@ export interface UpdateMemberData {
   state?: string
   zipCode?: string
   website?: string
-  membershipTier?: "BASIC" | "PREMIUM" | "VIP"
+  membershipTier?: MembershipTier
   membershipStatus?: "ACTIVE" | "INACTIVE" | "SUSPENDED"
   role?: "MEMBER" | "MODERATOR" | "ADMIN"
   isActive?: boolean
@@ -126,7 +127,7 @@ export interface UpdateMemberData {
 export interface MemberFilters {
   search?: string
   status?: "ACTIVE" | "INACTIVE" | "SUSPENDED"
-  membershipTier?: "BASIC" | "PREMIUM" | "VIP"
+  membershipTier?: MembershipTier
   industry?: string
   city?: string
   showInDirectory?: boolean

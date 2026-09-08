@@ -93,7 +93,7 @@ export default function DirectoryPage() {
   // Calculate stats
   const totalMembers = members.length
   const activeMembers = members.filter(m => m.membershipStatus === "ACTIVE").length
-  const premiumMembers = members.filter(m => m.membershipTier === "PREMIUM" || m.membershipTier === "VIP").length
+  const premiumMembers = members.filter(m => m.membershipTier === "ASSOCIATE_MEMBER" || m.membershipTier === "TRIO_MEMBER").length
 
   return (
     <div className={`relative ${isGuest ? "min-h-screen max-h-screen h-screen overflow-hidden" : "min-h-screen"}`}>

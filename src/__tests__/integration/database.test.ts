@@ -89,7 +89,7 @@ describe('Database Integration Tests', () => {
 
         expect(member.businessName).toBe('Test Business');
         expect(member.membershipStatus).toBe('ACTIVE');
-        expect(member.membershipTier).toBe('BASIC');
+        expect(member.membershipTier).toBe('MEETING_MEMBER');
 
         // Test member retrieval with user relation
         const memberWithUser = await prisma.member.findUnique({
@@ -110,18 +110,18 @@ describe('Database Integration Tests', () => {
         const user = await TestUtils.createTestUser(prisma, 'upgrade@test.com', 'MEMBER');
         const member = await TestUtils.createTestMember(prisma, user.id, 'Upgrade Business');
 
-        expect(member.membershipTier).toBe('BASIC');
+        expect(member.membershipTier).toBe('MEETING_MEMBER');
 
         // Upgrade membership
         const upgradedMember = await prisma.member.update({
           where: { id: member.id },
           data: { 
-            membershipTier: 'PREMIUM',
+            membershipTier: 'ASSOCIATE_MEMBER',
             membershipStatus: 'ACTIVE',
           },
         });
 
-        expect(upgradedMember.membershipTier).toBe('PREMIUM');
+        expect(upgradedMember.membershipTier).toBe('ASSOCIATE_MEMBER');
         expect(upgradedMember.membershipStatus).toBe('ACTIVE');
       })
     );
@@ -465,7 +465,7 @@ describe('Database Integration Tests', () => {
           businessEmail: user.email,
           city: 'Test City',
           state: 'CA',
-          membershipTier: 'BASIC',
+          membershipTier: 'MEETING_MEMBER',
           membershipStatus: 'ACTIVE',
           showInDirectory: true,
           allowContact: true,

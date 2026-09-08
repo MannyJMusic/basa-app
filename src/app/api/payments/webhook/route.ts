@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
 import { stripe } from '@/lib/stripe'
 import { headers } from 'next/headers'
+import { tierFromSlug } from '@/lib/membership-tiers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -105,7 +106,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
           member: {
             update: {
               businessName: parsedBusinessInfo.businessName || customerInfo.company || 'Business',
-              membershipTier: 'BASIC',
+              membershipTier: 'MEETING_MEMBER',
               membershipStatus: 'ACTIVE',
               stripeCustomerId: paymentIntent.customer
             }
@@ -151,7 +152,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
           member: {
             upsert: {
               create: {
-                membershipTier: 'BASIC',
+                membershipTier: 'MEETING_MEMBER',
                 membershipStatus: 'ACTIVE',
                 joinedAt: new Date(),
                 stripeCustomerId: paymentIntent.customer
@@ -206,16 +207,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
     if (cart) {
       const cartItems = JSON.parse(cart)
       for (const item of cartItems) {
-        const tierMapping: Record<string, 'BASIC' | 'PREMIUM' | 'VIP'> = {
-          'meeting-member': 'BASIC',
-          'associate-member': 'PREMIUM',
-          'trio-member': 'VIP',
-          'class-resource-member': 'BASIC',
-          'nag-resource-member': 'BASIC',
-          'training-resource-member': 'PREMIUM'
-        }
-
-        const membershipTier = tierMapping[item.tierId] || 'BASIC'
+        const membershipTier = tierFromSlug(item.tierId) ?? 'MEETING_MEMBER'
 
         // Update member record instead of creating separate membership
         await prisma.member.update({
