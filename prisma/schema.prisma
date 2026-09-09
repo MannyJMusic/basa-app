@@ -102,6 +102,7 @@ model Member {
   zipCode                    String?
   website                    String?
   membershipTier             MembershipTier?
+  chapterId                  String?
   membershipStatus           Status              @default(PENDING)
   joinedAt                   DateTime            @default(now())
   renewalDate                DateTime?
@@ -123,10 +124,11 @@ model Member {
   showAddress                Boolean             @default(false)
   newsletterSubscribed       Boolean             @default(false)
   membershipPaymentConfirmed Boolean             @default(false)
-  events                     Event[]
+  organizerProfiles          Organizer[]
   eventRegistrations         EventRegistration[]
   eventSponsors              EventSponsor[]
   leads                      Lead[]
+  chapter                    Chapter?            @relation(fields: [chapterId], references: [id])
   user                       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   referralsReceived          Referral[]          @relation("referred")
   referralsGiven             Referral[]          @relation("referrer")
@@ -136,6 +138,18 @@ model Member {
 
   @@index([businessType, membershipStatus])
   @@index([industry])
+  @@index([chapterId])
+}
+
+model Chapter {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  name         String
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  members      Member[]
 }
 
 model Resource {
@@ -194,12 +208,15 @@ model Event {
   status           EventStatus         @default(DRAFT)
   isFeatured       Boolean             @default(false)
   image            String?
-  organizerId      String
+  organizerId      String?
+  venueId          String?
   tags             String[]
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
-  organizer        Member              @relation(fields: [organizerId], references: [id])
+  organizer        Organizer?          @relation(fields: [organizerId], references: [id])
+  venue            Venue?              @relation(fields: [venueId], references: [id])
   registrations    EventRegistration[]
+  ticketTiers      TicketTier[]
   speakers         EventSpeaker[]
   sponsors         EventSponsor[]
 
@@ -207,6 +224,47 @@ model Event {
   @@index([category])
   @@index([status])
   @@index([organizerId])
+  @@index([venueId])
+}
+
+/// A reusable place an event happens. MEC keeps these as `mec_location` posts shared
+/// across events; `wpId` lets the importer upsert instead of duplicating them.
+model Venue {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  city      String?
+  state     String?
+  zipCode   String?
+  latitude  Float?
+  longitude Float?
+  capacity  Int?
+  website   String?
+  wpId      Int?     @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  events    Event[]
+
+  @@index([name])
+}
+
+/// Whoever runs an event. Often a BASA member, but frequently not - BASA itself,
+/// or a partner organisation - which is why this is not a Member relation.
+model Organizer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  website   String?
+  memberId  String?
+  wpId      Int?     @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  member    Member?  @relation(fields: [memberId], references: [id])
+  events    Event[]
+
+  @@index([name])
+  @@index([memberId])
 }
 
 model EventRegistration {
@@ -225,10 +283,53 @@ model EventRegistration {
   updatedAt       DateTime           @updatedAt
   event           Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
   member          Member?            @relation(fields: [memberId], references: [id])
+  items           EventRegistrationItem[]
 
   @@index([eventId])
   @@index([memberId])
   @@index([status])
+}
+
+/// What can actually be bought for an event. MEC sells several named tickets per
+/// event (member, non-member, table, sponsor levels), which a single price on
+/// Event cannot represent. `wpId` lets the #57 importer upsert MEC ticket ids.
+model TicketTier {
+  id           String    @id @default(cuid())
+  eventId      String
+  name         String
+  description  String?
+  price        Decimal   @db.Decimal(10, 2)
+  memberPrice  Decimal?  @db.Decimal(10, 2)
+  /// null means unlimited, still bounded by the event's own capacity
+  quantity     Int?
+  salesStartAt DateTime?
+  salesEndAt   DateTime?
+  sortOrder    Int       @default(0)
+  isActive     Boolean   @default(true)
+  wpId         Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  event        Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items        EventRegistrationItem[]
+
+  @@index([eventId])
+  @@index([wpId])
+}
+
+/// One line of a registration: how many of which tier, at the price charged.
+/// unitPrice is a snapshot - changing a tier's price must not rewrite history.
+model EventRegistrationItem {
+  id             String            @id @default(cuid())
+  registrationId String
+  ticketTierId   String
+  quantity       Int
+  unitPrice      Decimal           @db.Decimal(10, 2)
+  createdAt      DateTime          @default(now())
+  registration   EventRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  ticketTier     TicketTier        @relation(fields: [ticketTierId], references: [id])
+
+  @@index([registrationId])
+  @@index([ticketTierId])
 }
 
 model EventSpeaker {
@@ -407,9 +508,6 @@ model Payment {
 }
 
 enum MembershipTier {
-  BASIC
-  PREMIUM
-  VIP
   MEETING_MEMBER
   ASSOCIATE_MEMBER
   TRIO_MEMBER

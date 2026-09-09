@@ -67,7 +67,7 @@ export class TestUtils {
         businessEmail: 'test@business.com',
         city: 'Test City',
         state: 'CA',
-        membershipTier: 'BASIC',
+        membershipTier: 'MEETING_MEMBER',
         membershipStatus: 'ACTIVE',
         showInDirectory: true,
         allowContact: true,
@@ -78,6 +78,45 @@ export class TestUtils {
   /**
    * Create a test event
    */
+  static async createTestOrganizer(
+    prisma: any,
+    name: string = 'Test Organizer',
+    memberId?: string
+  ) {
+    return await prisma.organizer.create({
+      data: { name, email: 'organizer@test.com', memberId: memberId ?? null },
+    });
+  }
+
+  static async createTestVenue(prisma: any, name: string = 'Test Venue') {
+    return await prisma.venue.create({
+      data: { name, address: '123 Test St', city: 'Test City', state: 'CA', zipCode: '12345' },
+    });
+  }
+
+  /**
+   * Create an event organized by a given member. Events point at an Organizer now,
+   * so this reuses (or creates) the organizer profile attached to that member,
+   * preserving the "this member ran this event" relationship tests rely on.
+   */
+  static async createTestEventForMember(
+    prisma: any,
+    memberId: string,
+    title: string = 'Test Event'
+  ) {
+    const member = await prisma.member.findUnique({ where: { id: memberId } });
+    const organizer =
+      (await prisma.organizer.findFirst({ where: { memberId } })) ??
+      (await prisma.organizer.create({
+        data: {
+          name: member?.businessName || 'Test Organizer',
+          email: member?.businessEmail ?? null,
+          memberId,
+        },
+      }));
+    return await TestUtils.createTestEvent(prisma, organizer.id, title);
+  }
+
   static async createTestEvent(
     prisma: any,
     organizerId: string,

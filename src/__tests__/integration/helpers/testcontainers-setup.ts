@@ -307,7 +307,7 @@ export default class TestcontainersSetup {
           businessEmail: 'member@example.com',
           city: 'Test City',
           state: 'CA',
-          membershipTier: 'PREMIUM',
+          membershipTier: 'ASSOCIATE_MEMBER',
           membershipStatus: 'ACTIVE',
           showInDirectory: true,
           allowContact: true,

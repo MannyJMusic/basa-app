@@ -41,18 +41,8 @@ export async function GET(
     const event = await prisma.event.findUnique({
       where: { id },
       include: {
-        organizer: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        },
+        organizer: true,
+        venue: true,
         registrations: {
           include: {
             member: {
@@ -142,7 +132,7 @@ export async function PUT(
 
     // Check if organizer is being changed and if it exists
     if (validatedData.organizerId && validatedData.organizerId !== existingEvent.organizerId) {
-      const organizer = await prisma.member.findUnique({
+      const organizer = await prisma.organizer.findUnique({
         where: { id: validatedData.organizerId },
       })
       if (!organizer) {
@@ -180,18 +170,8 @@ export async function PUT(
         ...(validatedData.tags && { tags: validatedData.tags }),
       },
       include: {
-        organizer: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        },
+        organizer: true,
+        venue: true,
         registrations: {
           select: {
             id: true,
@@ -267,17 +247,8 @@ export async function DELETE(
     const existingEvent = await prisma.event.findUnique({
       where: { id },
       include: {
-        organizer: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        },
+        organizer: true,
+        venue: true,
         registrations: {
           select: {
             id: true,

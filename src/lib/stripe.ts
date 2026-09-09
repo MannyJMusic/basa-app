@@ -1,4 +1,5 @@
 import Stripe from 'stripe'
+import { MEMBERSHIP_TIERS, MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
 
 // Lazy initialization to avoid build-time errors when env vars are not set
 let _stripe: Stripe | null = null
@@ -28,50 +29,16 @@ export const getStripePublishableKey = () => {
   return process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 }
 
-// Membership pricing structure (in cents)
-export const MEMBERSHIP_PRICES = {
-  'meeting-member': 14900, // $149/year
-  'associate-member': 24500, // $245/year
-  'trio-member': 29500, // $295/year
-  'class-resource-member': 12000, // $120/year
-  'nag-resource-member': 0, // $0/year (included)
-  'training-resource-member': 22500, // $225/year
-  // Add the tier keys that are being referenced
-  'essential': 0, // $0/year (included)
-  'professional': 15000, // $150/year
-  'corporate': 30000, // $300/year
-}
+// Membership pricing, in cents, keyed by tier slug. Defined once in membership-tiers.ts.
+export const MEMBERSHIP_PRICES: Record<string, number> = Object.fromEntries(
+  MEMBERSHIP_TIER_VALUES.map(t => [MEMBERSHIP_TIERS[t].slug, MEMBERSHIP_TIERS[t].priceCents])
+)
 
 // Event pricing structure
 export const EVENT_PRICING = {
   member: 2500, // $25 for members
   nonMember: 5000, // $50 for non-members
   groupDiscount: 0.15, // 15% discount for groups of 3+
-}
-
-// Create a payment intent for membership
-export async function createMembershipPaymentIntent(
-  tier: 'essential' | 'professional' | 'corporate',
-  customerId?: string,
-  metadata?: Record<string, string>
-) {
-  const amount = MEMBERSHIP_PRICES[tier]
-  
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount,
-    currency: 'usd',
-    customer: customerId,
-    metadata: {
-      type: 'membership',
-      tier,
-      ...metadata,
-    },
-    automatic_payment_methods: {
-      enabled: true,
-    },
-  })
-
-  return paymentIntent
 }
 
 // Create a payment intent for event tickets
@@ -122,35 +89,6 @@ export async function createStripeCustomer(
   })
 
   return customer
-}
-
-// Create a subscription for recurring membership
-export async function createMembershipSubscription(
-  customerId: string,
-  tier: 'essential' | 'professional' | 'corporate',
-  metadata?: Record<string, string>
-) {
-  // You'll need to create these price IDs in your Stripe dashboard
-  const priceIds = {
-    essential: process.env.STRIPE_ESSENTIAL_PRICE_ID!,
-    professional: process.env.STRIPE_PROFESSIONAL_PRICE_ID!,
-    corporate: process.env.STRIPE_CORPORATE_PRICE_ID!,
-  }
-
-  const subscription = await stripe.subscriptions.create({
-    customer: customerId,
-    items: [{ price: priceIds[tier] }],
-    metadata: {
-      type: 'membership_subscription',
-      tier,
-      ...metadata,
-    },
-    payment_behavior: 'default_incomplete',
-    payment_settings: { save_default_payment_method: 'on_subscription' },
-    expand: ['latest_invoice.payment_intent'],
-  })
-
-  return subscription
 }
 
 // Handle webhook events

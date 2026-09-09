@@ -31,7 +31,6 @@ import {
   Building
 } from 'lucide-react'
 import { useEvents, Event, CreateEventData, EventFilters } from '@/hooks/use-events'
-import { useMembers } from '@/hooks/use-members'
 import { EventDetailDialog } from '@/components/events/event-detail-dialog'
 import { DashboardTableLoading } from '@/components/ui/dashboard-loading'
 
@@ -47,7 +46,7 @@ export default function AdminEventsPage() {
     exportEvents,
   } = useEvents()
 
-  const { members, fetchMembers } = useMembers()
+  const [organizers, setOrganizers] = useState<Array<{ id: string; name: string }>>([])
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState<EventFilters>({})
@@ -89,8 +88,16 @@ export default function AdminEventsPage() {
 
   useEffect(() => {
     fetchEvents(filters, currentPage, 20, sortBy, sortOrder)
-    fetchMembers()
-  }, [fetchEvents, fetchMembers, filters, currentPage, sortBy, sortOrder])
+  }, [fetchEvents, filters, currentPage, sortBy, sortOrder])
+
+  // Organizers only populate the create form, so load them once rather than on
+  // every filter, page, or sort change.
+  useEffect(() => {
+    fetch('/api/organizers')
+      .then(r => (r.ok ? r.json() : []))
+      .then(setOrganizers)
+      .catch(() => setOrganizers([]))
+  }, [])
 
   const handleSearch = () => {
     setFilters(prev => ({ ...prev, search: searchTerm }))
@@ -474,9 +481,9 @@ export default function AdminEventsPage() {
                       <SelectValue placeholder="Select organizer" />
                     </SelectTrigger>
                     <SelectContent>
-                      {members?.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.businessName || `${member.user.firstName} ${member.user.lastName}`}
+                      {organizers.map((organizer) => (
+                        <SelectItem key={organizer.id} value={organizer.id}>
+                          {organizer.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -734,9 +741,7 @@ export default function AdminEventsPage() {
                       <div className="flex items-center text-sm text-gray-600">
                         <Building className="w-4 h-4 mr-2" />
                         <span className="line-clamp-1">
-                          {(event.organizer && event.organizer.businessName) || 
-                           (event.organizer && event.organizer.user && `${event.organizer.user.firstName} ${event.organizer.user.lastName}`) ||
-                           'Unknown Organizer'}
+                          {event.organizer?.name || 'Unknown Organizer'}
                         </span>
                       </div>
                       <div className="flex items-center space-x-1">

@@ -42,8 +42,8 @@ describe('Events API Integration Tests', () => {
         const user = await TestUtils.createTestUser(prisma, 'organizer@test.com', 'MEMBER');
         const member = await TestUtils.createTestMember(prisma, user.id, 'Test Organizer');
         
-        const event1 = await TestUtils.createTestEvent(prisma, member.id, 'Published Event 1');
-        const event2 = await TestUtils.createTestEvent(prisma, member.id, 'Published Event 2');
+        const event1 = await TestUtils.createTestEventForMember(prisma, member.id, 'Published Event 1');
+        const event2 = await TestUtils.createTestEventForMember(prisma, member.id, 'Published Event 2');
         
         // Create a draft event (should not be returned)
         await prisma.event.create({
@@ -100,8 +100,8 @@ describe('Events API Integration Tests', () => {
         const user = await TestUtils.createTestUser(prisma, 'organizer@test.com', 'MEMBER');
         const member = await TestUtils.createTestMember(prisma, user.id, 'Test Organizer');
         
-        await TestUtils.createTestEvent(prisma, member.id, 'Networking Event');
-        await TestUtils.createTestEvent(prisma, member.id, 'Workshop Event');
+        await TestUtils.createTestEventForMember(prisma, member.id, 'Networking Event');
+        await TestUtils.createTestEventForMember(prisma, member.id, 'Workshop Event');
         
         // Update one event to have different category
         await prisma.event.updateMany({
@@ -141,7 +141,7 @@ describe('Events API Integration Tests', () => {
         
         // Create multiple events
         for (let i = 1; i <= 5; i++) {
-          await TestUtils.createTestEvent(prisma, member.id, `Event ${i}`);
+          await TestUtils.createTestEventForMember(prisma, member.id, `Event ${i}`);
         }
 
         const req = TestUtils.createMockRequest({
@@ -177,6 +177,7 @@ describe('Events API Integration Tests', () => {
         
         const user = await TestUtils.createTestUser(prisma, 'organizer@test.com', 'ADMIN');
         const member = await TestUtils.createTestMember(prisma, user.id, 'Test Organizer');
+        const organizer = await TestUtils.createTestOrganizer(prisma, 'Test Organizer', member.id);
 
         const eventData = {
           title: 'New Test Event',
@@ -195,7 +196,7 @@ describe('Events API Integration Tests', () => {
           memberPrice: 15.00,
           category: 'Networking',
           type: 'NETWORKING',
-          organizerId: member.id,
+          organizerId: organizer.id,
           tags: ['test'],
         };
 
@@ -226,7 +227,7 @@ describe('Events API Integration Tests', () => {
         expect(response.status).toBe(200);
         const responseData = await response.json();
         expect(responseData.title).toBe('New Test Event');
-        expect(responseData.organizerId).toBe(member.id);
+        expect(responseData.organizerId).toBe(organizer.id);
 
         // Verify event was created in database using the event ID
         await TestUtils.assertRecordExists(prisma, 'event', {

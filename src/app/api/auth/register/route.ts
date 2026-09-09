@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         data: {
           userId: user.id,
           businessName: "Guest",
-          membershipTier: "BASIC",
+          membershipTier: "MEETING_MEMBER",
           membershipStatus: "ACTIVE",
           joinedAt: new Date(),
           // Add any other default fields as needed

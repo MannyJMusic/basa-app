@@ -4,6 +4,7 @@ import { z } from "zod"
 import { sendEmailVerification } from "@/lib/basa-emails"
 import { generateVerificationToken } from "@/lib/utils"
 import { requireAdmin, requireSession, isResponse } from "@/lib/api-auth"
+import { MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
 
 // Validation schemas
 const createMemberSchema = z.object({
@@ -21,7 +22,7 @@ const createMemberSchema = z.object({
   state: z.string().optional(),
   zipCode: z.string().optional(),
   website: z.string().url().optional(),
-  membershipTier: z.enum(["BASIC", "PREMIUM", "VIP"]).optional(),
+  membershipTier: z.enum(MEMBERSHIP_TIER_VALUES).optional(),
   role: z.enum(["MEMBER", "MODERATOR", "ADMIN"]).default("MEMBER"),
   membershipPaymentConfirmed: z.boolean().optional(),
 })
@@ -29,7 +30,7 @@ const createMemberSchema = z.object({
 const searchParamsSchema = z.object({
   search: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
-  membershipTier: z.enum(["BASIC", "PREMIUM", "VIP"]).optional(),
+  membershipTier: z.enum(MEMBERSHIP_TIER_VALUES).optional(),
   industry: z.string().optional(),
   page: z.string().transform(Number).pipe(z.number().min(1)).default("1"),
   limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).default("20"),

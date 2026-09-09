@@ -185,10 +185,10 @@ if [ ! -f "$PROD_DIR/.env.production" ]; then
 # Replace with your actual credentials
 
 NODE_ENV=production
-DATABASE_URL=postgresql://basa_user:basa_password@localhost:5432/basa_prod
+DATABASE_URL=postgresql://basa_user:CHANGE_ME_strong_db_password@localhost:5432/basa_prod
 POSTGRES_DB=basa_prod
 POSTGRES_USER=basa_user
-POSTGRES_PASSWORD=basa_password
+POSTGRES_PASSWORD=CHANGE_ME_strong_db_password
 
 # NextAuth Configuration
 NEXTAUTH_URL=https://app.businessassociationsa.com
@@ -213,7 +213,7 @@ DATABASE_HOST=localhost
 DATABASE_PORT=5432
 DATABASE_NAME=basa_prod
 DATABASE_USER=basa_user
-DATABASE_PASSWORD=basa_password
+DATABASE_PASSWORD=CHANGE_ME_strong_db_password
 PRODENVEOF
     chown "$APP_USER:$APP_USER" "$PROD_DIR/.env.production"
     warning "Please edit $PROD_DIR/.env.production with your actual credentials"
@@ -227,10 +227,10 @@ if [ ! -f "$DEV_DIR/.env.development" ]; then
 # Replace with your actual credentials
 
 NODE_ENV=development
-DATABASE_URL=postgresql://basa_user:basa_password@localhost:5432/basa_dev
+DATABASE_URL=postgresql://basa_user:CHANGE_ME_strong_db_password@localhost:5432/basa_dev
 POSTGRES_DB=basa_dev
 POSTGRES_USER=basa_user
-POSTGRES_PASSWORD=basa_password
+POSTGRES_PASSWORD=CHANGE_ME_strong_db_password
 
 # NextAuth Configuration
 NEXTAUTH_URL=https://dev.businessassociationsa.com
@@ -255,7 +255,7 @@ DATABASE_HOST=localhost
 DATABASE_PORT=5432
 DATABASE_NAME=basa_dev
 DATABASE_USER=basa_user
-DATABASE_PASSWORD=basa_password
+DATABASE_PASSWORD=CHANGE_ME_strong_db_password
 DEVENVEOF
     chown "$APP_USER:$APP_USER" "$DEV_DIR/.env.development"
     warning "Please edit $DEV_DIR/.env.development with your actual credentials"

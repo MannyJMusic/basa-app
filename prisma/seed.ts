@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
+import { LAUNCH_CHAPTERS, tierRequiresChapter } from '../src/lib/membership-tiers'
 
 const prisma = new PrismaClient()
 
@@ -35,25 +37,15 @@ async function main() {
   await createAdmin('ADMIN1')
   await createAdmin('ADMIN2')
 
-  // Create test guest user
-  const guestEmail = 'guest@test.com'
-  const existingGuest = await prisma.user.findUnique({ where: { email: guestEmail } })
-  if (!existingGuest) {
-    await prisma.user.create({
-      data: {
-        firstName: 'Test',
-        lastName: 'Guest',
-        email: guestEmail,
-        hashedPassword: await bcrypt.hash('password123', 10),
-        role: 'GUEST',
-        isActive: true,
-        accountStatus: 'ACTIVE',
-      },
+  for (const chapter of LAUNCH_CHAPTERS) {
+    await prisma.chapter.upsert({
+      where: { code: chapter.code },
+      update: { name: chapter.name, displayOrder: chapter.displayOrder },
+      create: chapter,
     })
-    console.log('Created test guest user: guest@test.com (password: password123)')
-  } else {
-    console.log('Test guest user already exists: guest@test.com')
   }
+  const chapters = await prisma.chapter.findMany({ orderBy: { displayOrder: 'asc' } })
+  console.log(`Seeded ${chapters.length} chapters`)
 
   // Initialize default settings if none exist
   const existingSettings = await prisma.settings.findFirst()
@@ -91,14 +83,34 @@ async function main() {
     console.log('Settings already exist')
   }
 
-  // Map old membership tiers to new ones
-  function mapTier(oldTier: string): string {
-    switch (oldTier) {
-      case 'BASIC': return 'MEETING_MEMBER'
-      case 'PREMIUM': return 'ASSOCIATE_MEMBER'
-      case 'VIP': return 'TRIO_MEMBER'
-      default: return 'MEETING_MEMBER'
-    }
+  // Everything below is demo data. It must never reach a real environment: these
+  // accounts are active logins and were previously created in production (#77).
+  if (process.env.NODE_ENV === 'production') {
+    console.log('NODE_ENV=production - skipping demo users, events, and content')
+    return
+  }
+
+  // Demo accounts share one generated password, printed below. Set SEED_DEMO_PASSWORD
+  // to pin it for local convenience.
+  const demoPassword = process.env.SEED_DEMO_PASSWORD || randomBytes(9).toString('base64url')
+
+  const guestEmail = 'guest@test.com'
+  const existingGuest = await prisma.user.findUnique({ where: { email: guestEmail } })
+  if (!existingGuest) {
+    await prisma.user.create({
+      data: {
+        firstName: 'Test',
+        lastName: 'Guest',
+        email: guestEmail,
+        hashedPassword: await bcrypt.hash(demoPassword, 10),
+        role: 'GUEST',
+        isActive: true,
+        accountStatus: 'ACTIVE',
+      },
+    })
+    console.log('Created demo guest user: guest@test.com')
+  } else {
+    console.log('Demo guest user already exists: guest@test.com')
   }
 
   // Create sample members for events
@@ -107,13 +119,12 @@ async function main() {
       firstName: 'John',
       lastName: 'Smith',
       email: 'john.smith@techcorp.com',
-      password: 'password123',
       businessName: 'TechCorp Solutions',
       businessType: 'Technology',
       industry: ['Technology', 'Software'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'PREMIUM' as const,
+      membershipTier: 'ASSOCIATE_MEMBER' as const,
       businessEmail: 'john@techcorp.com',
       businessPhone: '(210) 555-0101',
       businessAddress: '123 Tech Blvd, Suite 100',
@@ -131,13 +142,12 @@ async function main() {
       firstName: 'Sarah',
       lastName: 'Johnson',
       email: 'sarah.johnson@innovatebiz.com',
-      password: 'password123',
       businessName: 'Innovate Business Solutions',
       businessType: 'Consulting',
       industry: ['Consulting', 'Business Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'VIP' as const,
+      membershipTier: 'TRIO_MEMBER' as const,
       businessEmail: 'sarah@innovatebiz.com',
       businessPhone: '(210) 555-0202',
       businessAddress: '456 Business Ave, Floor 3',
@@ -155,13 +165,12 @@ async function main() {
       firstName: 'Mike',
       lastName: 'Davis',
       email: 'mike.davis@localchamber.org',
-      password: 'password123',
       businessName: 'San Antonio Chamber of Commerce',
       businessType: 'Non-Profit',
       industry: ['Non-Profit', 'Community'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'BASIC' as const,
+      membershipTier: 'MEETING_MEMBER' as const,
       businessEmail: 'mike@localchamber.org',
       businessPhone: '(210) 555-0303',
       businessAddress: '789 Chamber Way',
@@ -179,13 +188,12 @@ async function main() {
       firstName: 'Jennifer',
       lastName: 'Chen',
       email: 'jennifer.chen@marketingpros.com',
-      password: 'password123',
       businessName: 'Marketing Pros SA',
       businessType: 'Marketing',
       industry: ['Marketing', 'Digital Marketing'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'PREMIUM' as const,
+      membershipTier: 'ASSOCIATE_MEMBER' as const,
       businessEmail: 'jennifer@marketingpros.com',
       businessPhone: '(210) 555-0404',
       businessAddress: '321 Marketing Ave',
@@ -203,13 +211,12 @@ async function main() {
       firstName: 'David',
       lastName: 'Thompson',
       email: 'david.thompson@thompsonconstruction.com',
-      password: 'password123',
       businessName: 'Thompson Construction Co.',
       businessType: 'Construction',
       industry: ['Construction', 'Real Estate'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'BASIC' as const,
+      membershipTier: 'MEETING_MEMBER' as const,
       businessEmail: 'david@thompsonconstruction.com',
       businessPhone: '(210) 555-0505',
       businessAddress: '654 Construction Way',
@@ -227,13 +234,12 @@ async function main() {
       firstName: 'Lisa',
       lastName: 'Garcia',
       email: 'lisa.garcia@garciarealty.com',
-      password: 'password123',
       businessName: 'Garcia Realty Group',
       businessType: 'Real Estate',
       industry: ['Real Estate', 'Property Management'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'PREMIUM' as const,
+      membershipTier: 'ASSOCIATE_MEMBER' as const,
       businessEmail: 'lisa@garciarealty.com',
       businessPhone: '(210) 555-0606',
       businessAddress: '987 Real Estate Blvd',
@@ -251,13 +257,12 @@ async function main() {
       firstName: 'Robert',
       lastName: 'Williams',
       email: 'robert.williams@williamsaccounting.com',
-      password: 'password123',
       businessName: 'Williams Accounting Services',
       businessType: 'Accounting',
       industry: ['Accounting', 'Financial Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'BASIC' as const,
+      membershipTier: 'MEETING_MEMBER' as const,
       businessEmail: 'robert@williamsaccounting.com',
       businessPhone: '(210) 555-0707',
       businessAddress: '147 Accounting Circle',
@@ -275,13 +280,12 @@ async function main() {
       firstName: 'Amanda',
       lastName: 'Martinez',
       email: 'amanda.martinez@martinezdesign.com',
-      password: 'password123',
       businessName: 'Martinez Design Studio',
       businessType: 'Design',
       industry: ['Design', 'Creative Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'BASIC' as const,
+      membershipTier: 'MEETING_MEMBER' as const,
       businessEmail: 'amanda@martinezdesign.com',
       businessPhone: '(210) 555-0808',
       businessAddress: '258 Design Street',
@@ -299,13 +303,12 @@ async function main() {
       firstName: 'James',
       lastName: 'Anderson',
       email: 'james.anderson@andersonconsulting.com',
-      password: 'password123',
       businessName: 'Anderson Business Consulting',
       businessType: 'Consulting',
       industry: ['Consulting', 'Business Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'VIP' as const,
+      membershipTier: 'TRIO_MEMBER' as const,
       businessEmail: 'james@andersonconsulting.com',
       businessPhone: '(210) 555-0909',
       businessAddress: '369 Consulting Drive',
@@ -323,13 +326,12 @@ async function main() {
       firstName: 'Maria',
       lastName: 'Lopez',
       email: 'maria.lopez@lopezinsurance.com',
-      password: 'password123',
       businessName: 'Lopez Insurance Agency',
       businessType: 'Insurance',
       industry: ['Insurance', 'Financial Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'PREMIUM' as const,
+      membershipTier: 'ASSOCIATE_MEMBER' as const,
       businessEmail: 'maria@lopezinsurance.com',
       businessPhone: '(210) 555-1010',
       businessAddress: '741 Insurance Lane',
@@ -343,14 +345,12 @@ async function main() {
       allowContact: true,
       showAddress: false,
     }
-  ].map(m => ({
-    ...m,
-    membershipTier: mapTier(m.membershipTier as string)
-  }))
+  ]
 
   const createdMembers = []
 
-  for (const memberData of sampleMembers) {
+  for (let index = 0; index < sampleMembers.length; index++) {
+    const memberData = sampleMembers[index]
     const existingUser = await prisma.user.findUnique({ where: { email: memberData.email } })
 
     if (!existingUser) {
@@ -359,7 +359,7 @@ async function main() {
           firstName: memberData.firstName,
           lastName: memberData.lastName,
           email: memberData.email,
-          hashedPassword: await bcrypt.hash(memberData.password, 10),
+          hashedPassword: await bcrypt.hash(demoPassword, 10),
           role: 'MEMBER',
           isActive: true,
           accountStatus: 'ACTIVE',
@@ -379,7 +379,10 @@ async function main() {
           state: memberData.state,
           zipCode: memberData.zipCode,
           website: memberData.website,
-          membershipTier: mapTier(memberData.membershipTier as string) as any,
+          membershipTier: memberData.membershipTier,
+          chapterId: tierRequiresChapter(memberData.membershipTier)
+            ? chapters[index % chapters.length]?.id
+            : null,
           membershipStatus: 'ACTIVE',
           joinedAt: new Date(),
           renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
@@ -408,6 +411,26 @@ async function main() {
     }
   }
 
+  // Events are organized by an Organizer, not a Member directly - an organizer is
+  // often a member but can also be BASA itself or a partner.
+  const createdOrganizers = []
+  for (const member of createdMembers) {
+    const existing = await prisma.organizer.findFirst({ where: { memberId: member.id } })
+    createdOrganizers.push(
+      existing ??
+        (await prisma.organizer.create({
+          data: {
+            name: member.businessName || 'Organizer',
+            email: member.businessEmail,
+            phone: member.businessPhone,
+            website: member.website,
+            memberId: member.id,
+          },
+        }))
+    )
+  }
+  console.log(`Seeded ${createdOrganizers.length} organizers`)
+
   // Create sample events
   const sampleEvents = [
     {
@@ -430,7 +453,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: true,
       image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800',
-      organizerId: createdMembers[0]?.id,
+      organizerId: createdOrganizers[0]?.id,
       tags: ['networking', 'business', 'san-antonio', 'mixer'],
     },
     {
@@ -453,7 +476,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: true,
       image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
-      organizerId: createdMembers[1]?.id,
+      organizerId: createdOrganizers[1]?.id,
       tags: ['technology', 'innovation', 'summit', 'san-antonio'],
     },
     {
@@ -476,7 +499,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800',
-      organizerId: createdMembers[2]?.id,
+      organizerId: createdOrganizers[2]?.id,
       tags: ['ribbon-cutting', 'grand-opening', 'downtown', 'san-antonio'],
     },
     {
@@ -499,7 +522,7 @@ async function main() {
       status: 'DRAFT' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800',
-      organizerId: createdMembers[2]?.id,
+      organizerId: createdOrganizers[2]?.id,
       tags: ['community-service', 'volunteer', 'san-antonio', 'giving-back'],
     },
     {
@@ -522,7 +545,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
-      organizerId: createdMembers[1]?.id,
+      organizerId: createdOrganizers[1]?.id,
       tags: ['workshop', 'business-growth', 'education', 'san-antonio'],
     },
     // June 2025 Events
@@ -546,7 +569,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: true,
       image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800',
-      organizerId: createdMembers[0]?.id,
+      organizerId: createdOrganizers[0]?.id,
       tags: ['networking', 'summer', 'business', 'san-antonio'],
     },
     {
@@ -569,7 +592,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: true,
       image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
-      organizerId: createdMembers[1]?.id,
+      organizerId: createdOrganizers[1]?.id,
       tags: ['startup', 'technology', 'innovation', 'san-antonio'],
     },
     {
@@ -592,7 +615,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800',
-      organizerId: createdMembers[2]?.id,
+      organizerId: createdOrganizers[2]?.id,
       tags: ['ribbon-cutting', 'restaurant', 'grand-opening', 'pearl-district'],
     },
     // July 2025 Events
@@ -616,7 +639,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800',
-      organizerId: createdMembers[0]?.id,
+      organizerId: createdOrganizers[0]?.id,
       tags: ['networking', 'independence-day', 'veterans', 'patriotic'],
     },
     {
@@ -639,7 +662,7 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: true,
       image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800',
-      organizerId: createdMembers[1]?.id,
+      organizerId: createdOrganizers[1]?.id,
       tags: ['healthcare', 'innovation', 'technology', 'medical'],
     },
     {
@@ -662,10 +685,12 @@ async function main() {
       status: 'PUBLISHED' as const,
       isFeatured: false,
       image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800',
-      organizerId: createdMembers[2]?.id,
+      organizerId: createdOrganizers[2]?.id,
       tags: ['volunteer', 'community-garden', 'environment', 'team-building'],
     },
   ]
+
+  const venuesByName = new Map<string, string>()
 
   for (const eventData of sampleEvents) {
     if (!eventData.organizerId) continue
@@ -675,8 +700,26 @@ async function main() {
     })
 
     if (!existingEvent) {
+      // Several sample events share a location; create each venue once.
+      let venueId = venuesByName.get(eventData.location)
+      if (!venueId) {
+        const venue =
+          (await prisma.venue.findFirst({ where: { name: eventData.location } })) ??
+          (await prisma.venue.create({
+            data: {
+              name: eventData.location,
+              address: eventData.address,
+              city: eventData.city,
+              state: eventData.state,
+              zipCode: eventData.zipCode,
+            },
+          }))
+        venueId = venue.id
+        venuesByName.set(eventData.location, venueId)
+      }
+
       const event = await prisma.event.create({
-        data: eventData,
+        data: { ...eventData, venueId },
       })
       console.log(`Created event: ${eventData.title}`)
     } else {
@@ -964,6 +1007,7 @@ async function main() {
   }
 
   console.log('Seed data creation completed!')
+  console.log(`Demo accounts use password: ${demoPassword}`)
 }
 
 main()

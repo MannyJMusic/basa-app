@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if organizer exists
-    const organizerCheck = await prisma.member.findUnique({
+    const organizerCheck = await prisma.organizer.findUnique({
       where: { id: validatedData.organizerId },
     })
 
@@ -264,22 +264,12 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Fetch organizer info separately to avoid relation issues
-    const organizer = await prisma.member.findUnique({
-      where: { id: event.organizerId },
-      select: {
-        id: true,
-        businessName: true,
-        businessEmail: true,
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
+    const organizer = event.organizerId
+      ? await prisma.organizer.findUnique({
+          where: { id: event.organizerId },
+          select: { id: true, name: true, email: true },
+        })
+      : null;
 
     const eventWithOrganizer = {
       ...event,

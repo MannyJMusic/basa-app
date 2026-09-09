@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
           const premiumMembers = await prisma.member.findMany({
             where: { 
               newsletterSubscribed: true,
-              membershipTier: { in: ["PREMIUM", "VIP"] },
+              membershipTier: { in: ["ASSOCIATE_MEMBER", "TRIO_MEMBER"] },
               user: {
                 email: { not: null }
               }
