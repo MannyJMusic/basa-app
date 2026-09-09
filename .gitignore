@@ -56,3 +56,11 @@ next-env.d.ts
 
 # npm lockfile (pnpm only)
 package-lock.json
+
+# Database backups pulled from the production host by scripts/pull-backups.sh.
+# These are full dumps: member PII, WordPress password hashes, payment records.
+# They live here for convenience and must never be committed or pushed.
+/backups/
+*.sql.gz
+*.sql.bz2
+*.dump

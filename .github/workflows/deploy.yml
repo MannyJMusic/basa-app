@@ -69,45 +69,85 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check required secrets
+      # Secrets are read through env rather than interpolated straight into the
+      # command line, and whitespace-trimmed before use. A SERVER_HOST saved with
+      # a trailing newline - which is what pasting into the GitHub UI usually
+      # produces - broke every deploy from 2026-09-06 with the unhelpful
+      # "hostname contains invalid characters", because ssh received
+      # "root@31.97.214.26\n". The old emptiness check could not catch it: a
+      # newline is not empty. See #75.
+      - name: Validate deploy secrets
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
-          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
-            echo "ERROR: SSH_PRIVATE_KEY secret is not set"
-            echo "Please add SSH_PRIVATE_KEY to your repository secrets"
-            exit 1
+          set -euo pipefail
+
+          fail=0
+          if [ -z "${SSH_PRIVATE_KEY:-}" ]; then
+            echo "::error::SSH_PRIVATE_KEY is not set."
+            fail=1
           fi
-          if [ -z "${{ secrets.SERVER_HOST }}" ]; then
-            echo "ERROR: SERVER_HOST secret is not set"
-            echo "Please add SERVER_HOST (server IP) to your repository secrets"
-            exit 1
+
+          # xargs with no args collapses surrounding whitespace, including newlines.
+          host="$(printf '%s' "${SERVER_HOST:-}" | xargs || true)"
+          user="$(printf '%s' "${SERVER_USER:-}" | xargs || true)"
+
+          if [ -z "$host" ]; then
+            echo "::error::SERVER_HOST is not set (or is only whitespace)."
+            fail=1
+          elif ! printf '%s' "$host" | grep -Eq '^[A-Za-z0-9._-]+$'; then
+            echo "::error::SERVER_HOST is not a plain hostname or IP after trimming."
+            echo "::error::Re-enter it in repository settings with no trailing newline."
+            fail=1
           fi
-          if [ -z "${{ secrets.SERVER_USER }}" ]; then
-            echo "ERROR: SERVER_USER secret is not set"
-            echo "Please add SERVER_USER to your repository secrets"
-            exit 1
+
+          if [ -z "$user" ]; then
+            echo "::error::SERVER_USER is not set (or is only whitespace)."
+            fail=1
+          elif ! printf '%s' "$user" | grep -Eq '^[A-Za-z0-9._-]+$'; then
+            echo "::error::SERVER_USER is not a plain username after trimming."
+            fail=1
           fi
-          echo "All required secrets are configured"
+
+          [ "$fail" -eq 0 ] || exit 1
+
+          if [ "$host" != "${SERVER_HOST:-}" ] || [ "$user" != "${SERVER_USER:-}" ]; then
+            echo "::warning::A deploy secret had surrounding whitespace and was trimmed."
+            echo "::warning::Re-save SERVER_HOST / SERVER_USER without it to silence this."
+          fi
+
+          # Publish the trimmed values for the later steps. Marked as secrets so
+          # they stay masked in logs even though they came back through env.
+          echo "::add-mask::$host"
+          echo "SSH_HOST=$host" >> "$GITHUB_ENV"
+          echo "SSH_USER=$user" >> "$GITHUB_ENV"
+          echo "Deploy secrets validated."
 
       - name: Setup SSH Key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Test SSH Connection
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" echo "SSH connection successful"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" echo "SSH connection successful"
 
       - name: Deploy to Server
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" 'bash -s' < .github/scripts/deploy-remote.sh
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/deploy-remote.sh
 
       - name: Verify Deployment
         run: |
           echo "Verifying deployment..."
           sleep 10
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" 'bash -s' < .github/scripts/verify-remote.sh
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/verify-remote.sh
 
       - name: Notify on Failure
         if: failure()
