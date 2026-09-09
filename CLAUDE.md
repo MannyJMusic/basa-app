@@ -65,8 +65,23 @@ docker compose -f /opt/basa-app/docker-compose.prod.yml logs -f # View logs
 docker compose -f /opt/basa-app/docker-compose.prod.yml restart # Restart services
 
 # Manual backup
-/opt/basa-app/scripts/backup-db.sh
+/usr/local/sbin/basa-backup.sh
 ```
+
+### Backups
+
+Three layers, in order of what you would actually restore from:
+
+1. **Hostinger VPS snapshots** — the off-box copy of record. Taken and retained by Hostinger, outside this repo and outside the box.
+2. **Nightly dumps on the host** — `/usr/local/sbin/basa-backup.sh` at 02:30 via `/etc/cron.d/basa`, writing WordPress MySQL and basa-app Postgres to `/var/backups/basa/{mysql,postgres}` with 14-day retention. The script exits non-zero if a dump fails or is truncated, and logs to `/var/backups/basa/backup.log`.
+3. **Local pulls** — `./scripts/pull-backups.sh` copies the newest dumps (or `--all`) into `./backups/` and gzip-verifies each one.
+
+```bash
+./scripts/pull-backups.sh          # newest of each database
+./scripts/pull-backups.sh --all    # everything the host still retains
+```
+
+`./backups/` is gitignored, as are `*.sql.gz`, `*.sql.bz2` and `*.dump` anywhere in the tree. These dumps contain member PII, WordPress password hashes and payment records — never commit them, attach them to an issue, or paste their contents.
 
 ### CI/CD (GitHub Actions)
 Automated deployment via `.github/workflows/deploy.yml`:
