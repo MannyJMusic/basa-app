@@ -29,6 +29,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    # Explicit tag rather than the project-derived `basa-app-basa-app`, so the
+    # deploy script can retag a known-good image back into place to roll back.
+    image: basa-app:current
     container_name: basa-app-prod
     ports:
       # Localhost only: nginx reverse-proxies to this. Publishing on 0.0.0.0 put the
