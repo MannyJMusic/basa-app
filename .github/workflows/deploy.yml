@@ -144,19 +144,27 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
+          # Keepalives matter more than they look. The image build on this 2-CPU VPS
+          # runs for minutes, and the deploy is a single ssh session held open for the
+          # whole thing. On 2026-09-09 that session was dropped mid-build with
+          # "client_loop: send disconnect: Broken pipe": the deploy step failed while
+          # the build carried on server-side, orphaned, with none of the steps after it
+          # - up, health check, rollback - ever running.
+          echo "SSH_OPTS=-i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes" >> "$GITHUB_ENV"
+
       - name: Test SSH Connection
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" echo "SSH connection successful"
+          ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" echo "SSH connection successful"
 
       - name: Deploy to Server
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/deploy-remote.sh
+          ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/deploy-remote.sh
 
       - name: Verify Deployment
         run: |
           echo "Verifying deployment..."
           sleep 10
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/verify-remote.sh
+          ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/verify-remote.sh
 
       - name: Notify on Failure
         if: failure()
