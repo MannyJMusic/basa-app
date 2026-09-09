@@ -274,13 +274,99 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       Sentry.captureException(error, { tags: { source: 'stripe-webhook', handler: 'payment_intent.succeeded' } })
       throw error
     }
-  } else {
+  } else if (type === 'event') {
+    await confirmEventRegistration(paymentIntent)
   }
+}
+
+/**
+ * Promote an event registration from PENDING to CONFIRMED once Stripe says the money
+ * actually arrived. This is the only place a registration becomes CONFIRMED - the
+ * payment route deliberately writes PENDING, because it runs before the card is charged.
+ */
+async function confirmEventRegistration(paymentIntent: any) {
+  // Looked up by PaymentIntent, which is unique on EventRegistration. Stripe
+  // redelivers webhooks, so this has to be safe to run repeatedly.
+  const registration = await prisma.eventRegistration.findUnique({
+    where: { paymentIntentId: paymentIntent.id },
+    select: { id: true, status: true, eventId: true, email: true, ticketCount: true },
+  })
+
+  if (!registration) {
+    // A succeeded event payment with no registration means the row was never
+    // written or was deleted. The buyer has been charged, so this must not pass quietly.
+    Sentry.captureMessage('Event payment succeeded with no matching registration', {
+      level: 'error',
+      tags: { source: 'stripe-webhook', handler: 'payment_intent.succeeded' },
+      extra: { paymentIntentId: paymentIntent.id, amount: paymentIntent.amount },
+    })
+    return
+  }
+
+  if (registration.status === 'CONFIRMED') {
+    logger.info('Event registration already confirmed; ignoring webhook redelivery', {
+      registrationId: registration.id,
+    })
+    return
+  }
+
+  await prisma.eventRegistration.update({
+    where: { id: registration.id },
+    data: { status: 'CONFIRMED' },
+  })
+
+  await prisma.auditLog.create({
+    data: {
+      action: 'EVENT_PAYMENT_COMPLETED',
+      entityType: 'EVENT_REGISTRATION',
+      entityId: registration.id,
+      newValues: {
+        eventId: registration.eventId,
+        tickets: registration.ticketCount,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        paymentIntentId: paymentIntent.id,
+      },
+    },
+  })
+
+  logger.info('Event registration confirmed', {
+    registrationId: registration.id,
+    eventId: registration.eventId,
+  })
+}
+
+/**
+ * Release the seats a PENDING registration was holding when its payment fails or is
+ * abandoned. Without this a failed card would hold places against the event's capacity
+ * indefinitely, because soldCounts() treats PENDING as holding a seat.
+ */
+async function releaseEventRegistration(paymentIntent: any, reason: string) {
+  const registration = await prisma.eventRegistration.findUnique({
+    where: { paymentIntentId: paymentIntent.id },
+    select: { id: true, status: true },
+  })
+
+  // Only PENDING is released. A CONFIRMED registration whose intent later reports a
+  // failure is a refund/dispute question, not something to cancel automatically.
+  if (!registration || registration.status !== 'PENDING') return
+
+  await prisma.eventRegistration.update({
+    where: { id: registration.id },
+    data: { status: 'CANCELLED' },
+  })
+
+  logger.info('Event registration released', { registrationId: registration.id, reason })
 }
 
 async function handlePaymentIntentFailed(paymentIntent: any) {
   logger.warn('Stripe payment failed', { paymentIntentId: paymentIntent.id })
-  
+
+  if (paymentIntent.metadata?.type === 'event') {
+    await releaseEventRegistration(paymentIntent, 'payment_failed')
+    return
+  }
+
   const { userId } = paymentIntent.metadata
 
   if (userId) {
@@ -381,6 +467,14 @@ export async function handleWebhookEvent(event: any) {
 
       case 'payment_intent.payment_failed':
         await handlePaymentIntentFailed(event.data.object)
+        break
+
+      // An abandoned checkout: Stripe cancels the intent rather than failing it, so
+      // without this the seats stay held by a PENDING registration nobody will pay for.
+      case 'payment_intent.canceled':
+        if (event.data.object?.metadata?.type === 'event') {
+          await releaseEventRegistration(event.data.object, 'payment_intent.canceled')
+        }
         break
 
       case 'customer.subscription.created':

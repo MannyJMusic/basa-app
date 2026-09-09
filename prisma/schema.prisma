@@ -72,7 +72,9 @@ model VerificationToken {
 
 model AuditLog {
   id         String   @id @default(cuid())
-  userId     String
+  /// Nullable since guest ticket checkout: a purchase with no account is still an
+  /// auditable event, and most event purchases are expected to be guest purchases.
+  userId     String?
   action     String
   entityType String
   entityId   String
@@ -81,7 +83,7 @@ model AuditLog {
   timestamp  DateTime @default(now())
   ipAddress  String?
   userAgent  String?
-  user       User     @relation(fields: [userId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id])
 }
 
 model Member {
@@ -278,7 +280,11 @@ model EventRegistration {
   ticketCount     Int                @default(1)
   totalAmount     Decimal            @db.Decimal(10, 2)
   status          RegistrationStatus @default(PENDING)
-  paymentIntentId String?
+  paymentIntentId String?            @unique
+  /// Per-ticket attendee details, as [{ name, email? }]. The columns above are the
+  /// buyer; this is who is actually coming. Collected by the registration form and
+  /// previously discarded.
+  attendees       Json?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   event           Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)

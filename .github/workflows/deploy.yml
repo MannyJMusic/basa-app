@@ -52,6 +52,15 @@ jobs:
       - name: Run linter
         run: pnpm run lint
 
+      # Tests did not run in CI at all, which made every test in the repo advisory:
+      # nothing stopped a PR that broke them. The GitHub runner has Docker, so the
+      # Testcontainers suite can run here even though it cannot on every laptop.
+      - name: Run unit tests
+        run: pnpm run test:unit
+
+      - name: Run integration tests
+        run: pnpm run test:integration
+
       - name: Build application
         run: pnpm exec next build
         env:
