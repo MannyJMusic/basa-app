@@ -28,6 +28,26 @@ export const EXPIRED_NOTICE_WINDOW_DAYS = 3
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+/**
+ * The renewal cycle a notice belongs to, as a date rather than an instant.
+ *
+ * `renewalDate` carries a time: it is set to the payment instant plus a year. If
+ * the raw value were the cycle key, anything that rewrote it by even a
+ * millisecond - a re-save that recomputes the term, a backfill - would look like
+ * a new cycle and send the whole set again. Truncating to UTC midnight means the
+ * key is the day the membership ends, which is what a member would call the
+ * cycle anyway.
+ *
+ * The trade is that two genuinely different cycles landing on the same UTC date
+ * would share a key. That needs two renewals within a year hitting the same day,
+ * and suppressing a duplicate email is the safer way to be wrong.
+ */
+export function reminderCycle(renewalDate: Date): Date {
+  return new Date(Date.UTC(
+    renewalDate.getUTCFullYear(), renewalDate.getUTCMonth(), renewalDate.getUTCDate()
+  ))
+}
+
 /** Whole days from `now` until `renewalDate`; negative once it has passed. */
 export function daysUntil(renewalDate: Date, now: Date): number {
   return Math.ceil((renewalDate.getTime() - now.getTime()) / DAY_MS)
@@ -70,7 +90,10 @@ interface Candidate {
   memberId: string
   email: string
   firstName: string
+  /** The real date, which is what the member is told. */
   renewalDate: Date
+  /** The cycle key, truncated to a day. See reminderCycle. */
+  cycle: Date
   daysBefore: number
   remaining: number
 }
@@ -123,8 +146,9 @@ export async function sendDueRenewalNotices(now: Date = new Date()): Promise<Rem
     candidates.push({
       memberId: member.id,
       email,
-      firstName: member.user.firstName ?? member.user.name ?? "there",
       renewalDate,
+      cycle: reminderCycle(renewalDate),
+      firstName: member.user.firstName ?? member.user.name ?? "there",
       daysBefore: interval,
       remaining: daysUntil(renewalDate, now),
     })
@@ -136,8 +160,9 @@ export async function sendDueRenewalNotices(now: Date = new Date()): Promise<Rem
     candidates.push({
       memberId: member.id,
       email,
-      firstName: member.user.firstName ?? member.user.name ?? "there",
       renewalDate: member.renewalDate!,
+      cycle: reminderCycle(member.renewalDate!),
+      firstName: member.user.firstName ?? member.user.name ?? "there",
       daysBefore: EXPIRED_NOTICE,
       remaining: daysUntil(member.renewalDate!, now),
     })
@@ -149,7 +174,7 @@ export async function sendDueRenewalNotices(now: Date = new Date()): Promise<Rem
       await prisma.membershipReminder.create({
         data: {
           memberId: candidate.memberId,
-          renewalDate: candidate.renewalDate,
+          renewalDate: candidate.cycle,
           daysBefore: candidate.daysBefore,
         },
       })

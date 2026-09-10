@@ -81,32 +81,52 @@ describe('Renewal notices', () => {
     'opens a fresh set of notices once the member renews',
     withEmptyTestDatabase(async ({ database }: any) => {
       const { prisma } = database;
-      const member = await makeMember(prisma, 'renewer@test.test', daysFromNow(7), 'ACTIVE');
+      const original = daysFromNow(7);
+      const member = await makeMember(prisma, 'renewer@test.test', original, 'ACTIVE');
 
       await sendDueRenewalNotices();
       expect(reminderMock).toHaveBeenCalledTimes(1);
 
-      // Renewal moves the date on a year; a year later they hear from us again.
+      // Renewal moves the date on a year: out of range, so nothing yet.
       await prisma.member.update({
         where: { id: member.id },
         data: { renewalDate: daysFromNow(7 + 365) },
       });
       await sendDueRenewalNotices();
-      expect(reminderMock).toHaveBeenCalledTimes(1); // too far out yet
+      expect(reminderMock).toHaveBeenCalledTimes(1);
 
-      await prisma.member.update({
-        where: { id: member.id },
-        data: { renewalDate: daysFromNow(7) },
-      });
-      await sendDueRenewalNotices();
-      expect(reminderMock).toHaveBeenCalledTimes(1); // same cycle as the first send
-
+      // Back inside the window on a different day: a different cycle, so it sends.
       await prisma.member.update({
         where: { id: member.id },
         data: { renewalDate: daysFromNow(6) },
       });
       const later = await sendDueRenewalNotices();
-      expect(later.remindersSent).toBe(1); // a different date is a different cycle
+      expect(later.remindersSent).toBe(1);
+    })
+  );
+
+  it(
+    'treats the same renewal day as the same cycle even if the timestamp moves',
+    withEmptyTestDatabase(async ({ database }: any) => {
+      const { prisma } = database;
+      const member = await makeMember(prisma, 'resaved@test.test', daysFromNow(7), 'ACTIVE');
+
+      await sendDueRenewalNotices();
+      expect(reminderMock).toHaveBeenCalledTimes(1);
+
+      // Something rewrites renewalDate to a slightly different instant on the same
+      // day - a re-save that recomputes the term, a backfill. The member must not
+      // be told twice about one renewal.
+      const current = (await prisma.member.findUnique({ where: { id: member.id } })).renewalDate;
+      await prisma.member.update({
+        where: { id: member.id },
+        data: { renewalDate: new Date(current.getTime() + 1000) },
+      });
+
+      const second = await sendDueRenewalNotices();
+      expect(second.remindersSent).toBe(0);
+      expect(second.alreadySent).toBe(1);
+      expect(reminderMock).toHaveBeenCalledTimes(1);
     })
   );
 
