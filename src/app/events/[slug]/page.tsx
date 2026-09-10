@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Calendar, Clock, MapPin, Users, Building } from 'lucide-react'
 import { prisma } from '@/lib/db'
 import { soldCounts } from '@/lib/ticket-tiers'
+import { sanitizeRichText, looksLikeHtml, toPlainText } from '@/lib/sanitize-html'
 
 // `force-dynamic` was removed as redundant: without generateStaticParams this route
 // is already dynamic.
@@ -36,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!event) return { title: 'Event not found' }
   return {
     title: `${event.title} | BASA`,
-    description: event.shortDescription ?? event.description.slice(0, 160),
+    description: event.shortDescription ?? toPlainText(event.description, 160),
   }
 }
 
@@ -114,7 +115,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             <Card>
               <CardHeader><CardTitle>About This Event</CardTitle></CardHeader>
               <CardContent>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{event.description}</p>
+                {looksLikeHtml(event.description) ? (
+                  // Imported WordPress events are HTML. Sanitized on the server;
+                  // see src/lib/sanitize-html.ts for what survives and why.
+                  <div
+                    className="rich-text"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(event.description) }}
+                  />
+                ) : (
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-line">{event.description}</p>
+                )}
               </CardContent>
             </Card>
 

@@ -3,6 +3,18 @@ const { withSentryConfig } = require("@sentry/nextjs");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ["@prisma/client", "bcryptjs"],
+  // sanitize-html's parser chain ships ESM only. Next handles that in its own
+  // bundle, but next/jest builds jest's transformIgnorePatterns from this list, so
+  // without it every test that imports src/lib/sanitize-html.ts fails to parse.
+  transpilePackages: [
+    "sanitize-html",
+    "htmlparser2",
+    "domhandler",
+    "domutils",
+    "domelementtype",
+    "dom-serializer",
+    "entities",
+  ],
   images: {
     remotePatterns: [
       {
