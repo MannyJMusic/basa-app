@@ -216,6 +216,16 @@ model Event {
   /// WordPress post id this event was imported from, so `scripts/migrate` can
   /// upsert instead of duplicating on a re-run. Null for events created in basa-app.
   wpId             Int?                @unique
+  /// The series this event is a later occurrence of. The first occurrence is the
+  /// series itself, so a four-week series is one parent and three children; see
+  /// the migration for why it is shaped that way.
+  parentEventId    String?
+  /// The scheduled slot this occurrence was created for. Kept separate from
+  /// startDate so that moving one occurrence does not lose track of which slot in
+  /// the series it is, and so a re-import does not recreate the original slot.
+  occurrenceStart  DateTime?
+  parent           Event?              @relation("EventSeries", fields: [parentEventId], references: [id], onDelete: Cascade)
+  occurrences      Event[]             @relation("EventSeries")
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
   organizer        Organizer?          @relation(fields: [organizerId], references: [id])
@@ -225,11 +235,13 @@ model Event {
   speakers         EventSpeaker[]
   sponsors         EventSponsor[]
 
+  @@unique([parentEventId, occurrenceStart])
   @@index([startDate])
   @@index([category])
   @@index([status])
   @@index([organizerId])
   @@index([venueId])
+  @@index([parentEventId])
 }
 
 /// A reusable place an event happens. MEC keeps these as `mec_location` posts shared

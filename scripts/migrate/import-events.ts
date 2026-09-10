@@ -25,7 +25,7 @@ import { join } from 'path'
 import { loadWordPress, metaOf, WpSource, WpTerm } from './lib/wp-source'
 import { phpUnserializeMap, phpString, PhpValue } from './lib/php-unserialize'
 import { decodeEntities, parseUsAddress, summarise, collapseWhitespace } from './lib/text'
-import { wallClockToUtc, to24Hour, formatInEventZone } from './lib/timezone'
+import { wallClockToUtc, to24Hour, wallClockPartsInEventZone } from './lib/timezone'
 import { MigrationReport, parseArgs } from './lib/report'
 
 const prisma = new PrismaClient()
@@ -61,6 +61,19 @@ function plainTitle(raw: string): string {
 const MEC_NO_ORGANIZER = 1
 /** The same sentinel for a location: 52 published events carry it. */
 const MEC_NO_LOCATION = 1
+
+/**
+ * Above this many dates, a "series" is not an event series.
+ *
+ * Two posts in this dump - "Deadline for Members To Members Email" and "Deadline
+ * for Social Content on BASA Pages" - are internal reminders that someone put on
+ * the events calendar with no end date. MEC has expanded each into 600 weekly
+ * dates running to 2033, which between them are 1,200 of the 1,474 rows in
+ * wp_mec_dates. Importing those would bury the public calendar in something no
+ * member should see. They come over as the single events they effectively are,
+ * and the report says so.
+ */
+const MAX_SERIES_OCCURRENCES = 24
 
 interface Options {
   dumpPath: string
@@ -249,6 +262,37 @@ async function importOrganizers(src: WpSource, report: MigrationReport, opts: Op
 }
 
 // ---------------------------------------------------------------- events
+
+/** One materialized date from `wp_mec_dates`. */
+interface MecDate {
+  startDate: string
+  endDate: string
+}
+
+/** Everything the importer writes for one event, parent or occurrence alike. */
+interface DesiredEvent {
+  title: string
+  slug: string
+  description: string
+  shortDescription: string | null
+  startDate: Date
+  endDate: Date
+  location: string
+  address: string | null
+  city: string | null
+  state: string | null
+  zipCode: string | null
+  capacity: number | null
+  price: number | null
+  memberPrice: number | null
+  category: string
+  type: string
+  status: EventStatus
+  image: string | null
+  tags: string[]
+  venueId: string | null
+  organizerId: string | null
+}
 
 interface EventDates {
   startDate: Date
@@ -498,6 +542,7 @@ function resolveVenue(
 
 async function importEvents(
   src: WpSource,
+  occurrencesByPost: Map<number, MecDate[]>,
   venueIds: Map<number, string>,
   organizerIds: Map<number, string>,
   report: MigrationReport,
@@ -508,6 +553,7 @@ async function importEvents(
   let handled = 0
   let noOrganizer = 0
   let noVenue = 0
+  let seriesCount = 0
 
   for (const post of posts) {
     if (opts.limit !== null && handled >= opts.limit) break
@@ -533,10 +579,24 @@ async function importEvents(
     }
     handled++
 
-    if (meta.mec_repeat_status === '1') {
+    // MEC's repeat *rules* are not trustworthy on this site - eight events carry an
+    // `until` that predates their own start date - so what counts as a series is
+    // what MEC actually materialized into wp_mec_dates. See the comment on #55.
+    const materialized = occurrencesByPost.get(post.id) ?? []
+    let laterOccurrences: MecDate[] = []
+
+    if (materialized.length > MAX_SERIES_OCCURRENCES) {
       report.issue(
-        'recurring event imported as its first occurrence only (needs #55)',
-        `${label}: repeats ${meta.mec_repeat_type || 'daily'} every ${meta.mec_repeat_interval || '1'}`
+        'not an event series: too many dates to be a real event, imported as one',
+        `${label}: ${materialized.length} dates, ${materialized[0].startDate} to ${materialized[materialized.length - 1].startDate}`
+      )
+    } else if (materialized.length > 1) {
+      laterOccurrences = materialized.slice(1)
+      seriesCount++
+    } else if (meta.mec_repeat_status === '1') {
+      report.issue(
+        'repeat rule produces nothing (ends before the event starts), imported as one event',
+        `${label}: repeats ${meta.mec_repeat_type || 'daily'} until ${meta.mec_repeat_end_at_date || 'never'}, starts ${meta.mec_start_date}`
       )
     }
 
@@ -559,7 +619,7 @@ async function importEvents(
       ? EventStatus.CANCELLED
       : post.status === 'publish' ? EventStatus.PUBLISHED : EventStatus.DRAFT
 
-    const desired = {
+    const desired: DesiredEvent = {
       title: plainTitle(post.title),
       slug: post.slug || `wp-event-${post.id}`,
       description: post.content,
@@ -601,13 +661,18 @@ async function importEvents(
       if (opts.commit) {
         const created = await prisma.event.create({ data: { ...desired, wpId: post.id } })
         await syncTickets(created.id, tickets, report, opts)
+        await syncOccurrences(created.id, desired, laterOccurrences, tickets, report, opts)
       } else {
         tickets.forEach(() => report.tally('ticket tiers', 'created'))
+        laterOccurrences.forEach(() => report.tally('occurrences', 'created'))
       }
       continue
     }
 
-    const changed = changedFields(existing as unknown as Record<string, unknown>, desired)
+    const changed = changedFields(
+      existing as unknown as Record<string, unknown>,
+      desired as unknown as Record<string, unknown>
+    )
     if (changed.length) {
       report.tally('events', 'updated')
       if (opts.commit) await prisma.event.update({ where: { id: existing.id }, data: desired })
@@ -615,8 +680,17 @@ async function importEvents(
       report.tally('events', 'unchanged')
     }
     await syncTickets(existing.id, tickets, report, opts)
+    await syncOccurrences(existing.id, desired, laterOccurrences, tickets, report, opts)
   }
 
+  if (seriesCount) {
+    report.note(
+      `${seriesCount} events happen on more than one date and import as a series: the first date is the event ` +
+      `itself and the rest are occurrences hanging off it. Every genuine occurrence in this data is in the past. ` +
+      `An occurrence that already exists is left completely alone on a re-run - including its ticket tiers, ` +
+      `which is why the tier count on a first run is higher than on the ones after it.`
+    )
+  }
   if (noVenue) {
     report.note(
       `${noVenue} published events have no venue: MEC stored location id 1 on them, its "none selected" ` +
@@ -633,6 +707,85 @@ async function importEvents(
     `The WordPress site's own timezone is America/Mexico_City, which is wrong for San Antonio and was ignored.`)
 
   return imageUrls
+}
+
+/**
+ * Create the later dates of a series as their own events.
+ *
+ * The first date is the event itself, so this handles dates two onwards. Each one
+ * is a full Event row: registrations, capacity and ticket tiers all attach per
+ * occurrence, which is the whole point of not flattening a series into one row.
+ *
+ * Times come from the parent event rather than from `wp_mec_dates`. That table
+ * stores absolute timestamps MEC computed using the WordPress site's own timezone,
+ * which is `America/Mexico_City` and wrong for San Antonio - from October 2022,
+ * when Mexico dropped daylight saving, those timestamps drift an hour from Central
+ * for half the year. Taking the date from MEC and the time of day from the event
+ * keeps an 8:00 AM meeting at 8:00 AM on every date.
+ */
+async function syncOccurrences(
+  parentId: string,
+  parent: DesiredEvent,
+  dates: MecDate[],
+  tickets: MappedTicket[],
+  report: MigrationReport,
+  opts: Options
+): Promise<void> {
+  if (!dates.length) return
+
+  const startWall = wallClockPartsInEventZone(parent.startDate)
+  const endWall = wallClockPartsInEventZone(parent.endDate)
+  // A series occurrence keeps the parent's length, including one that runs past
+  // midnight: MEC's own dend is unreliable for the same timezone reason.
+  const dayspan = Math.round(
+    (Date.UTC(endWall.year, endWall.month - 1, endWall.day) -
+      Date.UTC(startWall.year, startWall.month - 1, startWall.day)) / 86400000
+  )
+
+  for (const date of dates) {
+    const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.startDate)
+    if (!parts) {
+      report.issue('occurrence has an unreadable date', `${parent.title}: ${date.startDate}`)
+      continue
+    }
+    const [year, month, day] = parts.slice(1).map((n) => parseInt(n, 10))
+    const startDate = wallClockToUtc(year, month, day, startWall.hour, startWall.minute)
+    const endBase = new Date(Date.UTC(year, month - 1, day + dayspan))
+    const endDate = wallClockToUtc(
+      endBase.getUTCFullYear(), endBase.getUTCMonth() + 1, endBase.getUTCDate(),
+      endWall.hour, endWall.minute
+    )
+
+    const existing = opts.commit
+      ? await prisma.event.findUnique({
+          where: { parentEventId_occurrenceStart: { parentEventId: parentId, occurrenceStart: startDate } },
+        })
+      : null
+
+    if (existing) {
+      // Never rewritten. An occurrence that was moved or cancelled by hand has to
+      // survive a re-import, which is what makes editing one of them meaningful.
+      report.tally('occurrences', 'unchanged')
+      continue
+    }
+
+    report.tally('occurrences', 'created')
+    if (!opts.commit) continue
+
+    const created = await prisma.event.create({
+      data: {
+        ...parent,
+        slug: `${parent.slug}-${date.startDate}`,
+        startDate,
+        endDate,
+        parentEventId: parentId,
+        occurrenceStart: startDate,
+        // Only the parent carries the WordPress id: one post, one wpId.
+        wpId: null,
+      },
+    })
+    await syncTickets(created.id, tickets, report, opts)
+  }
 }
 
 async function syncTickets(
@@ -730,10 +883,24 @@ async function main(): Promise<void> {
   const report = new MigrationReport('MEC events, venues and organizers (#57)', !opts.commit)
 
   console.log(`Reading ${opts.dumpPath}`)
+
+  // MEC's materialized occurrence dates, collected in the same pass as everything
+  // else. See syncOccurrences for why the times in that table are not used.
+  const occurrencesByPost = new Map<number, MecDate[]>()
   const src = await loadWordPress(opts.dumpPath, {
     postTypes: ['mec-events', 'mec_location', 'mec_organizer', 'attachment'],
     options: ['siteurl', 'home', 'timezone_string'],
+    extraTables: {
+      wp_mec_dates: (row) => {
+        const postId = parseInt(row.post_id ?? '', 10)
+        if (!Number.isFinite(postId)) return
+        const list = occurrencesByPost.get(postId) ?? []
+        list.push({ startDate: row.dstart ?? '', endDate: row.dend ?? '' })
+        occurrencesByPost.set(postId, list)
+      },
+    },
   })
+  occurrencesByPost.forEach((dates) => dates.sort((a, b) => a.startDate.localeCompare(b.startDate)))
   console.log(
     `  ${(src.postsByType.get('mec-events') ?? []).length} events, ` +
     `${(src.termsByTaxonomy.get('mec_location') ?? []).length} venue terms, ` +
@@ -742,7 +909,7 @@ async function main(): Promise<void> {
 
   const venueIds = await importVenues(src, report, opts)
   const organizerIds = await importOrganizers(src, report, opts)
-  const images = await importEvents(src, venueIds, organizerIds, report, opts)
+  const images = await importEvents(src, occurrencesByPost, venueIds, organizerIds, report, opts)
 
   if (opts.imageDir) await downloadImages(images, opts.imageDir, report)
   else report.note(`${new Set(images).size} distinct featured images referenced; pass --images <dir> to fetch them`)

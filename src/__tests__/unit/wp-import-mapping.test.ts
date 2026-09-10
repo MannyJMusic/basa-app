@@ -13,7 +13,7 @@ import { join } from 'path'
 import { scanDump, Row } from '../../../scripts/migrate/lib/mysqldump'
 import { phpUnserialize, phpUnserializeMap, phpString } from '../../../scripts/migrate/lib/php-unserialize'
 import { decodeEntities, parseUsAddress, summarise } from '../../../scripts/migrate/lib/text'
-import { wallClockToUtc, to24Hour } from '../../../scripts/migrate/lib/timezone'
+import { wallClockToUtc, to24Hour, wallClockPartsInEventZone } from '../../../scripts/migrate/lib/timezone'
 
 function writeDump(sql: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'basa-dump-'))
@@ -147,6 +147,29 @@ describe('event times', () => {
     expect(wallClockToUtc(2026, 10, 13, 16, 30).toISOString()).toBe('2026-10-13T21:30:00.000Z')
     // Central Standard Time, UTC-6.
     expect(wallClockToUtc(2026, 1, 14, 8, 30).toISOString()).toBe('2026-01-14T14:30:00.000Z')
+  })
+
+  it('reads an instant back as San Antonio wall clock', () => {
+    expect(wallClockPartsInEventZone(new Date('2025-02-28T15:00:00Z')))
+      .toEqual({ year: 2025, month: 2, day: 28, hour: 9, minute: 0 })
+    // Same wall clock, one hour less of UTC offset: this is CDT.
+    expect(wallClockPartsInEventZone(new Date('2025-03-14T14:00:00Z')))
+      .toEqual({ year: 2025, month: 3, day: 14, hour: 9, minute: 0 })
+  })
+
+  it('keeps a repeating event at the same local time across a DST change', () => {
+    // "Brewing With BASA" recurs at 9:00 AM on Feb 28, Mar 14 and Mar 28 2025.
+    // Adding 14 days of milliseconds to the first instant would leave every later
+    // occurrence an hour late once Central moves to daylight time on March 9.
+    const first = wallClockToUtc(2025, 2, 28, 9, 0)
+    const second = wallClockToUtc(2025, 3, 14, 9, 0)
+
+    expect(first.toISOString()).toBe('2025-02-28T15:00:00.000Z')
+    expect(second.toISOString()).toBe('2025-03-14T14:00:00.000Z')
+    expect(wallClockPartsInEventZone(second).hour).toBe(9)
+
+    const naive = new Date(first.getTime() + 14 * 24 * 60 * 60 * 1000)
+    expect(wallClockPartsInEventZone(naive).hour).toBe(10)
   })
 
   it('does not shift an event stored as the site would render it', () => {
