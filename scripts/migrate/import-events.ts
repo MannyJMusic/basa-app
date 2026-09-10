@@ -641,11 +641,6 @@ async function syncTickets(
   report: MigrationReport,
   opts: Options
 ): Promise<void> {
-  if (!opts.commit) {
-    for (const _ of tickets) report.tally('ticket tiers', 'created')
-    return
-  }
-
   const existing = await prisma.ticketTier.findMany({ where: { eventId } })
   const byWpId = new Map<number, (typeof existing)[number]>()
   for (const tier of existing) if (tier.wpId !== null) byWpId.set(tier.wpId, tier)
@@ -661,13 +656,13 @@ async function syncTickets(
     }
     const found = byWpId.get(ticket.wpId)
     if (!found) {
-      await prisma.ticketTier.create({ data: { ...desired, eventId, wpId: ticket.wpId } })
       report.tally('ticket tiers', 'created')
+      if (opts.commit) await prisma.ticketTier.create({ data: { ...desired, eventId, wpId: ticket.wpId } })
       continue
     }
     if (changedFields(found as unknown as Record<string, unknown>, desired).length) {
-      await prisma.ticketTier.update({ where: { id: found.id }, data: desired })
       report.tally('ticket tiers', 'updated')
+      if (opts.commit) await prisma.ticketTier.update({ where: { id: found.id }, data: desired })
     } else {
       report.tally('ticket tiers', 'unchanged')
     }
@@ -678,8 +673,8 @@ async function syncTickets(
   const wanted = new Set(tickets.map((t) => t.wpId))
   for (const tier of existing) {
     if (tier.wpId === null || wanted.has(tier.wpId) || !tier.isActive) continue
-    await prisma.ticketTier.update({ where: { id: tier.id }, data: { isActive: false } })
     report.tally('ticket tiers', 'updated')
+    if (opts.commit) await prisma.ticketTier.update({ where: { id: tier.id }, data: { isActive: false } })
     report.issue('ticket tier no longer in WordPress, deactivated', `${tier.name} (event ${eventId})`)
   }
 }
