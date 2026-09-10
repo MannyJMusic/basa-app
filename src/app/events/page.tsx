@@ -29,6 +29,8 @@ import {
 import { useEvents } from "@/hooks/use-events"
 import { BasaEventLoading } from "@/components/ui/basa-loading"
 
+type Timeframe = 'upcoming' | 'past'
+
 export default function EventsPage() {
   const { events, loading, fetchEvents } = useEvents()
 
@@ -36,29 +38,28 @@ export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState("")
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+  const [timeframe, setTimeframe] = useState<Timeframe>('upcoming')
 
   // Fetch events on mount and when filters change
   useEffect(() => {
+    // The window is computed per fetch rather than held in state, so "upcoming"
+    // still means upcoming on a tab left open overnight.
+    const now = new Date().toISOString()
     fetchEvents(
       {
         status: "PUBLISHED",
         search: searchQuery || undefined,
         type: (filterType as 'NETWORKING' | 'SUMMIT' | 'RIBBON_CUTTING' | 'COMMUNITY' | undefined) || undefined,
+        ...(timeframe === 'upcoming' ? { from: now } : { to: now }),
       },
       1,
       20,
       "startDate",
-      "asc"
+      // Upcoming reads forwards from today; past reads backwards from today,
+      // so the most recent event is first either way.
+      timeframe === 'upcoming' ? "asc" : "desc"
     )
-  }, [fetchEvents, searchQuery, filterType])
-
-  
-  // Debug: Log each event
-  if (events && events.length > 0) {
-    events.forEach((event, index) => {
-    })
-  } else {
-  }
+  }, [fetchEvents, searchQuery, filterType, timeframe])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -98,10 +99,12 @@ export default function EventsPage() {
           {/* Headline and subheadline at the top */}
           <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-              Upcoming Events
+              {timeframe === 'upcoming' ? 'Upcoming Events' : 'Past Events'}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Don't miss these exclusive networking opportunities designed to accelerate your business success.
+              {timeframe === 'upcoming'
+                ? "Don't miss these exclusive networking opportunities designed to accelerate your business success."
+                : 'A look back at where BASA has been. Every event we have run, most recent first.'}
             </p>
           </div>
           {/* Controls row: search, filter, calendar, view toggles */}
@@ -116,6 +119,24 @@ export default function EventsPage() {
                   onChange={e => setSearchQuery(e.target.value)}
                   disabled={loading}
                 />
+              </div>
+              <div className="flex rounded-lg border border-gray-300 overflow-hidden" role="group" aria-label="Show upcoming or past events">
+                {(['upcoming', 'past'] as Timeframe[]).map(option => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setTimeframe(option)}
+                    aria-pressed={timeframe === option}
+                    disabled={loading}
+                    className={`px-4 py-2 text-sm font-medium transition ${
+                      timeframe === option
+                        ? 'bg-basa-gold text-basa-navy'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {option === 'upcoming' ? 'Upcoming' : 'Past'}
+                  </button>
+                ))}
               </div>
               <select
                 className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -167,8 +188,20 @@ export default function EventsPage() {
             <BasaEventLoading />
           ) : !events || events.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <p>No upcoming events found.</p>
-              <p className="text-sm mt-2">Debug info: events array length = {events?.length || 0}</p>
+              <p>
+                {timeframe === 'upcoming'
+                  ? 'No upcoming events right now.'
+                  : 'No past events match that search.'}
+              </p>
+              {timeframe === 'upcoming' && (
+                <button
+                  type="button"
+                  className="text-sm mt-2 text-purple-600 underline underline-offset-2"
+                  onClick={() => setTimeframe('past')}
+                >
+                  Browse past events
+                </button>
+              )}
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">

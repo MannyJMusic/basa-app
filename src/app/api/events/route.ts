@@ -41,6 +41,11 @@ const searchParamsSchema = z.object({
   type: z.enum(["NETWORKING", "SUMMIT", "RIBBON_CUTTING", "COMMUNITY"]).optional(),
   category: z.string().optional(),
   isFeatured: z.string().transform(val => val === "true").optional(),
+  // A time window, as ISO instants. An event is in the window when it overlaps
+  // it, so `from` compares against endDate and `to` against startDate: an event
+  // that started this morning and runs until tonight is still upcoming at noon.
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
   page: z.string().transform(Number).pipe(z.number().min(1)).default("1"),
   limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).default("20"),
   sortBy: z.enum(["title", "startDate", "createdAt", "capacity"]).default("startDate"),
@@ -83,6 +88,16 @@ export async function GET(request: NextRequest) {
     // Featured filter
     if (params.isFeatured !== undefined) {
       where.isFeatured = params.isFeatured
+    }
+
+    // Time window. Without this the public "Upcoming Events" page asks for every
+    // published event sorted ascending, which after the WordPress import (#57)
+    // means it opens on 2020.
+    if (params.from) {
+      where.endDate = { gte: new Date(params.from) }
+    }
+    if (params.to) {
+      where.startDate = { lte: new Date(params.to) }
     }
 
 
@@ -175,6 +190,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response)
   } catch (error) {
+    // A malformed query parameter is the caller's mistake, not a server fault.
+    // Answering 500 hides it, and a caller retrying on 500 never learns why.
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid query parameters", details: error.errors },
+        { status: 400 }
+      )
+    }
     console.error("Error fetching events:", error)
     return NextResponse.json(
       { error: "Failed to fetch events" },
