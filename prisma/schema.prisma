@@ -87,12 +87,12 @@ model AuditLog {
 }
 
 model Member {
-  id                         String              @id @default(cuid())
-  userId                     String              @unique
+  id                         String               @id @default(cuid())
+  userId                     String               @unique
   businessName               String?
   businessType               String?
   industry                   String[]
-  ein                        String?             @unique
+  ein                        String?              @unique
   yearEstablished            Int?
   numberOfEmployees          String?
   annualRevenue              String?
@@ -105,11 +105,11 @@ model Member {
   website                    String?
   membershipTier             MembershipTier?
   chapterId                  String?
-  membershipStatus           Status              @default(PENDING)
-  joinedAt                   DateTime            @default(now())
+  membershipStatus           Status               @default(PENDING)
+  joinedAt                   DateTime             @default(now())
   renewalDate                DateTime?
-  stripeCustomerId           String?             @unique
-  subscriptionId             String?             @unique
+  stripeCustomerId           String?              @unique
+  subscriptionId             String?              @unique
   logo                       String?
   coverImage                 String?
   description                String?
@@ -121,19 +121,20 @@ model Member {
   instagram                  String?
   twitter                    String?
   youtube                    String?
-  showInDirectory            Boolean             @default(true)
-  allowContact               Boolean             @default(true)
-  showAddress                Boolean             @default(false)
-  newsletterSubscribed       Boolean             @default(false)
-  membershipPaymentConfirmed Boolean             @default(false)
+  showInDirectory            Boolean              @default(true)
+  allowContact               Boolean              @default(true)
+  showAddress                Boolean              @default(false)
+  newsletterSubscribed       Boolean              @default(false)
+  membershipPaymentConfirmed Boolean              @default(false)
+  membershipReminders        MembershipReminder[]
   organizerProfiles          Organizer[]
   eventRegistrations         EventRegistration[]
   eventSponsors              EventSponsor[]
   leads                      Lead[]
-  chapter                    Chapter?            @relation(fields: [chapterId], references: [id])
-  user                       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  referralsReceived          Referral[]          @relation("referred")
-  referralsGiven             Referral[]          @relation("referrer")
+  chapter                    Chapter?             @relation(fields: [chapterId], references: [id])
+  user                       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referralsReceived          Referral[]           @relation("referred")
+  referralsGiven             Referral[]           @relation("referrer")
   resources                  Resource[]
   sponsorships               Sponsorship[]
   testimonials               Testimonial[]
@@ -141,6 +142,25 @@ model Member {
   @@index([businessType, membershipStatus])
   @@index([industry])
   @@index([chapterId])
+}
+
+/// One renewal notice sent to one member for one renewal cycle.
+///
+/// The sweep runs daily, so sending has to be impossible to repeat. The unique
+/// constraint does that work: the same cycle and interval cannot send twice, and
+/// a renewalDate that advances after payment naturally opens a fresh set.
+model MembershipReminder {
+  id          String   @id @default(cuid())
+  memberId    String
+  /// The renewalDate this notice was about, which is what makes it a cycle.
+  renewalDate DateTime
+  /// Days before renewal this notice was for. 0 is the notice sent after lapsing.
+  daysBefore  Int
+  sentAt      DateTime @default(now())
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, renewalDate, daysBefore])
+  @@index([memberId])
 }
 
 model Chapter {
