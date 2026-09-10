@@ -1,6 +1,29 @@
 # BASA Platform Plan: bring basa-app live, retire WordPress and the AI crew
 
-Status: draft for review. Written 2026-09-05 from a measured audit of the workspace, not from the repo's own docs (which overstate readiness). Next step after sign-off: turn Phase 0 and Phase 1 into scoped issues.
+Status: written 2026-09-05 from a measured audit of the workspace, not from the repo's own docs (which overstate readiness). Phases 0 to 3 are largely done; see the progress note below before reading the phases as a to-do list.
+
+## 0. Where this stands (2026-09-10)
+
+| Phase | State |
+|---|---|
+| 0. Safe and reproducible | **Done.** Dev routes gated, API auth audited, logging cleaned, single lockfile, Node 22, branch policy. |
+| 1. Strip scaffolding | **Done** except #73, a final sweep for what the deletion list missed. |
+| 2. Deployable build live | **Done, then redone.** `app.businessassociationsa.com` went live 2026-09-06, the host was compromised and rebuilt (#76), and both sites have been served from the rebuilt box since 2026-09-08. Deploys pass end to end. |
+| 3. Membership and events parity | **Substantially done.** Chapters and launch tiers, expiry lifecycle, venues and organizers, per-event ticket tiers, guest checkout, both importers, event series, iCal feed, renewal reminders. Open: the owner decisions listed below. |
+| 4. Modernize the stack | **Not started**, except the VPS work that #76 forced early. |
+| 5. Retire BASA-AI-CREW | **Not started**, and now a security item: port 8080 on that host is open to the internet (#36). |
+| 6. Cut over and retire WordPress | **Not started.** |
+
+Three things gate further progress and none of them are code:
+
+1. **Where imported event images live.** All 163 can be downloaded, but `Event.image` still points at WordPress. It stops resolving the moment Phase 6 turns that site off.
+2. **The five nominally-active members.** Four are BASA staff accounts. They import as `EXPIRED` with no tier; placing anyone on a launch tier is a per-member decision (#51).
+3. **The AI-CREW VPS.** Still blocked on explicit IP confirmation and an inventory of what else runs on that host (#36).
+
+Two things are worth knowing before touching this work:
+
+- **The importers have not been run against production.** They are verified against a local database loaded from the nightly dump. #101 and #102 must land first — they are the two bugs real content exposes.
+- **Imported members cannot sign in.** No password, `INACTIVE`, no claim flow (#104).
 
 ## 1. Where things stand
 
@@ -175,5 +198,23 @@ Filed 2026-09-08, once the decisions in section 4 were answered:
 | 71 | Phase 6 | Cut over `businessassociationsa.com` and retire WordPress |
 | 72 | Phase 6 | Cancel PMPro, PeepSo, Elementor, MEC licences |
 | 73 | Phase 1 | Audit and remove what is left of the old harness |
+
+Filed 2026-09-09 and 2026-09-10, as the work turned them up:
+
+| # | Milestone | Issue |
+|---|---|---|
+| 76 | — | Security incident: production VPS compromised (cryptominer) |
+| 82 | Phase 3 | Renewal reminder emails before a membership lapses |
+| 94 | — | Deploys drop ~10s of 502s while the app container is recreated |
+| 101 | Phase 3 | The "Upcoming Events" page has no date filter, and leaks debug text |
+| 102 | Phase 3 | Event descriptions render as escaped HTML |
+| 104 | Phase 3 | Imported members have no way to claim their account |
+
+What the importers found, which changed the plan rather than just implementing it:
+
+- **MEC keeps venues and organizers as taxonomy terms**, not as the post types the `basa-mec-api` plugin exposes. Importing over REST as #57 originally proposed would have produced 12 nameless venues instead of 112 with addresses. The importers read a database dump instead, which also survives the plugin and the WordPress site going away.
+- **There is no paying membership base to migrate.** 140 people, 296 expired memberships, and 14 active rows belonging to 5 users — four of them BASA staff accounts. What is being moved is a contact list with history.
+- **MEC's recurrence rules are vestigial.** Eight of the fifteen "recurring" events carry an `until` date that predates their own start. Two more are internal reminders expanded into 600 dates each running to 2033. #55 keeps the rule engine and admin UI; the model half is done.
+- **The WordPress site's timezone is `America/Mexico_City`**, which is wrong for San Antonio and drifts an hour from Central for half the year. Every date the importers write is converted from Central wall clock, not taken from MEC's own timestamps.
 
 Suggested order within Phase 3: #51 → #52, then #53 → #54 → #55 → #56, then the importers (#57, #58) last since they depend on the models. #59 and #73 are small and can go any time. In Phase 4, #67 must close before #68 starts.
