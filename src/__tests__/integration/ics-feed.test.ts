@@ -2,10 +2,14 @@
  * What a calendar subscriber actually receives (#56). The document format is
  * unit tested; this covers the part that needs a database - which events are in
  * the feed at all.
+ *
+ * Deliberately does not import the document builder: that pulls in sanitize-html,
+ * whose parser chain is ESM only, and this jest config runs raw ts-jest with no
+ * transform for node_modules - so it is a suite that fails to load, not one that
+ * fails an assertion.
  */
 import { TestUtils, withTestDatabase } from './helpers/test-utils';
 import { selectFeedEvents } from '@/lib/ics-feed';
-import { buildCalendar } from '@/lib/ics';
 
 describe('Events calendar feed', () => {
   it(
@@ -67,11 +71,9 @@ describe('Events calendar feed', () => {
       expect(titles).not.toContain('Not Announced Yet');
 
       // A subscriber has to see the cancellation, not lose the entry silently.
-      const ics = buildCalendar(
-        events.filter((e) => e.title === 'Called Off'),
-        { origin: 'https://app.businessassociationsa.com' }
-      );
-      expect(ics).toContain('STATUS:CANCELLED');
+      // What the document then says about it is covered in ics.test.ts.
+      const calledOff = events.filter((e) => e.title === 'Called Off')[0];
+      expect(calledOff.status).toBe('CANCELLED');
     })
   );
 

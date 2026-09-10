@@ -1,4 +1,8 @@
-import { IcsEvent } from '@/lib/ics'
+// Type-only on purpose: importing the value module pulls in sanitize-html and its
+// ESM-only parser chain. The integration jest config runs raw ts-jest with no
+// transform for node_modules, so that is a suite that fails to LOAD rather than a
+// suite that fails - and this module's job is a Prisma query, not a document.
+import type { IcsEvent } from '@/lib/ics'
 
 export interface FeedFilters {
   type?: string | null
