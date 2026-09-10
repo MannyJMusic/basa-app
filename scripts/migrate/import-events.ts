@@ -756,11 +756,9 @@ async function syncOccurrences(
       endWall.hour, endWall.minute
     )
 
-    const existing = opts.commit
-      ? await prisma.event.findUnique({
-          where: { parentEventId_occurrenceStart: { parentEventId: parentId, occurrenceStart: startDate } },
-        })
-      : null
+    const existing = await prisma.event.findUnique({
+      where: { parentEventId_occurrenceStart: { parentEventId: parentId, occurrenceStart: startDate } },
+    })
 
     if (existing) {
       // Never rewritten. An occurrence that was moved or cancelled by hand has to
