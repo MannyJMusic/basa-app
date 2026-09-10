@@ -117,10 +117,15 @@ describe('Renewal notices', () => {
       // Something rewrites renewalDate to a slightly different instant on the same
       // day - a re-save that recomputes the term, a backfill. The member must not
       // be told twice about one renewal.
+      //
+      // The jitter moves the date slightly *earlier* on purpose. Days remaining is
+      // rounded up, so nudging it later would push 7.0 days to 8 and land the
+      // member in the next bucket up - a different notice, correctly sent, which
+      // is not what this test is about.
       const current = (await prisma.member.findUnique({ where: { id: member.id } })).renewalDate;
       await prisma.member.update({
         where: { id: member.id },
-        data: { renewalDate: new Date(current.getTime() + 1000) },
+        data: { renewalDate: new Date(current.getTime() - 1000) },
       });
 
       const second = await sendDueRenewalNotices();
