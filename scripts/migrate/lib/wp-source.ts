@@ -6,7 +6,7 @@
  * two passes: the first collects posts, terms and options, the second collects
  * the meta belonging to the posts the first pass kept.
  */
-import { scanDump } from './mysqldump'
+import { scanDump, Row } from './mysqldump'
 
 export interface WpPost {
   id: number
@@ -49,6 +49,12 @@ export interface LoadOptions {
   postTypes: string[]
   /** Option names worth keeping; the options table is mostly transients. */
   options?: string[]
+  /**
+   * Extra tables to collect during the first pass, for data that is neither a
+   * post nor a term - MEC's materialized occurrence dates, for instance. Handlers
+   * run in dump order.
+   */
+  extraTables?: Record<string, (row: Row) => void>
 }
 
 const num = (v: string | null): number => (v === null ? 0 : parseInt(v, 10) || 0)
@@ -71,6 +77,7 @@ export async function loadWordPress(dumpPath: string, opts: LoadOptions): Promis
   const relationships: { objectId: number; taxonomyId: number }[] = []
 
   await scanDump(dumpPath, {
+    ...(opts.extraTables ?? {}),
     wp_posts: (r) => {
       const type = r.post_type ?? ''
       if (!wantedTypes.has(type)) return

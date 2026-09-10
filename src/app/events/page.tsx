@@ -24,6 +24,7 @@ import {
   List,
   Grid3X3,
   Calendar as CalendarIcon,
+  Rss,
   Info
 } from "lucide-react"
 import { useEvents } from "@/hooks/use-events"
@@ -174,6 +175,16 @@ export default function EventsPage() {
               >
                 <CalendarIcon className="w-5 h-5" />
               </Link>
+              {/* A real link so it can be copied into a calendar app's "subscribe
+                  by URL", and followed directly by clients that handle text/calendar. */}
+              <a
+                href="/events/calendar.ics"
+                className="p-2 rounded border bg-white text-gray-500 border-gray-300 hover:bg-basa-gold hover:text-basa-navy hover:border-basa-gold transition flex items-center justify-center"
+                aria-label="Subscribe to the events calendar"
+                title="Subscribe to this calendar (copy the link into Google or Apple Calendar)"
+              >
+                <Rss className="w-5 h-5" />
+              </a>
               {/* Info icon with tooltip */}
               <div className="relative group ml-2">
                 <Info className="w-4 h-4 text-gray-400 cursor-pointer group-hover:text-basa-gold group-focus:text-basa-gold" tabIndex={0} />

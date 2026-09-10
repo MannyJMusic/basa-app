@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Building } from 'lucide-react'
+import { ArrowLeft, Calendar, CalendarPlus, Clock, MapPin, Users, Building } from 'lucide-react'
 import { prisma } from '@/lib/db'
 import { soldCounts } from '@/lib/ticket-tiers'
 import { sanitizeRichText, looksLikeHtml, toPlainText } from '@/lib/sanitize-html'
@@ -187,6 +187,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                     <Link href={`/events/${event.slug}/register`}>Register Now</Link>
                   </Button>
                 )}
+
+                {/* A plain link, not a Button with onClick: this has to be a real
+                    GET so the browser hands the file to the calendar app. */}
+                <a
+                  href={`/events/${event.slug}/calendar.ics`}
+                  className="flex items-center justify-center w-full text-sm text-gray-600 hover:text-purple-700 transition"
+                >
+                  <CalendarPlus className="w-4 h-4 mr-2" />
+                  Add to calendar
+                </a>
               </CardContent>
             </Card>
 
