@@ -6,7 +6,7 @@ Importers that bring the live WordPress site's data into basa-app, for Phase 3 o
 | Script | Issue | Brings over |
 |---|---|---|
 | `import-events.ts` | #57 | MEC events, venues, organizers, ticket tiers |
-| `import-members.ts` | #58 | PMPro members, tiers, chapters, expiry dates (not written yet) |
+| `import-members.ts` | #58 | PMPro members, chapters, membership history |
 
 ## Running it
 
@@ -17,6 +17,9 @@ pnpm migrate:events --commit              # apply
 pnpm migrate:events --images ./media      # also fetch the featured images
 pnpm migrate:events --dump path/to.sql.gz # a dump other than the newest
 pnpm migrate:events --limit 20            # stop after 20 events, for a quick look
+
+pnpm migrate:members                      # dry run
+pnpm migrate:members --commit             # apply
 ```
 
 Dry run is the default. Every write is an upsert keyed on the WordPress id, so a
@@ -97,6 +100,42 @@ That is deliberately short of #57's "download and store rather than hotlink": wh
 the files should live is a hosting decision, and the images survive being downloaded
 now regardless of which store wins. It has to be settled before WordPress is turned
 off in Phase 6 — at that point the URLs stop resolving.
+
+## What the members importer assumes
+
+It is a much smaller job than "migrate the membership base" suggests. Across 314
+PMPro rows there are 140 people, 296 expired memberships, and 14 active rows
+belonging to 5 users — four of whom are BASA staff accounts whose memberships
+have no end date. There is no paying membership base to move; there is a contact
+list with history, and the history is the valuable part.
+
+Following the decisions on #51 and #35:
+
+- **Everyone imports as `EXPIRED`**, with their PMPro levels recorded in
+  `LegacyMembership`. Market, Mission and Action have no equivalent in the launch
+  product, so no `membershipTier` is set at all — placing the handful of current
+  members onto new tiers is a decision per member, not a lookup table.
+- **Chapter comes from `wp_pmpro_membership_levels_groups`**, never from parsing
+  the level name: level 27 is `SS w Associate` with a lowercase w, and `SS W` has
+  to be tested before `SS`. The database's group names (`South Side2East`,
+  `Center of The City`, `South Side2West`) are mapped to the association's.
+- **South Side West is retired but representable**: created as an inactive
+  chapter so its members can still be attached.
+- **82 people held levels in more than one chapter.** `Member.chapterId` takes the
+  most recent; every chapter they held is in `LegacyMembership`.
+- **No credentials and no email.** WordPress hashes are phpass and basa-app uses
+  bcrypt, so nothing carries over. Accounts import with no password, `INACTIVE`,
+  and need a claim or reset flow before anyone can sign in. The importer never
+  sends anything.
+- **Imported members are hidden from the directory.** They are lapsed contacts,
+  not current listings; whoever renews opts back in.
+- **An email that already belongs to a basa-app account is never written over** —
+  a seeded admin or a guest ticket buyer keeps their account, and the row is
+  reported as skipped.
+
+Business details are assembled from the three places WordPress kept them: PeepSo
+profile fields (numbered — the labels live in `peepso_user_field` posts, where
+103 is "Main Company"), WooCommerce `billing_*`, and PMPro's own `pmpro_b*`.
 
 ## The pieces
 
