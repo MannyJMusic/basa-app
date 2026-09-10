@@ -27,7 +27,8 @@
     "test:all": "pnpm test:integration",
     "email:preview": "echo 'Visit http://localhost:3000/dev/email-preview'",
     "setup:dev": "node scripts/setup-dev.js",
-    "db:setup": "node scripts/setup-database.js"
+    "db:setup": "node scripts/setup-database.js",
+    "migrate:events": "tsx scripts/migrate/import-events.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

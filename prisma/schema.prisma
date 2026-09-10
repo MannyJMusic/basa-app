@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "binary"
 }
 
@@ -35,31 +35,31 @@ model Session {
 }
 
 model User {
-  id                         String                 @id @default(cuid())
-  name                       String?
-  email                      String?                @unique
-  emailVerified              DateTime?
-  image                      String?
-  firstName                  String?
-  lastName                   String?
-  hashedPassword             String?
-  role                       String                 @default("GUEST")
-  isActive                   Boolean                @default(true)
-  lastLogin                  DateTime?
-  createdAt                  DateTime               @default(now())
-  updatedAt                  DateTime               @updatedAt
-  resetToken                 String?
-  resetTokenExpiry           DateTime?
-  accountStatus              AccountStatus          @default(PENDING_VERIFICATION)
-  verificationToken          String?                @unique
-  verificationTokenExpiry    DateTime?
-  accounts                   Account[]
-  auditLogs                  AuditLog[]
-  blogPosts                  BlogPost[]
-  member                     Member?
-  membershipInvitations      MembershipInvitation[]
-  payments                   Payment[]
-  sessions                   Session[]
+  id                      String                 @id @default(cuid())
+  name                    String?
+  email                   String?                @unique
+  emailVerified           DateTime?
+  image                   String?
+  firstName               String?
+  lastName                String?
+  hashedPassword          String?
+  role                    String                 @default("GUEST")
+  isActive                Boolean                @default(true)
+  lastLogin               DateTime?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  resetToken              String?
+  resetTokenExpiry        DateTime?
+  accountStatus           AccountStatus          @default(PENDING_VERIFICATION)
+  verificationToken       String?                @unique
+  verificationTokenExpiry DateTime?
+  accounts                Account[]
+  auditLogs               AuditLog[]
+  blogPosts               BlogPost[]
+  member                  Member?
+  membershipInvitations   MembershipInvitation[]
+  payments                Payment[]
+  sessions                Session[]
 }
 
 model VerificationToken {
@@ -213,6 +213,9 @@ model Event {
   organizerId      String?
   venueId          String?
   tags             String[]
+  /// WordPress post id this event was imported from, so `scripts/migrate` can
+  /// upsert instead of duplicating on a re-run. Null for events created in basa-app.
+  wpId             Int?                @unique
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
   organizer        Organizer?          @relation(fields: [organizerId], references: [id])
@@ -242,6 +245,9 @@ model Venue {
   longitude Float?
   capacity  Int?
   website   String?
+  /// Venue photo. MEC keeps one per location; it is a URL rather than an upload
+  /// because basa-app has no media store yet (see scripts/migrate/README.md).
+  image     String?
   wpId      Int?     @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -270,25 +276,25 @@ model Organizer {
 }
 
 model EventRegistration {
-  id              String             @id @default(cuid())
+  id              String                  @id @default(cuid())
   eventId         String
   memberId        String?
   name            String
   email           String
   company         String?
   phone           String?
-  ticketCount     Int                @default(1)
-  totalAmount     Decimal            @db.Decimal(10, 2)
-  status          RegistrationStatus @default(PENDING)
-  paymentIntentId String?            @unique
+  ticketCount     Int                     @default(1)
+  totalAmount     Decimal                 @db.Decimal(10, 2)
+  status          RegistrationStatus      @default(PENDING)
+  paymentIntentId String?                 @unique
   /// Per-ticket attendee details, as [{ name, email? }]. The columns above are the
   /// buyer; this is who is actually coming. Collected by the registration form and
   /// previously discarded.
   attendees       Json?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  event           Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  member          Member?            @relation(fields: [memberId], references: [id])
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  event           Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member          Member?                 @relation(fields: [memberId], references: [id])
   items           EventRegistrationItem[]
 
   @@index([eventId])
@@ -300,24 +306,27 @@ model EventRegistration {
 /// event (member, non-member, table, sponsor levels), which a single price on
 /// Event cannot represent. `wpId` lets the #57 importer upsert MEC ticket ids.
 model TicketTier {
-  id           String    @id @default(cuid())
+  id           String                  @id @default(cuid())
   eventId      String
   name         String
   description  String?
-  price        Decimal   @db.Decimal(10, 2)
-  memberPrice  Decimal?  @db.Decimal(10, 2)
+  price        Decimal                 @db.Decimal(10, 2)
+  memberPrice  Decimal?                @db.Decimal(10, 2)
   /// null means unlimited, still bounded by the event's own capacity
   quantity     Int?
   salesStartAt DateTime?
   salesEndAt   DateTime?
-  sortOrder    Int       @default(0)
-  isActive     Boolean   @default(true)
+  sortOrder    Int                     @default(0)
+  isActive     Boolean                 @default(true)
   wpId         Int?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  event        Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  event        Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   items        EventRegistrationItem[]
 
+  /// One row per MEC ticket per event, so the importer can upsert. MEC numbers its
+  /// tickets from 1 within each event, so wpId is only unique alongside eventId.
+  @@unique([eventId, wpId])
   @@index([eventId])
   @@index([wpId])
 }
@@ -494,18 +503,18 @@ model MembershipInvitation {
 }
 
 model Payment {
-  id                    String   @id @default(cuid())
+  id                    String        @id @default(cuid())
   userId                String
-  amount                Int      // Amount in cents
-  currency              String   @default("usd")
+  amount                Int // Amount in cents
+  currency              String        @default("usd")
   status                PaymentStatus @default(PENDING)
   paymentMethod         PaymentMethod
   stripePaymentIntentId String?
   stripeCustomerId      String?
   metadata              Json?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
