@@ -64,3 +64,7 @@ package-lock.json
 *.sql.gz
 *.sql.bz2
 *.dump
+
+# Featured images fetched by scripts/migrate/import-events.ts --images.
+# Event photos, not secrets, but not something to carry in git either.
+/media/
