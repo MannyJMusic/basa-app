@@ -73,6 +73,28 @@ export function to24Hour(hour: string, minutes: string, ampm: string): { hour: n
   return { hour: meridiem === 'PM' ? base + 12 : base, minute }
 }
 
+/** The local date and time an instant lands on in the event time zone. */
+export function wallClockPartsInEventZone(instant: Date): {
+  year: number; month: number; day: number; hour: number; minute: number
+} {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: EVENT_TIME_ZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+  const parts = (formatter as unknown as { formatToParts(d: Date): DateParts[] })
+    .formatToParts(instant) as unknown as DateParts[]
+
+  const get = (type: string): number => {
+    const part = parts.filter((p) => p.type === type)[0]
+    return part ? parseInt(part.value, 10) : 0
+  }
+  return {
+    year: get('year'), month: get('month'), day: get('day'),
+    hour: get('hour') % 24, minute: get('minute'),
+  }
+}
+
 /** Renders an instant back in the event time zone, for reports and dry runs. */
 export function formatInEventZone(date: Date): string {
   return new Intl.DateTimeFormat('en-US', {

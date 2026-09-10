@@ -62,8 +62,29 @@ Everything here was found in the data, not assumed:
   site no longer answers on. Image URLs are rebuilt against the canonical site URL.
 - **Titles occasionally contain markup** (`<center>…</center>`) and entities
   (`Anne Marie&#8217;s`). Both are stripped or decoded, since React escapes on render.
-- **15 events recur.** They import as their first occurrence only, and are listed in
-  the report, until recurring events exist in the model (#55).
+- **Recurrence rules are not trustworthy; the materialized dates are.** MEC keeps
+  repeat rules in post meta *and* the occurrences it already expanded into
+  `wp_mec_dates`. They disagree. Of the 15 events flagged as recurring, 8 carry an
+  identical `until` of 2020-09-30 while starting between October 2020 and September
+  2021 — the rule ends before the event begins, and MEC gives each of them exactly
+  one date. The importer trusts `wp_mec_dates` and reports the rest.
+- **Two "series" are not events.** *"Deadline for Members To Members Email"* and
+  *"Deadline for Social Content on BASA Pages"* are internal reminders on the events
+  calendar with no end date, which MEC expanded into 600 weekly dates each running
+  to 2033 — 1,200 of the 1,474 rows in that table. Anything past
+  `MAX_SERIES_OCCURRENCES` imports as a single event and is named in the report.
+- **The 5 real series import as a parent plus its later occurrences.** The first
+  date is the event itself; dates two onwards are their own `Event` rows with
+  `parentEventId` set, so registrations, capacity and tickets attach per date.
+  Occurrence *dates* come from `wp_mec_dates`, but the *time of day* comes from the
+  parent event — that table holds absolute timestamps MEC computed in the site's
+  own `America/Mexico_City`, which drifts an hour from Central for half the year
+  since Mexico dropped daylight saving in 2022. Verified on "Brewing With BASA":
+  its Feb 28 2025 date stores `15:00Z` and its Mar 14 date `14:00Z`, both rendering
+  9:00 AM.
+- **An occurrence is never rewritten once imported**, so one that was moved or
+  cancelled by hand survives a re-run. That is also why the ticket-tier count is
+  higher on a first run than on later ones.
 
 ## Featured images are not rehosted yet
 
