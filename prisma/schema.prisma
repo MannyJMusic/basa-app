@@ -126,6 +126,10 @@ model Member {
   showAddress                Boolean             @default(false)
   newsletterSubscribed       Boolean             @default(false)
   membershipPaymentConfirmed Boolean             @default(false)
+  /// WordPress user id this member was imported from, so `scripts/migrate` can
+  /// upsert instead of duplicating. Null for members who joined through basa-app.
+  wpUserId                   Int?                @unique
+  legacyMemberships          LegacyMembership[]
   organizerProfiles          Organizer[]
   eventRegistrations         EventRegistration[]
   eventSponsors              EventSponsor[]
@@ -141,6 +145,34 @@ model Member {
   @@index([businessType, membershipStatus])
   @@index([industry])
   @@index([chapterId])
+}
+
+/// A membership held on the WordPress site under Paid Memberships Pro.
+///
+/// Kept for reference, not as a live entitlement. The launch tiers are a different
+/// product - Market, Mission and Action no longer exist - so a legacy level cannot
+/// be written into `Member.membershipTier` without inventing a mapping. Placing the
+/// handful of still-current members onto new tiers is a decision per member (#51),
+/// and this is what that decision gets made from.
+model LegacyMembership {
+  id          String    @id @default(cuid())
+  memberId    String
+  /// wp_pmpro_memberships_users.id, which is what makes re-importing a no-op
+  wpId        Int       @unique
+  wpLevelId   Int
+  levelName   String
+  /// Chapter the PMPro level belonged to, by basa-app chapter code
+  chapterCode String?
+  price       Decimal   @db.Decimal(10, 2)
+  /// PMPro's own word for it: active, expired, admin_cancelled
+  status      String
+  startedAt   DateTime?
+  endedAt     DateTime?
+  createdAt   DateTime  @default(now())
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([chapterCode])
 }
 
 model Chapter {

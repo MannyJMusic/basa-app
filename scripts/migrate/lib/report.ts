@@ -16,6 +16,7 @@ export class MigrationReport {
   private readonly tallies = new Map<string, Map<Action, number>>()
   private readonly issues = new Map<string, string[]>()
   private readonly notes: string[] = []
+  private readonly breakdowns: { title: string; rows: [string, number][] }[] = []
   private readonly startedAt = Date.now()
 
   constructor(private readonly title: string, private readonly dryRun: boolean) {}
@@ -31,6 +32,15 @@ export class MigrationReport {
     const list = this.issues.get(reason) ?? []
     list.push(detail)
     this.issues.set(reason, list)
+  }
+
+  /**
+   * A count-by-something table. This is the half of reconciliation that is not
+   * about errors: whoever signs off on the import needs the same numbers the
+   * source system reports, not a total.
+   */
+  breakdown(title: string, rows: [string, number][]): void {
+    this.breakdowns.push({ title, rows })
   }
 
   /** A decision the run made that is not a problem, but should be on the record. */
@@ -58,6 +68,16 @@ export class MigrationReport {
       const byAction = this.tallies.get(entity)!
       const cells = ACTIONS.map((a) => String(byAction.get(a) ?? 0).padStart(9)).join('')
       lines.push(`${entity.padEnd(width)}  ${cells}`)
+    }
+
+    for (const table of this.breakdowns) {
+      lines.push('')
+      lines.push(table.title)
+      lines.push('-'.repeat(72))
+      const labelWidth = Math.max(10, ...table.rows.map((r) => r[0].length))
+      for (const [label, count] of table.rows) {
+        lines.push(`  ${label.padEnd(labelWidth)}  ${String(count).padStart(6)}`)
+      }
     }
 
     if (this.notes.length) {
