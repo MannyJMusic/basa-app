@@ -275,6 +275,115 @@ describe('Events API Integration Tests', () => {
         expect(responseData.error).toBeDefined();
       })
     );
+
+    it(
+      'filters to events that have not finished when given a from window',
+      withTestDatabase(async ({ database }) => {
+        const { prisma } = database;
+
+        const user = await TestUtils.createTestUser(prisma, 'organizer@test.com', 'MEMBER');
+        const member = await TestUtils.createTestMember(prisma, user.id, 'Test Organizer');
+        const template = await TestUtils.createTestEventForMember(prisma, member.id, 'Window Template');
+
+        const hour = 60 * 60 * 1000;
+        const day = 24 * hour;
+
+        // Long finished. This is the shape the WordPress import (#57) brought over
+        // in bulk, and the reason the public page needed a window at all.
+        await prisma.event.create({
+          data: {
+            ...template,
+            id: undefined,
+            title: 'Long Past Event',
+            slug: `long-past-${Date.now()}`,
+            startDate: new Date(Date.now() - 30 * day),
+            endDate: new Date(Date.now() - 30 * day + 2 * hour),
+          },
+        });
+
+        // Started this morning, finishes tonight: still upcoming to a visitor.
+        await prisma.event.create({
+          data: {
+            ...template,
+            id: undefined,
+            title: 'In Progress Event',
+            slug: `in-progress-${Date.now()}`,
+            startDate: new Date(Date.now() - hour),
+            endDate: new Date(Date.now() + hour),
+          },
+        });
+
+        const req = TestUtils.createMockRequest({
+          method: 'GET',
+          url: 'http://localhost:3000/api/events',
+          query: { status: 'PUBLISHED', from: new Date().toISOString() },
+        });
+
+        const { GET } = createTestAPI(database.prisma);
+        const responseData = await (await GET(req as any)).json();
+        const titles = responseData.events.map((e: any) => e.title);
+
+        expect(titles).toContain('In Progress Event');
+        expect(titles).toContain('Window Template'); // starts a week out
+        expect(titles).not.toContain('Long Past Event');
+      })
+    );
+
+    it(
+      'filters to events that had started when given a to window',
+      withTestDatabase(async ({ database }) => {
+        const { prisma } = database;
+
+        const user = await TestUtils.createTestUser(prisma, 'organizer@test.com', 'MEMBER');
+        const member = await TestUtils.createTestMember(prisma, user.id, 'Test Organizer');
+        const template = await TestUtils.createTestEventForMember(prisma, member.id, 'Future Event');
+
+        const day = 24 * 60 * 60 * 1000;
+        await prisma.event.create({
+          data: {
+            ...template,
+            id: undefined,
+            title: 'Already Happened',
+            slug: `already-happened-${Date.now()}`,
+            startDate: new Date(Date.now() - 30 * day),
+            endDate: new Date(Date.now() - 30 * day + 2 * 60 * 60 * 1000),
+          },
+        });
+
+        const req = TestUtils.createMockRequest({
+          method: 'GET',
+          url: 'http://localhost:3000/api/events',
+          query: { status: 'PUBLISHED', to: new Date().toISOString() },
+        });
+
+        const { GET } = createTestAPI(database.prisma);
+        const responseData = await (await GET(req as any)).json();
+        const titles = responseData.events.map((e: any) => e.title);
+
+        expect(titles).toContain('Already Happened');
+        expect(titles).not.toContain('Future Event');
+      })
+    );
+
+    it(
+      'rejects a window that is not an ISO instant rather than ignoring it',
+      withTestDatabase(async ({ database }) => {
+        const req = TestUtils.createMockRequest({
+          method: 'GET',
+          url: 'http://localhost:3000/api/events',
+          query: { from: 'next tuesday' },
+        });
+
+        const { GET } = createTestAPI(database.prisma);
+        const response = await GET(req as any);
+
+        // Silently dropping an unparseable window would put the caller back on
+        // the unfiltered list, which is the bug this filter exists to fix. 400
+        // rather than 500: it is the caller's mistake, and a caller retrying on
+        // a 500 never finds that out.
+        expect(response.status).toBe(400);
+      })
+    );
   });
 
   describe('PUT /api/events/[id]', () => {
