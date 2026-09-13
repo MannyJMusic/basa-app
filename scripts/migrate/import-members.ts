@@ -28,6 +28,7 @@ import { scanDump, Row } from './lib/mysqldump'
 import { decodeEntities, collapseWhitespace } from './lib/text'
 import { wallClockToUtc } from './lib/timezone'
 import { MigrationReport, parseArgs } from './lib/report'
+import { newestDumpPath } from './lib/dump-path'
 import { LAUNCH_CHAPTERS } from '../../src/lib/membership-tiers'
 
 const prisma = new PrismaClient()
@@ -52,17 +53,10 @@ interface Options {
   commit: boolean
 }
 
-function newestDump(): string {
-  const dir = join(process.cwd(), 'backups', 'mysql')
-  if (!existsSync(dir)) throw new Error(`no dump given and ${dir} does not exist - run scripts/pull-backups.sh`)
-  const files = readdirSync(dir).filter((f) => f.endsWith('.sql.gz')).sort()
-  if (!files.length) throw new Error(`no *.sql.gz in ${dir} - run scripts/pull-backups.sh`)
-  return join(dir, files[files.length - 1])
-}
 
 function readOptions(): Options {
   const { flags, values } = parseArgs(process.argv.slice(2))
-  return { dumpPath: values.dump ?? newestDump(), commit: flags.has('commit') }
+  return { dumpPath: values.dump ?? newestDumpPath(), commit: flags.has('commit') }
 }
 
 interface PmProSource {
