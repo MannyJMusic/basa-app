@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { passwordResetRequestSchema } from "@/lib/validations"
 import { prisma } from "@/lib/db"
-import { sendPasswordResetEmail } from "@/lib/basa-emails"
+import { sendPasswordResetEmail, sendAccountClaimEmail } from "@/lib/basa-emails"
+import { isUnclaimedLegacyAccount } from "@/lib/account-claim"
 import crypto from "crypto"
 
 export async function POST(request: NextRequest) {
@@ -35,12 +36,26 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Send password reset email using Mailgun
-    const resetUrl = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`
+    // A member imported from WordPress has no password to reset, so "reset your
+    // password" is the wrong thing to send them - that was the dishonest answer #104
+    // was filed about. Same token, same expiry, different wording, and completing it
+    // activates the account.
+    const claiming = isUnclaimedLegacyAccount(user)
+
+    // claim=1 is what tells the page to say "set up your account" rather than
+    // "reset your password". It only changes wording - the server decides what
+    // actually happens from the account's own state, not from this parameter.
+    const resetUrl =
+      `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}` +
+      (claiming ? '&claim=1' : '')
     try {
-      await sendPasswordResetEmail(email, user.firstName || 'User', resetUrl)
+      if (claiming) {
+        await sendAccountClaimEmail(email, user.firstName || 'there', resetUrl)
+      } else {
+        await sendPasswordResetEmail(email, user.firstName || 'User', resetUrl)
+      }
     } catch (emailError) {
-      console.error("Failed to send password reset email:", emailError)
+      console.error("Failed to send account email:", emailError)
       return NextResponse.json(
         { error: "Failed to send password reset email" },
         { status: 500 }
@@ -51,7 +66,7 @@ export async function POST(request: NextRequest) {
     await prisma.auditLog.create({
       data: {
         userId: user.id,
-        action: "PASSWORD_RESET_REQUESTED",
+        action: claiming ? "ACCOUNT_CLAIM_REQUESTED" : "PASSWORD_RESET_REQUESTED",
         entityType: "USER",
         entityId: user.id,
         newValues: {
