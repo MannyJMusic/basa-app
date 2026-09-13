@@ -14,6 +14,7 @@ import { scanDump, Row } from '../../../scripts/migrate/lib/mysqldump'
 import { phpUnserialize, phpUnserializeMap, phpString } from '../../../scripts/migrate/lib/php-unserialize'
 import { decodeEntities, parseUsAddress, summarise } from '../../../scripts/migrate/lib/text'
 import { wallClockToUtc, to24Hour, wallClockPartsInEventZone } from '../../../scripts/migrate/lib/timezone'
+import { loadMedia, storedImage, fileNameFor, serialiseManifest, Media } from '../../../scripts/migrate/lib/media'
 
 function writeDump(sql: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'basa-dump-'))
@@ -178,5 +179,103 @@ describe('event times', () => {
       timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit', hour12: true,
     }).format(stored)
     expect(rendered).toBe('4:30 PM')
+  })
+})
+
+describe('imported media paths (#111)', () => {
+  const media = (manifest: Record<string, string>, failed: string[] = []): Media => ({
+    dir: '/tmp/media',
+    manifest,
+    failed: new Set(failed),
+  })
+  const WP = 'https://businessassociationsa.com/wp-content/uploads/2024/01/mixer.jpg'
+
+  it('leaves the WordPress URL alone when media is not managed', () => {
+    // --images is opt-in; without it the importer must behave exactly as before.
+    expect(storedImage(null, WP)).toBe(WP)
+  })
+
+  it('stores a local uploads path once the file has been fetched', () => {
+    expect(storedImage(media({ [WP]: 'mixer.jpg' }), WP)).toBe('/uploads/mixer.jpg')
+  })
+
+  it('is stable across runs, so a second import reports no change', () => {
+    // The whole point of persisting the manifest: recomputing the WordPress URL
+    // here would rewrite every row and report all of them as updated.
+    const m = media({ [WP]: 'mixer.jpg' })
+    expect(storedImage(m, WP)).toBe(storedImage(m, WP))
+    expect(storedImage(m, WP)).not.toBe(WP)
+  })
+
+  it('keeps the WordPress URL for a file not fetched yet', () => {
+    // First run: the sync happens before anything is downloaded.
+    expect(storedImage(media({}), WP)).toBe(WP)
+  })
+
+  it('nulls an image that could not be fetched rather than storing a dead link', () => {
+    // 14 venue photos were already 404 on WordPress before any of this began.
+    expect(storedImage(media({}, [WP]), WP)).toBeNull()
+  })
+
+  it('never stores a PDF as an image', () => {
+    // Four "featured images" are flyers. An <img> at a PDF renders broken.
+    const pdf = 'https://businessassociationsa.com/wp-content/uploads/flyer.pdf'
+    expect(storedImage(media({ [pdf]: 'flyer.pdf' }), pdf)).toBeNull()
+    expect(storedImage(media({ [pdf]: 'FLYER.PDF' }), pdf)).toBeNull()
+  })
+
+  it('passes a null image through', () => {
+    expect(storedImage(media({}), null)).toBeNull()
+    expect(storedImage(null, null)).toBeNull()
+  })
+
+  it('makes file names safe for the filesystem', () => {
+    expect(fileNameFor('https://x.test/a/b/Golf Flyer (2023).png')).toBe('Golf_Flyer__2023_.png')
+    expect(fileNameFor('https://x.test/a/../etc/passwd')).toBe('passwd')
+  })
+
+  it('returns no media store when --images was not passed', () => {
+    expect(loadMedia(null)).toBeNull()
+  })
+
+  it('starts empty when the directory has no manifest yet', () => {
+    const m = loadMedia('/tmp/basa-media-does-not-exist')
+    expect(m).not.toBeNull()
+    expect(m!.manifest).toEqual({})
+  })
+
+  it('survives a corrupt manifest instead of failing the run', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'basa-media-'))
+    writeFileSync(join(dir, 'manifest.json'), '{ this is not json')
+    expect(loadMedia(dir)!.manifest).toEqual({})
+  })
+
+  it('remembers which files could not be fetched, so they do not churn', () => {
+    // The bug this guards: without persisting failures, every run rewrites the dead
+    // WordPress URL during the sync and nulls it again afterwards, reporting 14
+    // venues as updated forever.
+    const dir = mkdtempSync(join(tmpdir(), 'basa-media-'))
+    const gone = 'https://businessassociationsa.com/wp-content/uploads/deleted.jpg'
+    const first = { dir, manifest: { [WP]: 'mixer.jpg' }, failed: new Set([gone]) }
+
+    writeFileSync(join(dir, 'manifest.json'), JSON.stringify(serialiseManifest(first)))
+    const second = loadMedia(dir)!
+
+    expect(second.manifest[WP]).toBe('mixer.jpg')
+    expect(second.failed.has(gone)).toBe(true)
+    expect(storedImage(second, gone)).toBeNull()
+    expect(storedImage(second, WP)).toBe('/uploads/mixer.jpg')
+  })
+
+  it('serialises a failure as null and a success as its file name', () => {
+    const gone = 'https://x.test/gone.jpg'
+    const out = serialiseManifest({ dir: '/tmp', manifest: { [WP]: 'mixer.jpg' }, failed: new Set([gone]) })
+    expect(out).toEqual({ [WP]: 'mixer.jpg', [gone]: null })
+  })
+
+  it('reads back what a previous run wrote', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'basa-media-'))
+    writeFileSync(join(dir, 'manifest.json'), JSON.stringify({ [WP]: 'mixer.jpg' }))
+    expect(storedImage(loadMedia(dir), WP)).toBe('/uploads/mixer.jpg')
   })
 })
