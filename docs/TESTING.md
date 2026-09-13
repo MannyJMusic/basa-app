@@ -5,7 +5,7 @@
 Two layers:
 
 - **Unit tests** — fast, no external dependencies, Node.js environment.
-- **Integration tests** — real PostgreSQL via [Testcontainers](https://node.testcontainers.org/), so they need Docker running locally.
+- **Integration tests** — a real PostgreSQL. By default via [Testcontainers](https://node.testcontainers.org/), which needs Docker; set `TEST_DATABASE_URL` to use a PostgreSQL you already have instead (see below).
 
 There is no end-to-end test suite. Cypress was removed (support files only, zero specs — see #30); Playwright end-to-end coverage is planned for Phase 4 of `.claude/PLAN.md`.
 
@@ -22,9 +22,36 @@ pnpm test:integration                                                   # all in
 pnpm test:integration -- src/__tests__/integration/api-events.test.ts   # one file
 DEBUG=testcontainers:* pnpm test:integration                            # container debug logs
 
+# Without Docker — against a PostgreSQL you already have:
+createdb basa_test
+TEST_DATABASE_URL=postgresql://$USER@localhost:5432/basa_test pnpm test:integration
+
 pnpm test:all      # == pnpm test:integration
 pnpm test          # == pnpm test:integration
 ```
+
+## Running without Docker
+
+Testcontainers needs Docker, and there is no Docker on every machine this project
+gets worked on — which made the whole integration tier unrunnable rather than merely
+slow. Set `TEST_DATABASE_URL` and the tests use that server directly, starting no
+container:
+
+```bash
+createdb basa_test
+TEST_DATABASE_URL=postgresql://$USER@localhost:5432/basa_test pnpm test:integration
+```
+
+Migrations are applied to it on startup, exactly as they are to a container.
+
+**The database name must contain `test`, and the run aborts if it does not.** These
+tests `TRUNCATE` every table they find. The local `basa_dev` on a developer machine
+here holds member data imported from production, so pointing this at the wrong
+database would be unrecoverable. The check is crude, and it is the difference between
+wiping a scratch database and wiping a real one.
+
+Leave `TEST_DATABASE_URL` unset and nothing changes: a container is started as before,
+which is what CI does.
 
 ## Test structure
 

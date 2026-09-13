@@ -4,9 +4,41 @@ import { StartedTestContainer, Wait } from 'testcontainers';
 import { execSync } from 'child_process';
 
 export interface TestDatabase {
-  container: StartedTestContainer;
+  /** Null when running against an external server via TEST_DATABASE_URL. */
+  container: StartedTestContainer | null;
   prisma: PrismaClient;
   databaseUrl: string;
+}
+
+/**
+ * An existing PostgreSQL to use instead of starting a container.
+ *
+ * Testcontainers needs Docker, which is not available everywhere - notably not on
+ * the machine this project is developed on, where it makes the whole integration
+ * tier unrunnable. Point this at a scratch database and the tests run against it
+ * directly:
+ *
+ *   TEST_DATABASE_URL=postgresql://user@localhost:5432/basa_test pnpm test:integration
+ *
+ * Without it, nothing changes: a container is started exactly as before.
+ */
+function externalDatabaseUrl(): string | null {
+  const url = process.env.TEST_DATABASE_URL?.trim()
+  if (!url) return null
+
+  // These tests TRUNCATE every table they find. Running that against a database
+  // someone actually uses would be unrecoverable - the local basa_dev here holds
+  // imported production member data. Requiring "test" in the name is crude, but it
+  // is the difference between a wiped scratch database and a wiped real one.
+  const name = url.split('/').pop()?.split('?')[0] ?? ''
+  if (!/test/i.test(name)) {
+    throw new Error(
+      `TEST_DATABASE_URL points at a database named "${name}". These tests truncate ` +
+      `every table, so the name must contain "test" - create a scratch database first, ` +
+      `e.g. createdb basa_test.`
+    )
+  }
+  return url
 }
 
 export interface TestEnvironment {
@@ -23,6 +55,7 @@ export default class TestcontainersSetup {
   private sharedContainer: StartedTestContainer | null = null;
   private sharedPrisma: PrismaClient | null = null;
   private isCloudEnvironment: boolean;
+  private sharedDatabaseUrl: string | null = null;
 
   private constructor() {
     // Check if we're running in Testcontainers Cloud
@@ -64,7 +97,18 @@ export default class TestcontainersSetup {
    * Get or create a shared test database
    */
   async getSharedTestDatabase(): Promise<TestDatabase> {
-    if (!this.sharedContainer || !this.sharedPrisma) {
+    if (!this.sharedPrisma) {
+      const external = externalDatabaseUrl();
+
+      if (external) {
+        console.log('🔌 Using the PostgreSQL given in TEST_DATABASE_URL (no container)');
+        this.sharedDatabaseUrl = external;
+        process.env.DATABASE_URL = external;
+        await this.runMigrations(external);
+        this.sharedPrisma = this.buildPrismaClient(external);
+        return { container: null, prisma: this.sharedPrisma, databaseUrl: external };
+      }
+
       console.log('🚀 Creating shared PostgreSQL container...');
       
       const container = await new PostgreSqlContainer('postgres:15-alpine')
@@ -125,8 +169,24 @@ export default class TestcontainersSetup {
     return {
       container: this.sharedContainer,
       prisma: this.sharedPrisma,
-      databaseUrl: this.sharedContainer.getConnectionUri(),
+      databaseUrl: this.sharedDatabaseUrl ?? this.sharedContainer!.getConnectionUri(),
     };
+  }
+
+  /** Prisma client bound to one database, with the module cache cleared first. */
+  private buildPrismaClient(databaseUrl: string): PrismaClient {
+    Object.keys(require.cache).forEach((key) => {
+      if (key.includes('@prisma/client') || key.includes('@/lib/db')) {
+        delete require.cache[key];
+      }
+    });
+    const client = new PrismaClient({
+      datasources: { db: { url: databaseUrl } },
+      log: ['error'],
+    });
+    const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
+    globalForPrisma.prisma = client;
+    return client;
   }
 
   /**
@@ -427,6 +487,7 @@ export default class TestcontainersSetup {
     
     await Promise.all(stopPromises);
     this.sharedContainer = null;
+    this.sharedDatabaseUrl = null;
     
     console.log('✅ Testcontainers cleanup completed');
   }
