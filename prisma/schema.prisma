@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "binary"
 }
 
@@ -35,31 +35,31 @@ model Session {
 }
 
 model User {
-  id                         String                 @id @default(cuid())
-  name                       String?
-  email                      String?                @unique
-  emailVerified              DateTime?
-  image                      String?
-  firstName                  String?
-  lastName                   String?
-  hashedPassword             String?
-  role                       String                 @default("GUEST")
-  isActive                   Boolean                @default(true)
-  lastLogin                  DateTime?
-  createdAt                  DateTime               @default(now())
-  updatedAt                  DateTime               @updatedAt
-  resetToken                 String?
-  resetTokenExpiry           DateTime?
-  accountStatus              AccountStatus          @default(PENDING_VERIFICATION)
-  verificationToken          String?                @unique
-  verificationTokenExpiry    DateTime?
-  accounts                   Account[]
-  auditLogs                  AuditLog[]
-  blogPosts                  BlogPost[]
-  member                     Member?
-  membershipInvitations      MembershipInvitation[]
-  payments                   Payment[]
-  sessions                   Session[]
+  id                      String                 @id @default(cuid())
+  name                    String?
+  email                   String?                @unique
+  emailVerified           DateTime?
+  image                   String?
+  firstName               String?
+  lastName                String?
+  hashedPassword          String?
+  role                    String                 @default("GUEST")
+  isActive                Boolean                @default(true)
+  lastLogin               DateTime?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  resetToken              String?
+  resetTokenExpiry        DateTime?
+  accountStatus           AccountStatus          @default(PENDING_VERIFICATION)
+  verificationToken       String?                @unique
+  verificationTokenExpiry DateTime?
+  accounts                Account[]
+  auditLogs               AuditLog[]
+  blogPosts               BlogPost[]
+  member                  Member?
+  membershipInvitations   MembershipInvitation[]
+  payments                Payment[]
+  sessions                Session[]
 }
 
 model VerificationToken {
@@ -87,12 +87,12 @@ model AuditLog {
 }
 
 model Member {
-  id                         String              @id @default(cuid())
-  userId                     String              @unique
+  id                         String               @id @default(cuid())
+  userId                     String               @unique
   businessName               String?
   businessType               String?
   industry                   String[]
-  ein                        String?             @unique
+  ein                        String?              @unique
   yearEstablished            Int?
   numberOfEmployees          String?
   annualRevenue              String?
@@ -105,11 +105,11 @@ model Member {
   website                    String?
   membershipTier             MembershipTier?
   chapterId                  String?
-  membershipStatus           Status              @default(PENDING)
-  joinedAt                   DateTime            @default(now())
+  membershipStatus           Status               @default(PENDING)
+  joinedAt                   DateTime             @default(now())
   renewalDate                DateTime?
-  stripeCustomerId           String?             @unique
-  subscriptionId             String?             @unique
+  stripeCustomerId           String?              @unique
+  subscriptionId             String?              @unique
   logo                       String?
   coverImage                 String?
   description                String?
@@ -121,19 +121,24 @@ model Member {
   instagram                  String?
   twitter                    String?
   youtube                    String?
-  showInDirectory            Boolean             @default(true)
-  allowContact               Boolean             @default(true)
-  showAddress                Boolean             @default(false)
-  newsletterSubscribed       Boolean             @default(false)
-  membershipPaymentConfirmed Boolean             @default(false)
+  showInDirectory            Boolean              @default(true)
+  allowContact               Boolean              @default(true)
+  showAddress                Boolean              @default(false)
+  newsletterSubscribed       Boolean              @default(false)
+  membershipPaymentConfirmed Boolean              @default(false)
+  membershipReminders        MembershipReminder[]
+  /// WordPress user id this member was imported from, so `scripts/migrate` can
+  /// upsert instead of duplicating. Null for members who joined through basa-app.
+  wpUserId                   Int?                 @unique
+  legacyMemberships          LegacyMembership[]
   organizerProfiles          Organizer[]
   eventRegistrations         EventRegistration[]
   eventSponsors              EventSponsor[]
   leads                      Lead[]
-  chapter                    Chapter?            @relation(fields: [chapterId], references: [id])
-  user                       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  referralsReceived          Referral[]          @relation("referred")
-  referralsGiven             Referral[]          @relation("referrer")
+  chapter                    Chapter?             @relation(fields: [chapterId], references: [id])
+  user                       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referralsReceived          Referral[]           @relation("referred")
+  referralsGiven             Referral[]           @relation("referrer")
   resources                  Resource[]
   sponsorships               Sponsorship[]
   testimonials               Testimonial[]
@@ -141,6 +146,53 @@ model Member {
   @@index([businessType, membershipStatus])
   @@index([industry])
   @@index([chapterId])
+}
+
+/// A membership held on the WordPress site under Paid Memberships Pro.
+///
+/// Kept for reference, not as a live entitlement. The launch tiers are a different
+/// product - Market, Mission and Action no longer exist - so a legacy level cannot
+/// be written into `Member.membershipTier` without inventing a mapping. Placing the
+/// handful of still-current members onto new tiers is a decision per member (#51),
+/// and this is what that decision gets made from.
+model LegacyMembership {
+  id          String    @id @default(cuid())
+  memberId    String
+  /// wp_pmpro_memberships_users.id, which is what makes re-importing a no-op
+  wpId        Int       @unique
+  wpLevelId   Int
+  levelName   String
+  /// Chapter the PMPro level belonged to, by basa-app chapter code
+  chapterCode String?
+  price       Decimal   @db.Decimal(10, 2)
+  /// PMPro's own word for it: active, expired, admin_cancelled
+  status      String
+  startedAt   DateTime?
+  endedAt     DateTime?
+  createdAt   DateTime  @default(now())
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([chapterCode])
+}
+
+/// One renewal notice sent to one member for one renewal cycle.
+///
+/// The sweep runs daily, so sending has to be impossible to repeat. The unique
+/// constraint does that work: the same cycle and interval cannot send twice, and
+/// a renewalDate that advances after payment naturally opens a fresh set.
+model MembershipReminder {
+  id          String   @id @default(cuid())
+  memberId    String
+  /// The renewalDate this notice was about, which is what makes it a cycle.
+  renewalDate DateTime
+  /// Days before renewal this notice was for. 0 is the notice sent after lapsing.
+  daysBefore  Int
+  sentAt      DateTime @default(now())
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, renewalDate, daysBefore])
+  @@index([memberId])
 }
 
 model Chapter {
@@ -213,6 +265,19 @@ model Event {
   organizerId      String?
   venueId          String?
   tags             String[]
+  /// WordPress post id this event was imported from, so `scripts/migrate` can
+  /// upsert instead of duplicating on a re-run. Null for events created in basa-app.
+  wpId             Int?                @unique
+  /// The series this event is a later occurrence of. The first occurrence is the
+  /// series itself, so a four-week series is one parent and three children; see
+  /// the migration for why it is shaped that way.
+  parentEventId    String?
+  /// The scheduled slot this occurrence was created for. Kept separate from
+  /// startDate so that moving one occurrence does not lose track of which slot in
+  /// the series it is, and so a re-import does not recreate the original slot.
+  occurrenceStart  DateTime?
+  parent           Event?              @relation("EventSeries", fields: [parentEventId], references: [id], onDelete: Cascade)
+  occurrences      Event[]             @relation("EventSeries")
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
   organizer        Organizer?          @relation(fields: [organizerId], references: [id])
@@ -222,11 +287,13 @@ model Event {
   speakers         EventSpeaker[]
   sponsors         EventSponsor[]
 
+  @@unique([parentEventId, occurrenceStart])
   @@index([startDate])
   @@index([category])
   @@index([status])
   @@index([organizerId])
   @@index([venueId])
+  @@index([parentEventId])
 }
 
 /// A reusable place an event happens. MEC keeps these as `mec_location` posts shared
@@ -242,6 +309,9 @@ model Venue {
   longitude Float?
   capacity  Int?
   website   String?
+  /// Venue photo. MEC keeps one per location; it is a URL rather than an upload
+  /// because basa-app has no media store yet (see scripts/migrate/README.md).
+  image     String?
   wpId      Int?     @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -270,25 +340,25 @@ model Organizer {
 }
 
 model EventRegistration {
-  id              String             @id @default(cuid())
+  id              String                  @id @default(cuid())
   eventId         String
   memberId        String?
   name            String
   email           String
   company         String?
   phone           String?
-  ticketCount     Int                @default(1)
-  totalAmount     Decimal            @db.Decimal(10, 2)
-  status          RegistrationStatus @default(PENDING)
-  paymentIntentId String?            @unique
+  ticketCount     Int                     @default(1)
+  totalAmount     Decimal                 @db.Decimal(10, 2)
+  status          RegistrationStatus      @default(PENDING)
+  paymentIntentId String?                 @unique
   /// Per-ticket attendee details, as [{ name, email? }]. The columns above are the
   /// buyer; this is who is actually coming. Collected by the registration form and
   /// previously discarded.
   attendees       Json?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  event           Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  member          Member?            @relation(fields: [memberId], references: [id])
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  event           Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member          Member?                 @relation(fields: [memberId], references: [id])
   items           EventRegistrationItem[]
 
   @@index([eventId])
@@ -300,24 +370,27 @@ model EventRegistration {
 /// event (member, non-member, table, sponsor levels), which a single price on
 /// Event cannot represent. `wpId` lets the #57 importer upsert MEC ticket ids.
 model TicketTier {
-  id           String    @id @default(cuid())
+  id           String                  @id @default(cuid())
   eventId      String
   name         String
   description  String?
-  price        Decimal   @db.Decimal(10, 2)
-  memberPrice  Decimal?  @db.Decimal(10, 2)
+  price        Decimal                 @db.Decimal(10, 2)
+  memberPrice  Decimal?                @db.Decimal(10, 2)
   /// null means unlimited, still bounded by the event's own capacity
   quantity     Int?
   salesStartAt DateTime?
   salesEndAt   DateTime?
-  sortOrder    Int       @default(0)
-  isActive     Boolean   @default(true)
+  sortOrder    Int                     @default(0)
+  isActive     Boolean                 @default(true)
   wpId         Int?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  event        Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  event        Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   items        EventRegistrationItem[]
 
+  /// One row per MEC ticket per event, so the importer can upsert. MEC numbers its
+  /// tickets from 1 within each event, so wpId is only unique alongside eventId.
+  @@unique([eventId, wpId])
   @@index([eventId])
   @@index([wpId])
 }
@@ -494,18 +567,18 @@ model MembershipInvitation {
 }
 
 model Payment {
-  id                    String   @id @default(cuid())
+  id                    String        @id @default(cuid())
   userId                String
-  amount                Int      // Amount in cents
-  currency              String   @default("usd")
+  amount                Int // Amount in cents
+  currency              String        @default("usd")
   status                PaymentStatus @default(PENDING)
   paymentMethod         PaymentMethod
   stripePaymentIntentId String?
   stripeCustomerId      String?
   metadata              Json?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])

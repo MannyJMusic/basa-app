@@ -2285,3 +2285,199 @@ export function generateAdminCreatedWelcomeEmailHtml(firstName: string, email: s
 </html>
 `
 }
+
+// ---------------------------------------------------------------------------
+// Membership renewal notices (#82)
+// ---------------------------------------------------------------------------
+
+/**
+ * A shared shell for the renewal notices.
+ *
+ * Every generator above this point carries its own copy of the full document -
+ * doctype, head, the same inline style block, header, footer - which is why the
+ * module is 2,200 lines. Two more copies would have added another 340. These two
+ * share one shell instead. The older templates are left alone deliberately:
+ * rewriting eleven live emails is a different change from adding two, and it
+ * belongs with whoever is willing to re-test all of them.
+ */
+function renderNoticeEmail(options: {
+  title: string
+  preheader: string
+  heading: string
+  bodyHtml: string
+  ctaLabel: string
+  ctaUrl: string
+  accent: string
+  siteUrl: string
+  logoUrl: string
+}): string {
+  const year = new Date().getFullYear()
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>${escapeHtml(options.title)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <!-- Preview text: shown in the inbox list beside the subject. -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(options.preheader)}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#1B365D 0%,#15294d 100%);padding:28px 32px;text-align:center;">
+              <img src="${options.logoUrl}" alt="BASA" width="140" style="display:block;margin:0 auto;max-width:140px;height:auto;border:0;">
+            </td>
+          </tr>
+          <tr>
+            <td style="height:4px;background-color:${options.accent};font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#1B365D;">${escapeHtml(options.heading)}</h1>
+              ${options.bodyHtml}
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 8px;">
+                <tr>
+                  <td style="background-color:#1B365D;border-radius:6px;">
+                    <a href="${options.ctaUrl}" style="display:inline-block;padding:13px 28px;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;">${escapeHtml(options.ctaLabel)}</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:16px 0 0;font-size:13px;color:#6b7280;">
+                If the button does not work, copy this link into your browser:<br>
+                <a href="${options.ctaUrl}" style="color:#17A2B8;word-break:break-all;">${options.ctaUrl}</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 32px;background-color:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">Business Association of San Antonio</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;">
+                <a href="${options.siteUrl}" style="color:#17A2B8;text-decoration:none;">${options.siteUrl.replace(/^https?:\/\//, '')}</a>
+                &nbsp;&middot;&nbsp; &copy; ${year} BASA
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
+/** Member names and business names reach these templates unescaped otherwise. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function formatRenewalDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  }).format(date)
+}
+
+export function generateMembershipRenewalReminderEmailHtml(
+  firstName: string,
+  renewalDate: Date,
+  daysRemaining: number,
+  options: { siteUrl?: string; logoUrl?: string } = {}
+): string {
+  const siteUrl = options.siteUrl || getSiteUrl()
+  const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
+  const when = daysRemaining <= 1
+    ? (daysRemaining === 1 ? 'tomorrow' : 'today')
+    : `in ${daysRemaining} days`
+
+  return renderNoticeEmail({
+    title: 'Your BASA membership is due for renewal',
+    preheader: `Your membership renews ${when}, on ${formatRenewalDate(renewalDate)}.`,
+    heading: `Your BASA membership renews ${when}`,
+    accent: '#FFD700',
+    siteUrl,
+    logoUrl,
+    ctaLabel: 'Renew my membership',
+    ctaUrl: `${siteUrl}/membership/join`,
+    bodyHtml: `
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${escapeHtml(firstName)},</p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
+                Your BASA membership ends on <strong style="color:#1B365D;">${formatRenewalDate(renewalDate)}</strong>.
+                Renewing keeps your member rate on every event, your place in the member directory, and your chapter membership running without a gap.
+              </p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
+                There is no automatic charge - BASA memberships are renewed by hand each year, so nothing happens unless you renew.
+              </p>`,
+  })
+}
+
+export function generateMembershipExpiredEmailHtml(
+  firstName: string,
+  renewalDate: Date,
+  options: { siteUrl?: string; logoUrl?: string } = {}
+): string {
+  const siteUrl = options.siteUrl || getSiteUrl()
+  const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
+
+  return renderNoticeEmail({
+    title: 'Your BASA membership has ended',
+    preheader: `Your membership ended on ${formatRenewalDate(renewalDate)}. You can pick it back up any time.`,
+    heading: 'Your BASA membership has ended',
+    accent: '#17A2B8',
+    siteUrl,
+    logoUrl,
+    ctaLabel: 'Rejoin BASA',
+    ctaUrl: `${siteUrl}/membership/join`,
+    bodyHtml: `
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${escapeHtml(firstName)},</p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
+                Your BASA membership ended on <strong style="color:#1B365D;">${formatRenewalDate(renewalDate)}</strong>.
+                You are always welcome at BASA events - tickets are now at the non-member rate, and your listing has come out of the member directory.
+              </p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
+                Rejoining takes a couple of minutes and puts everything back as it was.
+                If you meant to renew and something got in the way, reply to this email and we will sort it out.
+              </p>`,
+  })
+}
+
+export async function sendMembershipRenewalReminderEmail(
+  email: string,
+  firstName: string,
+  renewalDate: Date,
+  daysRemaining: number,
+  options: { siteUrl?: string; logoUrl?: string; fromName?: string } = {}
+) {
+  try {
+    const html = generateMembershipRenewalReminderEmailHtml(firstName, renewalDate, daysRemaining, options)
+    const subject = daysRemaining <= 1
+      ? 'Your BASA membership renews tomorrow'
+      : `Your BASA membership renews in ${daysRemaining} days`
+    const response = await sendEmail(email, subject, html, { fromName: options.fromName })
+    return { success: true, messageId: response.id }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+export async function sendMembershipExpiredEmail(
+  email: string,
+  firstName: string,
+  renewalDate: Date,
+  options: { siteUrl?: string; logoUrl?: string; fromName?: string } = {}
+) {
+  try {
+    const html = generateMembershipExpiredEmailHtml(firstName, renewalDate, options)
+    const response = await sendEmail(email, 'Your BASA membership has ended', html, { fromName: options.fromName })
+    return { success: true, messageId: response.id }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}

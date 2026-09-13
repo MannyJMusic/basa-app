@@ -4,9 +4,10 @@ import type { Metadata } from 'next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Building } from 'lucide-react'
+import { ArrowLeft, Calendar, CalendarPlus, Clock, MapPin, Users, Building } from 'lucide-react'
 import { prisma } from '@/lib/db'
 import { soldCounts } from '@/lib/ticket-tiers'
+import { sanitizeRichText, looksLikeHtml, toPlainText } from '@/lib/sanitize-html'
 
 // `force-dynamic` was removed as redundant: without generateStaticParams this route
 // is already dynamic.
@@ -36,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!event) return { title: 'Event not found' }
   return {
     title: `${event.title} | BASA`,
-    description: event.shortDescription ?? event.description.slice(0, 160),
+    description: event.shortDescription ?? toPlainText(event.description, 160),
   }
 }
 
@@ -114,7 +115,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             <Card>
               <CardHeader><CardTitle>About This Event</CardTitle></CardHeader>
               <CardContent>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{event.description}</p>
+                {looksLikeHtml(event.description) ? (
+                  // Imported WordPress events are HTML. Sanitized on the server;
+                  // see src/lib/sanitize-html.ts for what survives and why.
+                  <div
+                    className="rich-text"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(event.description) }}
+                  />
+                ) : (
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-line">{event.description}</p>
+                )}
               </CardContent>
             </Card>
 
@@ -177,6 +187,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                     <Link href={`/events/${event.slug}/register`}>Register Now</Link>
                   </Button>
                 )}
+
+                {/* A plain link, not a Button with onClick: this has to be a real
+                    GET so the browser hands the file to the calendar app. */}
+                <a
+                  href={`/events/${event.slug}/calendar.ics`}
+                  className="flex items-center justify-center w-full text-sm text-gray-600 hover:text-purple-700 transition"
+                >
+                  <CalendarPlus className="w-4 h-4 mr-2" />
+                  Add to calendar
+                </a>
               </CardContent>
             </Card>
 

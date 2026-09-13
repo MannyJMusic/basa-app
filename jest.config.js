@@ -29,7 +29,18 @@ const customJestConfig = {
   ],
   // Handle ES modules from Testcontainers
   transformIgnorePatterns: [
-    'node_modules/(?!(testcontainers|@testcontainers|yaml|docker-compose)/)',
+    // ESM-only packages have to be transformed rather than skipped.
+    //
+    // Two things make this fiddly, and both bit while adding sanitize-html:
+    //
+    // 1. next/jest prepends its own patterns, built from `transpilePackages` in
+    //    next.config.js. Patterns are OR'd, so a package missing from THERE stays
+    //    ignored no matter what is written here. Add ESM deps in both places.
+    // 2. pnpm stores real packages at node_modules/.pnpm/<pkg>@<ver>/node_modules/<pkg>,
+    //    one level deeper than npm. A pattern written for a flat layout never
+    //    matches its own allowlist, so it quietly ignores everything - which is
+    //    what the previous version of this line did.
+    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(testcontainers|@testcontainers|yaml|docker-compose|sanitize-html|htmlparser2|domhandler|domutils|domelementtype|dom-serializer|entities)/)',
   ],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   globals: {

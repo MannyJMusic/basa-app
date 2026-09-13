@@ -85,6 +85,10 @@ export interface EventFilters {
   type?: 'NETWORKING' | 'SUMMIT' | 'RIBBON_CUTTING' | 'COMMUNITY'
   category?: string
   isFeatured?: boolean
+  /** ISO instant: only events that have not finished by then */
+  from?: string
+  /** ISO instant: only events that had started by then */
+  to?: string
 }
 
 export interface EventListResponse {
