@@ -68,3 +68,6 @@ package-lock.json
 # Featured images fetched by scripts/migrate/import-events.ts --images.
 # Event photos, not secrets, but not something to carry in git either.
 /media/
+
+# Imported WordPress media, copied to the uploads volume on the host (#111)
+public/uploads/
