@@ -569,14 +569,18 @@ async function importEvents(
     if (opts.limit !== null && handled >= opts.limit) break
 
     const label = `${post.id} "${plainTitle(post.title).slice(0, 60)}"`
-    if (post.status === 'trash') {
+    // Published events only, by the owner's decision (2026-09-13). Drafts used to
+    // come across as DRAFT records; they are working notes on the old site, not
+    // content anyone asked to migrate, and importing them means someone has to go
+    // and decide about each one later.
+    if (post.status !== 'publish') {
       report.tally('events', 'skipped')
-      report.issue('event is in the WordPress trash', label)
-      continue
-    }
-    if (post.status !== 'publish' && post.status !== 'draft') {
-      report.tally('events', 'skipped')
-      report.issue(`event has status "${post.status}"`, label)
+      report.issue(
+        post.status === 'trash'
+          ? 'event is in the WordPress trash'
+          : `event is not published (status "${post.status}")`,
+        label
+      )
       continue
     }
 
@@ -612,7 +616,7 @@ async function importEvents(
 
     const { venue, fallbackName } = resolveVenue(src, post.id, meta, report, label)
     const venueAddress = venue ? parseUsAddress(venue.meta.address ?? '') : null
-    if (!venue && !fallbackName && post.status === 'publish') noVenue++
+    if (!venue && !fallbackName) noVenue++
 
     const organizerTermId = parseInt(meta.mec_organizer_id ?? '', 10)
     if (organizerTermId === MEC_NO_ORGANIZER) noOrganizer++
@@ -622,12 +626,14 @@ async function importEvents(
     const { price, memberPrice } = headlinePrices(tickets)
     const image = featuredImage(src, post.id)
     if (image) imageUrls.push(image)
-    else if (post.status === 'publish') report.issue('event has no featured image', label)
+    else report.issue('event has no featured image', label)
 
     const venueName = venue ? collapseWhitespace(decodeEntities(venue.name)) : null
+    // Only published posts reach here, so the sole distinction left is whether MEC
+    // marked the event cancelled.
     const status: EventStatus = meta.mec_event_status === 'EventCancelled'
       ? EventStatus.CANCELLED
-      : post.status === 'publish' ? EventStatus.PUBLISHED : EventStatus.DRAFT
+      : EventStatus.PUBLISHED
 
     const desired: DesiredEvent = {
       title: plainTitle(post.title),

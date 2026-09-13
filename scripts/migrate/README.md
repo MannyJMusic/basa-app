@@ -46,6 +46,27 @@ The dumps come from the nightly cron on the production host and are pulled down 
 `scripts/pull-backups.sh`. They contain member PII and password hashes: they are
 gitignored, and they stay that way.
 
+## Only published events come over
+
+Owner decision, 2026-09-13. The dump holds 275 `mec-events` posts:
+
+| WordPress status | count | imported |
+|---|---|---|
+| `publish` | 259 | yes |
+| `draft` | 10 | no |
+| `trash` | 6 | no |
+
+Drafts used to import as `DRAFT` records. They are working notes on the old site
+rather than content anyone asked to migrate, and bringing them across only means
+someone has to go and decide about each one later. Both drafts and trashed posts are
+named individually in the report, so nothing disappears silently.
+
+Because only published posts get past that check, the only status distinction left in
+basa-app is whether MEC marked an event cancelled — those import as `CANCELLED`.
+
+Note the importer never deletes. If a database already holds drafts from an earlier
+run, changing this rule does not remove them; it only stops new ones arriving.
+
 ## What the importer does with MEC's quirks
 
 Everything here was found in the data, not assumed:
