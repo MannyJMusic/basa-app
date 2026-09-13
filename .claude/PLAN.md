@@ -11,14 +11,14 @@ Status: written 2026-09-05 from a measured audit of the workspace, not from the 
 | 2. Deployable build live | **Done, then redone.** `app.businessassociationsa.com` went live 2026-09-06, the host was compromised and rebuilt (#76), and both sites have been served from the rebuilt box since 2026-09-08. Deploys pass end to end. |
 | 3. Membership and events parity | **Substantially done.** Chapters and launch tiers, expiry lifecycle, venues and organizers, per-event ticket tiers, guest checkout, both importers, event series, iCal feed, renewal reminders. Open: the owner decisions listed below. |
 | 4. Modernize the stack | **Not started**, except the VPS work that #76 forced early. |
-| 5. Retire BASA-AI-CREW | **Not started**, and now a security item: port 8080 on that host is open to the internet (#36). |
+| 5. Retire BASA-AI-CREW | **Mostly done (2026-09-13).** Orchestrator and dashboard disabled, port 8080 closed, host backed up and reprovisioned to bare Ubuntu 24.04, WP application password revoked, `basa-mec-api` deleted from the live site. Remaining: revoke the Azure AD app, rotate the leftover keys, build the replacement (#69). |
 | 6. Cut over and retire WordPress | **Not started.** |
 
 Three things gate further progress and none of them are code:
 
 1. **Where imported event images live.** All 163 can be downloaded, but `Event.image` still points at WordPress. It stops resolving the moment Phase 6 turns that site off.
 2. **The five nominally-active members.** Four are BASA staff accounts. They import as `EXPIRED` with no tier; placing anyone on a launch tier is a per-member decision (#51).
-3. **The AI-CREW VPS.** Still blocked on explicit IP confirmation and an inventory of what else runs on that host (#36).
+3. ~~**The AI-CREW VPS.**~~ Resolved 2026-09-13. The owner confirmed `31.220.18.48` and that the co-hosted services were no longer needed, so the host was fully backed up and wiped rather than having the orchestrator alone switched off.
 
 Two things are worth knowing before touching this work:
 
@@ -33,7 +33,7 @@ Two things are worth knowing before touching this work:
 |---|---|---|
 | WordPress at `businessassociationsa.com` (`BASA-WP/`) | Live production site. MEC events, PMPro memberships, PeepSo community, WooCommerce, WPAdverts perks, 2.4k news posts. | Live, nginx on `31.97.214.26`, REST API open. |
 | `basa-app/` (Next.js 15) | Intended replacement for the WP site. | **Not live.** `app.businessassociationsa.com` resolves to the same IP as WP, but TLS handshake fails with "unrecognized name": no CloudPanel vhost or certificate serves it. Last GitHub Actions deploy succeeded 2025-12-19 on `main`; whatever it deployed is not reachable. |
-| `BASA-AI-CREW/` (Python, Claude Agent SDK) | Email-to-MEC-event automation. Read Jen's emails, pull the flyer, create WP event + tickets. | Never worked reliably. Still running as a systemd service on a VPS (docs say `31.220.18.48`, owner to confirm). **To be retired, not fixed.** |
+| `BASA-AI-CREW/` (Python, Claude Agent SDK) | Email-to-MEC-event automation. Read Jen's emails, pull the flyer, create WP event + tickets. | **Retired 2026-09-13.** Ran on `31.220.18.48` until then, polling Microsoft Graph every 15 minutes and discarding every message (Jen sent none). Host backed up and reprovisioned. |
 
 `basa-app-backup/` is a stale copy of `basa-app` on an older `dev`. Reference only; delete once the plan is underway.
 
@@ -129,10 +129,16 @@ Phases 0 and 1 are sequential and should be done first. Phases 2 to 4 can overla
 
 ### Phase 5. Retire BASA-AI-CREW
 
-- Owner provides the VPS IP. Note per section 4: **other services run on that host**, so the shutdown is service-scoped, not box-scoped, and the host itself gets reprovisioned later. Snapshot `/opt/basa-ai-crew` (`.env`, `*.db`, logs) to a private archive, then `systemctl disable --now basa-orchestrator basa-dashboard`, close port 8080, and remove the Azure AD app / WordPress application password it used.
-- Deactivate and delete the `basa-mec-api` plugin on WordPress if installed.
-- Archive the `BASA-AI-CREW` repo (or delete the local copy; upstream is `coleam00/your-claude-engineer`).
-- Build the replacement (decided, section 4): an admin "create event from flyer" upload in basa-app that uses Claude to extract fields into a pre-filled form for human confirmation. No email polling, no Azure AD app, no MEC REST plugin.
+**Done 2026-09-13**, except the two items marked below. What the host actually turned out to hold, and every step taken, is recorded in #36.
+
+- [x] Owner confirmed the VPS IP (`31.220.18.48`, Hostinger VPS `1320804`) and that the co-hosted services were no longer needed. It held three products, not one: the AI crew, Recaster Studio (`recaster.studio` + docs + downloads), and LA Rent Finder. None of the three directories was a git repo.
+- [x] Backed up before touching anything: a Hostinger snapshot, plus `~/Backups/vps-1320804-2026-09-13/` holding all three codebases, every `.env`, both SQLite DBs, nginx, Let's Encrypt, systemd units, PM2 dump and crontabs — and the 5.9 GB of Recaster installers, verified byte-identical.
+- [x] `systemctl disable --now basa-orchestrator basa-dashboard`; port 8080 closed and verified unreachable from outside.
+- [x] Revoked the WordPress application password (`MEC Automation`). **Still open: the Azure AD app registration**, which only the owner can revoke in the Entra portal, and rotation of `ANTHROPIC_API_KEY`, `ARCADE_*` and the cron bearer tokens that sat in plaintext on the host.
+- [x] Deactivated and deleted `basa-mec-api` from the live WordPress site. It was safe to remove because the events importer reads a mysqldump, not the REST API.
+- [x] Reprovisioned the box to a clean Ubuntu 24.04. Same IP, same subscription.
+- [ ] Archive the local `BASA-AI-CREW/` folder. Left in place — it is the only remaining copy of the product source and the plugin.
+- [ ] Build the replacement (#69): an admin "create event from flyer" upload in basa-app that uses Claude to extract fields into a pre-filled form for human confirmation. No email polling, no Azure AD app, no MEC REST plugin.
 
 ### Phase 6. Cut over and retire WordPress
 
@@ -150,7 +156,7 @@ Phases 0 and 1 are sequential and should be done first. Phases 2 to 4 can overla
 5. **Flyer-to-event tool: build it.** An admin uploads a flyer, Claude pre-fills the event form, a human confirms. Replaces the AI crew's mailbox polling.
 6. **Hosting: stay on Hostinger.** Not moving to Vercel. Back up the current VPS, reprovision it, and replace the fragile inline-SSH deploy with a build-and-pull pipeline.
 7. **Harness scope: remove all of it,** not just the Phase 1 deletion list. Needs a sweep for what Phase 1 missed.
-8. **AI-CREW VPS: other services run on that host** besides the orchestrator, and the box will eventually be reprovisioned too. Shutdown must not disrupt the rest. Still blocked on explicit IP confirmation and an inventory of what else is on it.
+8. ~~**AI-CREW VPS: other services run on that host.**~~ Superseded 2026-09-13: the owner confirmed the IP and that the co-hosted services (Recaster Studio, LA Rent Finder) were no longer needed. Everything was backed up and the box reprovisioned. What was actually on it is recorded in #36.
 
 ## 5. Tracking
 
