@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { passwordResetSchema } from "@/lib/validations"
 import { hashPassword } from "@/lib/utils"
 import { prisma } from "@/lib/db"
+import { isUnclaimedLegacyAccount, CLAIM_ACTIVATION } from "@/lib/account-claim"
 
 /**
  * Complete a password reset.
@@ -32,6 +33,14 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await hashPassword(password)
 
+    // An imported member setting a password for the first time is claiming their
+    // account, so this is also where it becomes usable: without clearing isActive and
+    // accountStatus they would set a password and still be silently refused at
+    // sign-in, which is exactly the behaviour #104 was filed about. Role is
+    // deliberately untouched - a lapsed member gets back into their account, not back
+    // into a membership. The Stripe webhook makes them a MEMBER when they renew.
+    const claiming = isUnclaimedLegacyAccount(user)
+
     // Clearing the token in the same update is what makes it single-use. Scoping
     // the update by token as well means two requests racing the same link cannot
     // both succeed - the second matches no row.
@@ -41,6 +50,7 @@ export async function POST(request: NextRequest) {
         hashedPassword,
         resetToken: null,
         resetTokenExpiry: null,
+        ...(claiming ? CLAIM_ACTIVATION : {}),
       },
     })
 
@@ -54,7 +64,7 @@ export async function POST(request: NextRequest) {
     await prisma.auditLog.create({
       data: {
         userId: user.id,
-        action: "PASSWORD_RESET_COMPLETED",
+        action: claiming ? "ACCOUNT_CLAIMED" : "PASSWORD_RESET_COMPLETED",
         entityType: "USER",
         entityId: user.id,
         newValues: {
@@ -64,7 +74,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(
-      { message: "Password reset successfully" },
+      { message: claiming ? "Account set up successfully" : "Password reset successfully" },
       { status: 200 }
     )
 
