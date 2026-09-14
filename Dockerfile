@@ -81,7 +81,6 @@ COPY --from=base /app/next.config.js ./
 
 # Copy setup scripts
 COPY scripts/setup-prod.js ./
-COPY scripts/setup-database.js ./
 
 # prisma/seed.ts imports shared definitions (chapters, membership tiers) from
 # src/lib. The seed runs at container start via tsx, so that module has to ship

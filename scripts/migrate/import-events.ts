@@ -20,13 +20,15 @@
  *    itself is being retired (#71). A dump keeps this re-runnable afterwards.
  */
 import { PrismaClient, Prisma, EventStatus } from '@prisma/client'
-import { readdirSync, existsSync, mkdirSync, writeFileSync } from 'fs'
+import { readdirSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { loadWordPress, metaOf, WpSource, WpTerm } from './lib/wp-source'
 import { phpUnserializeMap, phpString, PhpValue } from './lib/php-unserialize'
 import { decodeEntities, parseUsAddress, summarise, collapseWhitespace } from './lib/text'
 import { wallClockToUtc, to24Hour, wallClockPartsInEventZone } from './lib/timezone'
 import { MigrationReport, parseArgs } from './lib/report'
+import { newestDumpPath } from './lib/dump-path'
+import { Media, loadMedia, storedImage, isPdf, fileNameFor, serialiseManifest } from './lib/media'
 
 const prisma = new PrismaClient()
 
@@ -79,27 +81,18 @@ interface Options {
   dumpPath: string
   commit: boolean
   imageDir: string | null
+  media: Media | null
   limit: number | null
 }
 
-function newestDump(): string {
-  const dir = join(process.cwd(), 'backups', 'mysql')
-  if (!existsSync(dir)) {
-    throw new Error(
-      `no dump given and ${dir} does not exist - run scripts/pull-backups.sh first`
-    )
-  }
-  const files = readdirSync(dir).filter((f) => f.endsWith('.sql.gz')).sort()
-  if (!files.length) throw new Error(`no *.sql.gz in ${dir} - run scripts/pull-backups.sh`)
-  return join(dir, files[files.length - 1])
-}
 
 function readOptions(): Options {
   const { flags, values } = parseArgs(process.argv.slice(2))
   return {
-    dumpPath: values.dump ?? newestDump(),
+    dumpPath: values.dump ?? newestDumpPath(),
     commit: flags.has('commit'),
     imageDir: values.images ?? null,
+    media: loadMedia(values.images ?? null),
     limit: values.limit ? parseInt(values.limit, 10) : null,
   }
 }
@@ -147,7 +140,12 @@ function usableCoordinate(lat: string, lng: string): { latitude: number; longitu
   return { latitude, longitude }
 }
 
-async function importVenues(src: WpSource, report: MigrationReport, opts: Options): Promise<Map<number, string>> {
+async function importVenues(
+  src: WpSource,
+  report: MigrationReport,
+  opts: Options,
+  imageUrls: string[]
+): Promise<Map<number, string>> {
   const idByWpId = new Map<number, string>()
   const terms = src.termsByTaxonomy.get('mec_location') ?? []
   const seenNames = new Map<string, number>()
@@ -177,6 +175,8 @@ async function importVenues(src: WpSource, report: MigrationReport, opts: Option
       report.issue('venue coordinates discarded as implausible', `${term.id} "${name}": ${term.meta.latitude}, ${term.meta.longitude}`)
     }
     const website = (term.meta.url ?? '').trim() || null
+    const thumbnail = canonicalUrl(src, (term.meta.thumbnail ?? '').trim())
+    if (thumbnail) imageUrls.push(thumbnail)
     const desired = {
       name,
       address: parsed.address,
@@ -186,7 +186,7 @@ async function importVenues(src: WpSource, report: MigrationReport, opts: Option
       latitude: coords ? coords.latitude : null,
       longitude: coords ? coords.longitude : null,
       website,
-      image: canonicalUrl(src, (term.meta.thumbnail ?? '').trim()),
+      image: storedImage(opts.media, thumbnail),
     }
 
     const existing = await prisma.venue.findUnique({ where: { wpId: term.id } })
@@ -559,14 +559,18 @@ async function importEvents(
     if (opts.limit !== null && handled >= opts.limit) break
 
     const label = `${post.id} "${plainTitle(post.title).slice(0, 60)}"`
-    if (post.status === 'trash') {
+    // Published events only, by the owner's decision (2026-09-13). Drafts used to
+    // come across as DRAFT records; they are working notes on the old site, not
+    // content anyone asked to migrate, and importing them means someone has to go
+    // and decide about each one later.
+    if (post.status !== 'publish') {
       report.tally('events', 'skipped')
-      report.issue('event is in the WordPress trash', label)
-      continue
-    }
-    if (post.status !== 'publish' && post.status !== 'draft') {
-      report.tally('events', 'skipped')
-      report.issue(`event has status "${post.status}"`, label)
+      report.issue(
+        post.status === 'trash'
+          ? 'event is in the WordPress trash'
+          : `event is not published (status "${post.status}")`,
+        label
+      )
       continue
     }
 
@@ -602,7 +606,7 @@ async function importEvents(
 
     const { venue, fallbackName } = resolveVenue(src, post.id, meta, report, label)
     const venueAddress = venue ? parseUsAddress(venue.meta.address ?? '') : null
-    if (!venue && !fallbackName && post.status === 'publish') noVenue++
+    if (!venue && !fallbackName) noVenue++
 
     const organizerTermId = parseInt(meta.mec_organizer_id ?? '', 10)
     if (organizerTermId === MEC_NO_ORGANIZER) noOrganizer++
@@ -612,12 +616,14 @@ async function importEvents(
     const { price, memberPrice } = headlinePrices(tickets)
     const image = featuredImage(src, post.id)
     if (image) imageUrls.push(image)
-    else if (post.status === 'publish') report.issue('event has no featured image', label)
+    else report.issue('event has no featured image', label)
 
     const venueName = venue ? collapseWhitespace(decodeEntities(venue.name)) : null
+    // Only published posts reach here, so the sole distinction left is whether MEC
+    // marked the event cancelled.
     const status: EventStatus = meta.mec_event_status === 'EventCancelled'
       ? EventStatus.CANCELLED
-      : post.status === 'publish' ? EventStatus.PUBLISHED : EventStatus.DRAFT
+      : EventStatus.PUBLISHED
 
     const desired: DesiredEvent = {
       title: plainTitle(post.title),
@@ -637,7 +643,7 @@ async function importEvents(
       category,
       type,
       status,
-      image,
+      image: storedImage(opts.media, image),
       tags,
       venueId: venue ? venueIds.get(venue.id) ?? null : null,
       organizerId: organizerTermId === MEC_NO_ORGANIZER ? null : organizerIds.get(organizerTermId) ?? null,
@@ -833,23 +839,21 @@ async function syncTickets(
 // ---------------------------------------------------------------- images
 
 /**
- * Fetch each featured image to a local directory with a manifest.
+ * Fetch every referenced image into the media directory, recording what landed
+ * where in `media.manifest` and what could not be fetched in `media.failed`.
  *
- * basa-app has nowhere to serve uploaded media from yet - no volume, no blob
- * container - so this does not rewrite `Event.image`; it puts the files somewhere
- * safe so that whichever store gets chosen, the images are not still being
- * hotlinked from a WordPress site that is scheduled for deletion (#71).
+ * Deliberately re-runnable: a file already on disk is kept rather than re-fetched,
+ * so this can be pointed at a half-finished directory without starting over.
  */
-async function downloadImages(urls: string[], dir: string, report: MigrationReport): Promise<void> {
-  mkdirSync(dir, { recursive: true })
+async function downloadImages(urls: string[], media: Media, report: MigrationReport): Promise<void> {
+  mkdirSync(media.dir, { recursive: true })
   const unique = Array.from(new Set(urls))
-  const manifest: Record<string, string> = {}
 
   for (const url of unique) {
-    const name = url.split('/').slice(-1)[0].replace(/[^A-Za-z0-9._-]/g, '_')
-    const target = join(dir, name)
+    const name = fileNameFor(url)
+    const target = join(media.dir, name)
     if (existsSync(target)) {
-      manifest[url] = name
+      media.manifest[url] = name
       report.tally('images', 'unchanged')
       continue
     }
@@ -857,21 +861,84 @@ async function downloadImages(urls: string[], dir: string, report: MigrationRepo
       const response = await fetch(url)
       if (!response.ok) {
         report.issue(`image fetch returned ${response.status}`, url)
+        media.failed.add(url)
         report.tally('images', 'skipped')
         continue
       }
       const body = Buffer.from(await response.arrayBuffer())
       writeFileSync(target, body)
-      manifest[url] = name
+      media.manifest[url] = name
       report.tally('images', 'created')
     } catch (err) {
       report.issue('image could not be fetched', `${url}: ${(err as Error).message}`)
+      media.failed.add(url)
       report.tally('images', 'skipped')
     }
   }
 
-  writeFileSync(join(dir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
-  report.note(`${Object.keys(manifest).length} images in ${dir}, with manifest.json mapping WordPress URL to file`)
+  writeFileSync(join(media.dir, 'manifest.json'), `${JSON.stringify(serialiseManifest(media), null, 2)}\n`)
+  report.note(
+    `${Object.keys(media.manifest).length} files in ${media.dir}, with manifest.json mapping ` +
+    `WordPress URL to file name. Copy that directory to the uploads volume on the host - ` +
+    `see scripts/migrate/README.md.`
+  )
+}
+
+/**
+ * Point rows still holding a WordPress URL at the local copy.
+ *
+ * On a first run the sync writes WordPress URLs, because nothing has been fetched
+ * yet and the manifest is empty. This is the pass that fixes that up, and it doubles
+ * as the backfill for events imported before #111. On any later run the sync has
+ * already written the local path, so this matches nothing and does nothing.
+ */
+async function applyMediaPaths(media: Media, opts: Options, report: MigrationReport): Promise<void> {
+  const pdfs: string[] = []
+
+  for (const [url, name] of Object.entries(media.manifest)) {
+    const target = storedImage(media, url)
+    if (target === null && isPdf(name)) pdfs.push(name)
+    await pointAt(url, target, report, opts)
+  }
+  for (const url of Array.from(media.failed)) {
+    await pointAt(url, null, report, opts)
+  }
+
+  if (pdfs.length) {
+    report.note(
+      `${pdfs.length} featured "images" are PDF flyers, not images: ${pdfs.join(', ')}. ` +
+      `The files are in the media directory, but the events import with no image, because an ` +
+      `<img> pointing at a PDF renders broken. Converting them to a page image is a decision for the owner.`
+    )
+  }
+  if (media.failed.size) {
+    report.note(
+      `${media.failed.size} images could not be fetched and are already gone from WordPress. ` +
+      `Those rows import with a null image rather than a link that was dead before cutover.`
+    )
+  }
+}
+
+/** Repoint every event and venue whose image is exactly `url`. */
+async function pointAt(
+  url: string,
+  target: string | null,
+  report: MigrationReport,
+  opts: Options
+): Promise<void> {
+  if (!opts.commit) {
+    const [events, venues] = await Promise.all([
+      prisma.event.count({ where: { image: url } }),
+      prisma.venue.count({ where: { image: url } }),
+    ])
+    for (let i = 0; i < events + venues; i++) report.tally('image paths', 'updated')
+    return
+  }
+  const [events, venues] = await Promise.all([
+    prisma.event.updateMany({ where: { image: url }, data: { image: target } }),
+    prisma.venue.updateMany({ where: { image: url }, data: { image: target } }),
+  ])
+  for (let i = 0; i < events.count + venues.count; i++) report.tally('image paths', 'updated')
 }
 
 // ------------------------------------------------------------------ main
@@ -905,12 +972,20 @@ async function main(): Promise<void> {
     `${(src.termsByTaxonomy.get('mec_organizer') ?? []).length} organizer terms`
   )
 
-  const venueIds = await importVenues(src, report, opts)
+  const images: string[] = []
+  const venueIds = await importVenues(src, report, opts, images)
   const organizerIds = await importOrganizers(src, report, opts)
-  const images = await importEvents(src, occurrencesByPost, venueIds, organizerIds, report, opts)
+  images.push(...await importEvents(src, occurrencesByPost, venueIds, organizerIds, report, opts))
 
-  if (opts.imageDir) await downloadImages(images, opts.imageDir, report)
-  else report.note(`${new Set(images).size} distinct featured images referenced; pass --images <dir> to fetch them`)
+  if (opts.media) {
+    await downloadImages(images, opts.media, report)
+    await applyMediaPaths(opts.media, opts, report)
+  } else {
+    report.note(
+      `${new Set(images).size} distinct images referenced, still pointing at WordPress. ` +
+      `Pass --images <dir> to fetch them and store local /uploads paths instead (#111).`
+    )
+  }
 
   report.print()
 

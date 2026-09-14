@@ -545,6 +545,56 @@ export async function sendPasswordResetEmail(
   }
 }
 
+/**
+ * Invite somebody to claim an account imported from WordPress (#104).
+ *
+ * Same token and same 1-hour expiry as a password reset - the mechanics are
+ * identical, proving control of the address. The wording is not: telling a legacy
+ * member to "reset" a password they never had is the dishonest answer this issue was
+ * filed about.
+ */
+export async function sendAccountClaimEmail(
+  email: string,
+  firstName: string,
+  claimUrl: string,
+  options: {
+    siteUrl?: string
+    logoUrl?: string
+    fromName?: string
+  } = {}
+) {
+  try {
+    const html = generatePasswordResetEmailHtml(firstName, claimUrl, {
+      ...options,
+      copy: {
+        title: 'Set Up Your BASA Account',
+        heading: 'Set Up Your Account',
+        intro:
+          'Your BASA membership record came across from our previous website, but the account has never been set up with a password. ' +
+          "If you didn't ask to set one up, you can safely ignore this email.",
+        instruction:
+          'Choose a password using the button below and your account is ready to use. This link will expire in 1 hour for security reasons.',
+        button: 'Set Up My Account',
+        notice:
+          'This link will expire in 1 hour. Setting a password gets you into your account and your membership history; ' +
+          'it does not renew a membership on its own.',
+      },
+    })
+    const response = await sendEmail(email, 'Set Up Your BASA Account', html, {
+      fromName: options.fromName
+    })
+    return {
+      success: true,
+      messageId: response.id
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
 export async function sendEventInvitationEmail(
   email: string,
   firstName: string,
@@ -798,10 +848,34 @@ export function isRateLimited(email: string): boolean {
 export { sendEmail }
 
 // BASA Password Reset Email Template
+/**
+ * Copy that differs between resetting a password and claiming an imported account
+ * (#104). Same layout, same token mechanics, honest wording for each.
+ */
+export interface ResetEmailCopy {
+  title: string
+  heading: string
+  intro: string
+  instruction: string
+  button: string
+  notice: string
+}
+
+const RESET_COPY: ResetEmailCopy = {
+  title: 'Reset Your BASA Password',
+  heading: 'Reset Your Password',
+  intro: "We received a request to reset your password for your BASA account. If you didn't make this request, you can safely ignore this email.",
+  instruction: 'To reset your password, click the button below. This link will expire in 1 hour for security reasons.',
+  button: 'Reset Password',
+  notice: 'This password reset link will expire in 1 hour. If you need a new link, please request another password reset from your account settings.',
+}
+
 export function generatePasswordResetEmailHtml(firstName: string, resetUrl: string, options: { 
   siteUrl?: string
   logoUrl?: string
+  copy?: ResetEmailCopy
 } = {}) {
+  const copy = options.copy || RESET_COPY
   const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOG%20-SIDE2%20-%20WHITE%20-PROOF.png`
   
@@ -813,7 +887,7 @@ export function generatePasswordResetEmailHtml(firstName: string, resetUrl: stri
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="x-apple-disable-message-reformatting">
-  <title>Reset Your BASA Password</title>
+  <title>${copy.title}</title>
   
   <style>
     /* BASA Email Styles */
@@ -904,7 +978,7 @@ export function generatePasswordResetEmailHtml(firstName: string, resetUrl: stri
               <!-- Header -->
               <div style="text-align: center; margin-bottom: 32px;">
                 <img src="${logoUrl}" alt="BASA Logo" style="height: 60px; width: auto; margin-bottom: 16px;">
-                <h1 class="basa-text-navy" style="margin: 0; font-size: 24px; font-weight: 700;">Reset Your Password</h1>
+                <h1 class="basa-text-navy" style="margin: 0; font-size: 24px; font-weight: 700;">${copy.heading}</h1>
                 <p class="basa-text-teal" style="margin: 8px 0 0 0; font-size: 16px;">Business Association of San Antonio</p>
               </div>
 
@@ -912,15 +986,15 @@ export function generatePasswordResetEmailHtml(firstName: string, resetUrl: stri
               <div style="margin-bottom: 32px;">
                 <h2 class="basa-text-navy" style="margin: 0 0 16px 0; font-size: 20px;">Hello ${firstName},</h2>
                 <p style="color: #64748b; line-height: 1.6; margin-bottom: 16px;">
-                  We received a request to reset your password for your BASA account. If you didn't make this request, you can safely ignore this email.
+                  ${copy.intro}
                 </p>
                 <p style="color: #64748b; line-height: 1.6; margin-bottom: 24px;">
-                  To reset your password, click the button below. This link will expire in 1 hour for security reasons.
+                  ${copy.instruction}
                 </p>
                 
                 <div style="text-align: center; margin: 32px 0;">
                   <a href="${resetUrl}" class="basa-button" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #17A2B8 0%, #1391a5 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                    Reset Password
+                    ${copy.button}
                   </a>
                 </div>
                 
@@ -936,7 +1010,7 @@ export function generatePasswordResetEmailHtml(firstName: string, resetUrl: stri
               <div class="basa-card" style="background: #fefbf7; border-left: 4px solid #FFD700; padding: 16px; margin-bottom: 24px;">
                 <h3 class="basa-text-navy" style="margin: 0 0 8px 0; font-size: 16px;">🔒 Security Notice</h3>
                 <p style="color: #64748b; line-height: 1.6; margin: 0; font-size: 14px;">
-                  This password reset link will expire in 1 hour. If you need a new link, please request another password reset from your account settings.
+                  ${copy.notice}
                 </p>
               </div>
 

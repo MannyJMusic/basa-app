@@ -160,7 +160,7 @@ pnpm test:integration -- src/__tests__/integration/api-events.test.ts    # singl
 pnpm test:unit -- -t "generateRandomData"                                # filter by test name
 ```
 
-Integration tests spin up a real PostgreSQL via Testcontainers, so they need Docker running locally or a Testcontainers Cloud token (`pnpm setup:testcontainers`). They run serially (`maxWorkers: 1`) with a 2-minute timeout; a hang usually means the container never started. Unit tests use jsdom and ignore the `integration/` folder entirely.
+Integration tests need a real PostgreSQL. By default they spin one up via Testcontainers, which needs Docker locally or a Testcontainers Cloud token (`pnpm setup:testcontainers`); set `TEST_DATABASE_URL` to a scratch database (`createdb basa_test`) to run them against an existing server with no Docker at all — the name must contain `test`, because the suite truncates every table.  They run serially (`maxWorkers: 1`) with a 2-minute timeout; a hang usually means the container never started. Unit tests use jsdom and ignore the `integration/` folder entirely.
 
 ## Sentry
 

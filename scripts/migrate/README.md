@@ -14,7 +14,7 @@ Importers that bring the live WordPress site's data into basa-app, for Phase 3 o
 ./scripts/pull-backups.sh                 # newest dumps into ./backups/ (gitignored)
 pnpm migrate:events                       # dry run: reports, writes nothing
 pnpm migrate:events --commit              # apply
-pnpm migrate:events --images ./media      # also fetch the featured images
+pnpm migrate:events --images ./media      # also fetch images, and store local paths
 pnpm migrate:events --dump path/to.sql.gz # a dump other than the newest
 pnpm migrate:events --limit 20            # stop after 20 events, for a quick look
 
@@ -45,6 +45,27 @@ wrong source for this site:
 The dumps come from the nightly cron on the production host and are pulled down by
 `scripts/pull-backups.sh`. They contain member PII and password hashes: they are
 gitignored, and they stay that way.
+
+## Only published events come over
+
+Owner decision, 2026-09-13. The dump holds 275 `mec-events` posts:
+
+| WordPress status | count | imported |
+|---|---|---|
+| `publish` | 259 | yes |
+| `draft` | 10 | no |
+| `trash` | 6 | no |
+
+Drafts used to import as `DRAFT` records. They are working notes on the old site
+rather than content anyone asked to migrate, and bringing them across only means
+someone has to go and decide about each one later. Both drafts and trashed posts are
+named individually in the report, so nothing disappears silently.
+
+Because only published posts get past that check, the only status distinction left in
+basa-app is whether MEC marked an event cancelled — those import as `CANCELLED`.
+
+Note the importer never deletes. If a database already holds drafts from an earlier
+run, changing this rule does not remove them; it only stops new ones arriving.
 
 ## What the importer does with MEC's quirks
 
@@ -89,17 +110,47 @@ Everything here was found in the data, not assumed:
   cancelled by hand survives a re-run. That is also why the ticket-tier count is
   higher on a first run than on later ones.
 
-## Featured images are not rehosted yet
+## Featured images
 
-basa-app has no media store: no volume on the app container, no blob container in
-use, and `public/` is baked into the image at build time. So `Event.image` and
-`Venue.image` hold the WordPress URL, and `--images <dir>` fetches every referenced
-file to a directory with a `manifest.json` mapping URL to filename.
+Images are rehosted on the app's own host, not hotlinked from WordPress (#111). The
+owner's decision was a volume on the VPS rather than object storage: no new vendor,
+no new credential to rotate after the #76 compromise, and the Hostinger snapshots
+that are already the backup-of-record cover it.
 
-That is deliberately short of #57's "download and store rather than hotlink": where
-the files should live is a hosting decision, and the images survive being downloaded
-now regardless of which store wins. It has to be settled before WordPress is turned
-off in Phase 6 — at that point the URLs stop resolving.
+`docker-compose.prod.yml` bind-mounts `./uploads` (i.e. `/opt/basa-app/uploads` on
+the host) at `/app/public/uploads`, so Next serves the files at `/uploads/...`. The
+mount is what makes them survive a deploy — `public/` is otherwise baked into the
+image at build time, so a rebuild would wipe anything written inside the container.
+
+```bash
+pnpm migrate:events --images ./media --commit   # fetch files, store /uploads/... paths
+./scripts/push-media.sh ./media                 # copy them to the host
+```
+
+Run the importer first and the push second: the importer talks to a database, the
+push talks to a server. Both are re-runnable and neither deletes anything.
+
+**The manifest is load-bearing.** `./media/manifest.json` maps WordPress URL to file
+name, and it is read back at the *start* of the next run. Without that the importer
+would recompute the WordPress URL while syncing, write it over the local path, and
+report every row as changed — which would quietly destroy the idempotency check this
+importer is otherwise held to. Keep the media directory around between runs, or the
+first run after losing it will rewrite paths it did not need to.
+
+It records failures too, as a `null` value: `"https://…/gone.jpg": null`. That is not
+cosmetic. Fourteen venue photos are already 404, and without remembering that, each
+run would write the dead URL during the sync and null it again afterwards — reporting
+fourteen venues as updated forever. A run after this one reports everything unchanged,
+which is the check worth doing after any change here.
+
+Two categories do not come out as images, and both are reported rather than hidden:
+
+- **Four "featured images" are PDF flyers.** The file is fetched and kept, but the
+  event imports with a null image, because an `<img>` pointing at a PDF renders as a
+  broken image. Turning them into page images is a decision for the owner.
+- **Fourteen venue photos are already 404 on WordPress**, gone before any of this
+  started. Those rows import with a null image rather than a link that was dead
+  before cutover.
 
 ## What the members importer assumes
 

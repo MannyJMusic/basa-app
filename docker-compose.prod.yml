@@ -39,6 +39,12 @@ services:
       - "127.0.0.1:3000:3000"
     env_file:
       - .env.production
+    volumes:
+      # Imported event and venue media (#111). A bind mount rather than a named
+      # volume so the files can be rsynced straight to the host; `public/` is baked
+      # into the image at build time, so without this every deploy would wipe them.
+      # Covered by the Hostinger VPS snapshots along with the rest of the box.
+      - ./uploads:/app/public/uploads
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER:-basa_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-basa_prod}

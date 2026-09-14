@@ -4,6 +4,7 @@ import { hashPassword } from "@/lib/utils"
 import { prisma } from "@/lib/db"
 import { sendWelcomeEmail } from "@/lib/basa-emails"
 import { generateVerificationToken } from "@/lib/utils"
+import { isUnclaimedLegacyAccount } from "@/lib/account-claim"
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +17,22 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingUser) {
+      // A member imported from the old WordPress site has a record here but has
+      // never set a password (#104). "Email already exists" is a dead end for them:
+      // they would reasonably conclude somebody else holds their address. This route
+      // already discloses that the address is taken, so saying which case it is adds
+      // no new disclosure - only a way forward.
+      if (isUnclaimedLegacyAccount(existingUser)) {
+        return NextResponse.json(
+          {
+            error:
+              "You already have a BASA record from our previous website. " +
+              "Use \u201cForgot password\u201d to set up your account.",
+            claimable: true,
+          },
+          { status: 400 }
+        )
+      }
       return NextResponse.json(
         { error: "Email already exists" },
         { status: 400 }
