@@ -17,7 +17,8 @@ const OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: [
     'p', 'br', 'hr',
     'strong', 'b', 'em', 'i', 'u', 's', 'sup', 'sub', 'mark',
-    'h2', 'h3', 'h4', 'h5', 'h6',
+    // The WordPress house style opens with an <h1> tagline; the editor emits it too.
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'ul', 'ol', 'li',
     'blockquote', 'pre', 'code',
     'a', 'img', 'figure', 'figcaption',

@@ -1,21 +1,21 @@
 # Cutover kit for businessassociationsa.com (#71)
 
-**Friday 2026-09-18 at close of business.** After it, `businessassociationsa.com` *is* basa-app; `www`, `member.` and the old `app.` hostname redirect to it. Portals that come later get their own subdomains (owner, 2026-09-15). Nothing here is active until `cutover.sh` runs.
+**Sunday 2026-09-20 at 12:00 noon Pacific (2:00 PM Central).** After it, `businessassociationsa.com` *is* basa-app; `www`, `member.` and the old `app.` hostname redirect to it. Portals that come later get their own subdomains (owner, 2026-09-15). Nothing here is active until `cutover.sh` runs.
 
 | File | Where it goes | What it is |
 |---|---|---|
 | `businessassociationsa.com.conf` | `/etc/nginx/sites-enabled/` | The apex vhost: proxies to the app, serves `/uploads/`, includes the redirect rules; `www` and `member.` 301 to the apex |
 | `app.businessassociationsa.com.conf` | `/etc/nginx/sites-enabled/` (replaces the proxying vhost) | `app.` 301s to the apex, except `/api/webhooks/`, which keeps proxying so in-flight Stripe deliveries are not lost |
 | `basa-redirects.conf` | `/etc/nginx/basa-redirects.conf` | One exact-match `location` per old WordPress URL. **Generated**, not committed: `pnpm migrate:urls --nginx nginx/cutover/basa-redirects.conf --same-host` from the final dump. `--same-host` drops rules that would redirect a URL to itself |
-| `cutover.sh` | `/root/cutover-2026-09-18/` | Does the switch and runs the checks. `--check` runs only the checks |
-| `rollback.sh` | `/root/cutover-2026-09-18/` | Puts WordPress back on the public names and the app back on `app.`, using the pre-cutover image |
+| `cutover.sh` | `/root/cutover-2026-09-20/` | Does the switch and runs the checks. `--check` runs only the checks |
+| `rollback.sh` | `/root/cutover-2026-09-20/` | Puts WordPress back on the public names and the app back on `app.`, using the pre-cutover image |
 
-## Before Friday, once
+## Before Sunday, once
 
 - **Google OAuth client** (Google Cloud Console → Credentials): add `https://businessassociationsa.com/api/auth/callback/google` to the authorised redirect URIs. Keep the `app.` one until the rollback window has passed. Without this, Google sign-in on the apex fails with `redirect_uri_mismatch`; the app cannot fix that from its side.
-- The events poster knows WordPress freezes at COB.
+- The events poster knows WordPress freezes at noon Pacific.
 
-## Friday
+## Sunday
 
 ```bash
 # on the Mac, after WordPress is frozen
@@ -23,10 +23,10 @@
 pnpm migrate:events --images ./media --commit && pnpm migrate:members --commit
 ./scripts/push-media.sh ./media
 pnpm migrate:urls --nginx nginx/cutover/basa-redirects.conf --same-host
-scp nginx/cutover/*.conf nginx/cutover/*.sh root@31.97.214.26:/root/cutover-2026-09-18/
+scp nginx/cutover/*.conf nginx/cutover/*.sh root@31.97.214.26:/root/cutover-2026-09-20/
 
 # on the host
-/root/cutover-2026-09-18/cutover.sh
+/root/cutover-2026-09-20/cutover.sh
 ```
 
 What `cutover.sh` does, in order:
@@ -44,7 +44,7 @@ What `cutover.sh` does, in order:
 
 `rollback.sh` reverses all of it in about a minute, restoring the pre-cutover image so the client bundle points at `app.` again.
 
-## After Friday
+## After Sunday
 
 - Replace `nginx/basa-app.conf` in this repo with the two installed vhosts so the repo describes the host again.
 - Update `CLAUDE.md`'s deployment section: the site is `https://businessassociationsa.com`.

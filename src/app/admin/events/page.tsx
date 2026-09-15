@@ -33,6 +33,7 @@ import {
 import { useEvents, Event, CreateEventData, EventFilters } from '@/hooks/use-events'
 import { EventDetailDialog } from '@/components/events/event-detail-dialog'
 import { FlyerUpload, type FlyerDraft } from '@/components/admin/flyer-upload'
+import { RichTextEditor } from '@/components/admin/rich-text-editor'
 import { DashboardTableLoading } from '@/components/ui/dashboard-loading'
 
 export default function AdminEventsPage() {
@@ -290,12 +291,11 @@ export default function AdminEventsPage() {
 
                 <div>
                   <Label htmlFor="description">Description *</Label>
-                  <Textarea
+                  <RichTextEditor
                     id="description"
                     value={createFormData.description}
-                    onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })}
-                    placeholder="Enter event description"
-                    rows={3}
+                    onChange={(html) => setCreateFormData(prev => ({ ...prev, description: html }))}
+                    placeholder="Tagline, a warm intro, Event Details, Pricing, what to expect, how to register…"
                   />
                 </div>
 

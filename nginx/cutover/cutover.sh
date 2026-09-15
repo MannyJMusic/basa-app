@@ -6,8 +6,8 @@
 # Runs on the production host as root. Every step prints what it did, everything
 # it changes is saved first, and rollback.sh in the same directory undoes it.
 #
-#   /root/cutover-2026-09-18/cutover.sh            # do it (about 15 minutes; the rebuild is most of it)
-#   /root/cutover-2026-09-18/cutover.sh --check    # only run the post-cutover checks
+#   /root/cutover-2026-09-20/cutover.sh            # do it (about 15 minutes; the rebuild is most of it)
+#   /root/cutover-2026-09-20/cutover.sh --check    # only run the post-cutover checks
 #
 # Before running: the final import has been done from the last dump, the rules in
 # this directory were regenerated from that same dump with --same-host, and the
