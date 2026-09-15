@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseEventDateTime } from "@/lib/event-time"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireAdmin, isResponse } from "@/lib/api-auth"
@@ -9,8 +10,9 @@ const updateEventSchema = z.object({
   slug: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
   shortDescription: z.string().optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  // ISO with a zone, or a datetime-local wall clock read as America/Chicago (see event-time.ts)
+  startDate: z.string().min(1).optional(),
+  endDate: z.string().min(1).optional(),
   location: z.string().min(1).optional(),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -151,8 +153,8 @@ export async function PUT(
         ...(validatedData.slug && { slug: validatedData.slug }),
         ...(validatedData.description && { description: validatedData.description }),
         ...(validatedData.shortDescription !== undefined && { shortDescription: validatedData.shortDescription }),
-        ...(validatedData.startDate && { startDate: new Date(validatedData.startDate) }),
-        ...(validatedData.endDate && { endDate: new Date(validatedData.endDate) }),
+        ...(validatedData.startDate && { startDate: parseEventDateTime(validatedData.startDate) ?? undefined }),
+        ...(validatedData.endDate && { endDate: parseEventDateTime(validatedData.endDate) ?? undefined }),
         ...(validatedData.location && { location: validatedData.location }),
         ...(validatedData.address !== undefined && { address: validatedData.address }),
         ...(validatedData.city !== undefined && { city: validatedData.city }),

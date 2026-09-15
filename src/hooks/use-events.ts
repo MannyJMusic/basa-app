@@ -73,7 +73,7 @@ export interface CreateEventData {
   status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
   isFeatured: boolean
   image?: string
-  organizerId: string
+  organizerId?: string
   tags: string[]
 }
 

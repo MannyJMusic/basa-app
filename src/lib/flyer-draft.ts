@@ -39,8 +39,8 @@ export const FlyerExtractionSchema = z.object({
     .boolean()
     .describe("false if the document is not an announcement for a single event (a menu, a logo, a newsletter, a blank page)"),
   title: text("Event name as printed, without dates or venue"),
-  description: text("Two to five sentences a visitor would read on the event page, written from the flyer's own wording. Plain text"),
-  shortDescription: text("One sentence, under 140 characters"),
+  description: text("The full event page write-up as HTML in the BASA house style described in the instructions: a bold tagline, an intro paragraph, an Event Details list, Pricing when printed, then further sections. Facts only from the flyer; the enthusiasm is the house voice"),
+  shortDescription: text("Leave empty: it is derived from the description"),
   startDate: text("YYYY-MM-DD. If the flyer omits the year, the next occurrence on or after today"),
   startTime: text("HH:MM, 24-hour, local time"),
   endDate: text("YYYY-MM-DD if a different day from startDate"),
@@ -97,6 +97,19 @@ export function slugify(title: string): string {
     .slice(0, 80)
 }
 
+/** Plain-text opening of an HTML description, the way the WordPress import wrote shortDescription. */
+export function summarize(html: string, max = 300): string {
+  const text = html
+    .replace(/<(br|\/p|\/h\d|\/li)>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/&#8217;|&rsquo;/g, "\u2019").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (text.length <= max) return text
+  const cut = text.slice(0, max)
+  return cut.slice(0, cut.lastIndexOf(" ")).trimEnd() + "\u2026"
+}
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 
@@ -135,7 +148,10 @@ export function flyerToFormDraft(x: FlyerExtraction): FlyerFormDraft {
     warnings.push("No description on the flyer; the title was used as a placeholder.")
     lowConfidence.add("description")
   }
-  if (x.shortDescription) fields.shortDescription = x.shortDescription.trim().slice(0, 200)
+  // The imported WordPress events carry the opening of the description, as plain
+  // text, cut at about 300 characters with an ellipsis. Match that.
+  if (fields.description) fields.shortDescription = summarize(fields.description)
+  else if (x.shortDescription) fields.shortDescription = x.shortDescription.trim().slice(0, 300)
 
   // Dates. The form needs both ends; the flyer usually gives one.
   const startDate = x.startDate && DATE_RE.test(x.startDate) ? x.startDate : null
