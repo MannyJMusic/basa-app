@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { useEvents, Event, CreateEventData, EventFilters } from '@/hooks/use-events'
 import { EventDetailDialog } from '@/components/events/event-detail-dialog'
+import { FlyerUpload, type FlyerDraft } from '@/components/admin/flyer-upload'
 import { DashboardTableLoading } from '@/components/ui/dashboard-loading'
 
 export default function AdminEventsPage() {
@@ -85,6 +86,12 @@ export default function AdminEventsPage() {
 
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+
+  // A flyer draft only fills the form; the admin still reviews and clicks Create (#69).
+  const applyFlyerDraft = (draft: FlyerDraft) => {
+    setCreateError(null)
+    setCreateFormData(prev => ({ ...prev, ...draft.fields }))
+  }
 
   useEffect(() => {
     fetchEvents(filters, currentPage, 20, sortBy, sortOrder)
@@ -257,6 +264,8 @@ export default function AdminEventsPage() {
               )}
 
               <div className="space-y-4">
+                <FlyerUpload onDraft={applyFlyerDraft} disabled={createLoading} />
+
                 {/* Basic Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
