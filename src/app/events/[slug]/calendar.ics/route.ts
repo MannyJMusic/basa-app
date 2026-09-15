@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { slugCandidates } from '@/lib/slug'
 import { prisma } from '@/lib/db'
 import { buildCalendar, icsFilename } from '@/lib/ics'
 import { icsResponse, requestOrigin } from '@/lib/ics-response'
@@ -15,7 +16,7 @@ const EVENT_TTL_SECONDS = 300
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const event = await prisma.event.findFirst({
-    where: { slug, status: { in: ['PUBLISHED', 'CANCELLED', 'COMPLETED'] } },
+    where: { slug: { in: slugCandidates(slug) }, status: { in: ['PUBLISHED', 'CANCELLED', 'COMPLETED'] } },
   })
   if (!event) {
     return new Response('Event not found', { status: 404, headers: { 'Content-Type': 'text/plain' } })

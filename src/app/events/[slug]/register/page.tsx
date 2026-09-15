@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { slugCandidates } from '@/lib/slug'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { Button } from '@/components/ui/button'
@@ -16,7 +17,7 @@ import { EventRegistrationForm } from '@/components/events/event-registration-fo
 
 async function getEvent(slug: string) {
   return prisma.event.findFirst({
-    where: { slug, status: 'PUBLISHED' },
+    where: { slug: { in: slugCandidates(slug) }, status: 'PUBLISHED' },
     include: {
       venue: true,
       ticketTiers: {

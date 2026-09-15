@@ -21,11 +21,11 @@ export async function POST(request: NextRequest) {
 
     switch (template) {
       case 'welcome':
-        const activationUrl = body.activationUrl || 'https://app.businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com'
+        const activationUrl = body.activationUrl || 'https://businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com'
         result = await sendWelcomeEmail(email, firstName, activationUrl, { fromName })
         break
       case 'password-reset':
-        const resetUrl = body.resetUrl || 'https://app.businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com'
+        const resetUrl = body.resetUrl || 'https://businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com'
         result = await sendPasswordResetEmail(email, firstName, resetUrl, { fromName })
         break
       case 'event-invitation':
@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
             { name: 'John Smith', title: 'CEO, Tech Solutions Inc.' },
             { name: 'Sarah Johnson', title: 'Director of Business Development' }
           ],
-                  rsvpUrl: 'https://app.businessassociationsa.com/events/mixer/rsvp',
-        calendarUrl: 'https://app.businessassociationsa.com/events/mixer/calendar',
-        shareUrl: 'https://app.businessassociationsa.com/events/mixer'
+                  rsvpUrl: 'https://businessassociationsa.com/events/mixer/rsvp',
+        calendarUrl: 'https://businessassociationsa.com/events/mixer/calendar',
+        shareUrl: 'https://businessassociationsa.com/events/mixer'
         }
         result = await sendEventInvitationEmail(email, firstName, event, { fromName })
         break

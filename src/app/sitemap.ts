@@ -1,7 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { prisma } from '@/lib/db'
-
-const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.businessassociationsa.com'
+import { SITE_URL as base } from '@/lib/site-url'
 
 // Rendered on request, never at build time: CI builds have no DATABASE_URL, and a
 // prerendered sitemap would freeze the event list at the moment of the deploy.
