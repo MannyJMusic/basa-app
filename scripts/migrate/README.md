@@ -130,6 +130,14 @@ pnpm migrate:events --images ./media --commit   # fetch files, store /uploads/..
 Run the importer first and the push second: the importer talks to a database, the
 push talks to a server. Both are re-runnable and neither deletes anything.
 
+**nginx serves `/uploads/`, not Next.** Next.js reads the list of files in `public/`
+once at startup and returns 404 for anything that appears afterwards, which is
+exactly what a media push does. Rather than restart the container after every push,
+the app's vhost (`nginx/basa-app.conf`, installed at
+`/etc/nginx/sites-enabled/app.businessassociationsa.com.conf`) has a
+`location /uploads/` that aliases `/opt/basa-app/uploads/` directly. New files are
+served the moment rsync finishes. The bind mount stays so the app can write there.
+
 **The manifest is load-bearing.** `./media/manifest.json` maps WordPress URL to file
 name, and it is read back at the *start* of the next run. Without that the importer
 would recompute the WordPress URL while syncing, write it over the local path, and
