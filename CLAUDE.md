@@ -125,7 +125,12 @@ API routes are in `src/app/api/`. Key domains:
 - `/api/dev/` - Development tools (email preview, database inspection)
 
 ### Route Protection
-`middleware.ts` (repo root) wraps NextAuth's `auth()` and only guards **page** routes: `/dashboard` requires a session and `/admin` requires `role === "ADMIN"`; everything else is treated as public. It returns early for every `/api/*` path and the matcher excludes `api` as well, so **API route handlers must check `auth()` themselves**. Do not rely on the middleware for API authorization.
+There is **no request middleware**. A `middleware.ts` sat in the repo root until 2026-09-14, but this project uses `src/`, so Next never compiled it and it never ran; it could not have anyway, because `src/lib/auth.ts` pulls in Prisma and bcrypt, which cannot execute at the edge. Protection lives in two places instead:
+
+- **Page routes:** the server layouts. `src/app/dashboard/layout.tsx` redirects anonymous visitors to sign-in; `src/app/admin/layout.tsx` additionally requires `role === "ADMIN"` (the client-side `AdminShell` under it is chrome, not a guard); `src/app/dev/layout.tsx` gates the dev tools. A new protected section needs its own layout check.
+- **API routes:** every handler under `src/app/api/` must call `requireSession()` / `requireAdmin()` from `src/lib/api-auth.ts` itself. Nothing upstream protects them.
+
+Static files under `public/` and `/uploads/` (served by nginx) are public by definition.
 
 There are two Stripe webhook handlers: `/api/webhooks/stripe` (the one the dev script and Stripe are pointed at, verifies the signature with `STRIPE_WEBHOOK_SECRET` and sends welcome/receipt emails) and the older `/api/payments/webhook`. Change the former.
 
