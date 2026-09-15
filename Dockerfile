@@ -16,6 +16,10 @@ WORKDIR /app
 # Set Prisma to use binary engine (let Prisma auto-detect the correct binary)
 ENV PRISMA_QUERY_ENGINE_TYPE=binary
 
+# Non-root runtime user, created before the copies below so they can be owned
+# directly with --chown instead of a whole-tree chown afterwards.
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001 -G nodejs
+
 # Copy package files first for better layer caching
 COPY package.json pnpm-lock.yaml ./
 
@@ -59,6 +63,10 @@ WORKDIR /app
 # Set Prisma to use binary engine (let Prisma auto-detect the correct binary)
 ENV PRISMA_QUERY_ENGINE_TYPE=binary
 
+# Non-root runtime user, created before the copies below so they can be owned
+# directly with --chown instead of a whole-tree chown afterwards.
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001 -G nodejs
+
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
@@ -72,27 +80,26 @@ RUN npm pkg delete scripts.postinstall
 RUN pnpm install --frozen-lockfile --prod && pnpm add -D prisma tsx
 
 # Copy generated Prisma client from build stage
-COPY --from=base /tmp/prisma-client ./node_modules/.prisma
+COPY --from=base --chown=nextjs:nodejs /tmp/prisma-client ./node_modules/.prisma
 
 # Copy built application
-COPY --from=base /app/.next ./.next
-COPY --from=base /app/public ./public
-COPY --from=base /app/next.config.js ./
+COPY --from=base --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=base --chown=nextjs:nodejs /app/public ./public
+COPY --from=base --chown=nextjs:nodejs /app/next.config.js ./
 
 # Copy setup scripts
-COPY scripts/setup-prod.js ./
+COPY --chown=nextjs:nodejs scripts/setup-prod.js ./
 
 # prisma/seed.ts imports shared definitions (chapters, membership tiers) from
 # src/lib. The seed runs at container start via tsx, so that module has to ship
 # with the runtime image or seeding fails with MODULE_NOT_FOUND.
-COPY src/lib ./src/lib
+COPY --chown=nextjs:nodejs src/lib ./src/lib
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-
-# Change ownership of the app directory to the nextjs user
-RUN chown -R nextjs:nodejs /app
+# Only the directory itself and the pieces Next writes to (.next/cache) are owned
+# by the runtime user; node_modules stays root-owned and read-only. The former
+# `chown -R nextjs:nodejs /app` rewrote every file in node_modules into a new
+# image layer and took over 20 minutes on the production host per deploy.
+RUN chown nextjs:nodejs /app
 
 # Switch to non-root user
 USER nextjs
