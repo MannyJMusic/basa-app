@@ -23,7 +23,7 @@ scp nginx/cutover/*.conf nginx/cutover/*.sh root@31.97.214.26:/root/cutover-2026
 /root/cutover-2026-09-18/cutover.sh
 ```
 
-`cutover.sh` saves the WordPress vhost and its `home`/`siteurl`/`blog_public` first, takes the public names off the WordPress vhost, installs the two files, reloads nginx, points WordPress at `srv1152916.hstgr.cloud` with `noindex`, moves the certificate's renewal webroot for the apex names, and then checks: each public hostname redirects to the app, one URL of each disposition behaves, WordPress still answers on its internal name, the app's health check passes.
+`cutover.sh` saves the WordPress vhost and its `home`/`siteurl`/`blog_public` first, takes the public names off the WordPress vhost, installs the two files, reloads nginx, points WordPress at `srv1152916.hstgr.cloud` with `noindex`, confirms certificate renewal still works with a certbot dry run, and then checks: each public hostname redirects to the app, one URL of each disposition behaves, WordPress still answers on its internal name, the app's health check passes.
 
 ## Why the apex redirects to `app.` rather than serving the app itself
 

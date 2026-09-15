@@ -31,14 +31,14 @@ export function generateMetadata(): Metadata {
       address: false,
       telephone: false,
     },
-    metadataBase: new URL('https://basa.org'),
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.businessassociationsa.com'),
     alternates: {
       canonical: '/',
     },
     openGraph: {
       title: "BASA - Business Association of San Antonio",
       description: "Join 150+ thriving businesses in San Antonio's premier business network. Connect, collaborate, and grow with BASA's strategic networking events and community partnerships.",
-      url: 'https://basa.org',
+      url: '/',
       siteName: 'BASA',
       images: [
         {

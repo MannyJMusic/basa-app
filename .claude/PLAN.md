@@ -11,7 +11,7 @@ Status: written 2026-09-05 from a measured audit of the workspace, not from the 
 | 2. Deployable build live | **Done, then redone.** `app.businessassociationsa.com` went live 2026-09-06, the host was compromised and rebuilt (#76), and both sites have been served from the rebuilt box since 2026-09-08. Deploys pass end to end. |
 | 3. Membership and events parity | **Done.** Chapters and launch tiers, expiry lifecycle, venues and organizers, per-event ticket tiers, guest checkout, both importers, event series, iCal feed, renewal reminders, account claim for imported members (#104). Every Phase 3 issue is closed. |
 | 4. Modernize the stack | **Not started**, except the host rebuild that #76 forced early. #68 is re-scoped to the one piece left: a registry-based deploy, which also fixes #94. #81 closed as superseded. |
-| 5. Retire BASA-AI-CREW | **Done (2026-09-13).** Orchestrator and dashboard disabled, host backed up and reprovisioned, WP application password and Azure AD app registration revoked, `basa-mec-api` deleted from the live site, product source archived to `MannyJMusic/basa-ai-crew`. Remaining: the replacement flyer tool (#69), which is a feature, not a retirement step. |
+| 5. Retire BASA-AI-CREW | **Done (2026-09-13).** Orchestrator and dashboard disabled, host backed up and reprovisioned, WP application password and Azure AD app registration revoked, `basa-mec-api` deleted from the live site, product source archived to `MannyJMusic/basa-ai-crew`. The replacement flyer-to-event tool (#69) was built 2026-09-14 (PR #132); it needs a new `ANTHROPIC_API_KEY` on the host before it works in production. |
 | 6. Cut over and retire WordPress | **Scheduled: Friday 2026-09-18, close of business** (owner, 2026-09-14). Redirect map built (#70). Runbook on #71. |
 
 The gating decisions are all answered:
@@ -28,7 +28,7 @@ What stands between today and Friday, in order:
 - **Apex vhost on CloudPanel.** `businessassociationsa.com`, `www` and `member` are `server_name`s on the WordPress vhost today. basa-app needs its own reverse-proxy site for the apex with the redirect map included and a certificate issued before Friday.
 - **Friday COB:** freeze WordPress, final dump and re-import, swap the vhosts, test. Full runbook on #71.
 
-Still open but not on the cutover path: the flyer-to-event tool (#69), the breach-notification decision (#125), and all of Phase 4.
+Still open but not on the cutover path: the breach-notification decision (#125), the OpenHouse sidecar-vs-replacement decision (#131), and all of Phase 4.
 
 ## 1. Where things stand
 
@@ -143,7 +143,7 @@ Phases 0 and 1 are sequential and should be done first. Phases 2 to 4 can overla
 - [x] Deactivated and deleted `basa-mec-api` from the live WordPress site. It was safe to remove because the events importer reads a mysqldump, not the REST API.
 - [x] Reprovisioned the box to a clean Ubuntu 24.04. Same IP, same subscription.
 - [x] Archived the product source and plugin to `MannyJMusic/basa-ai-crew` (private, archived, with an `ARCHIVED.md`). The local `BASA-AI-CREW/` folder stays in the workspace as a convenience copy.
-- [ ] Build the replacement (#69): an admin "create event from flyer" upload in basa-app that uses Claude to extract fields into a pre-filled form for human confirmation. No email polling, no Azure AD app, no MEC REST plugin.
+- [x] Built the replacement (#69, 2026-09-14): an admin "create event from flyer" upload in basa-app. Claude reads the image or PDF with a structured-output schema and pre-fills the create-event form; the admin checks and saves. Verified against two real BASA flyers. No email polling, no Azure AD app, no MEC REST plugin. Owner action: a new `ANTHROPIC_API_KEY` in `.env.production`.
 
 ### Phase 6. Cut over and retire WordPress
 
@@ -231,6 +231,7 @@ Filed 2026-09-13 and 2026-09-14:
 |---|---|---|
 | 116 | — | Password reset accepted any token (fixed and released the same day) |
 | 125 | — | Decide whether members must be notified about the September 2026 host compromise (spun out of #76 when it closed) |
+| 131 | — | Decide how the OpenHouse Office (TKO board/CRM, a Django sidecar by design) relates to basa-app: sidecar or replacement for `/admin`. Not before the cutover; back up the admin portal first |
 
 What the importers found, which changed the plan rather than just implementing it:
 

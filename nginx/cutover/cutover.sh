@@ -80,14 +80,11 @@ wp option update blog_public 0
 wp cache flush >/dev/null 2>&1 || true
 echo "WordPress home/siteurl = $WP_INTERNAL, blog_public = 0 (noindex)"
 
-echo "== 5. Certificate renewal for the apex names now needs the shared ACME webroot =="
-# The `basa` certificate covers the apex names AND srv1152916.hstgr.cloud. The
-# apex vhost serves challenges from /var/www/acme; WordPress keeps its htdocs.
-mkdir -p /var/www/acme
-certbot certonly --webroot --cert-name basa --non-interactive --keep-until-expiring \
-  -w /var/www/acme -d businessassociationsa.com -d www.businessassociationsa.com -d member.businessassociationsa.com \
-  -w "$WP_ROOT" -d srv1152916.hstgr.cloud \
-  && echo "renewal config updated (certificate kept, it is not due)" \
-  || echo "WARNING: certbot could not update the renewal webroots; fix before 2026-12-07 or renewal will fail" >&2
+echo "== 5. Certificate renewal: nothing to do =="
+# The apex vhost serves ACME challenges from the WordPress htdocs, which is the
+# webroot certbot already has on record for the \`basa\` certificate, so renewal of
+# all four names keeps working unchanged. Prove it without touching anything:
+certbot renew --cert-name basa --dry-run --no-random-sleep-on-renew >/dev/null 2>&1 && echo "certbot dry-run renewal OK" \
+  || echo "WARNING: certbot dry-run renewal failed; investigate before 2026-12-07 (certbot renew --cert-name basa --dry-run --no-random-sleep-on-renew)" >&2
 
 check
