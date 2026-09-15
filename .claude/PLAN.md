@@ -12,7 +12,7 @@ Status: written 2026-09-05 from a measured audit of the workspace, not from the 
 | 3. Membership and events parity | **Done.** Chapters and launch tiers, expiry lifecycle, venues and organizers, per-event ticket tiers, guest checkout, both importers, event series, iCal feed, renewal reminders, account claim for imported members (#104). Every Phase 3 issue is closed. |
 | 4. Modernize the stack | **Not started**, except the host rebuild that #76 forced early. #68 is re-scoped to the one piece left: a registry-based deploy, which also fixes #94. #81 closed as superseded. |
 | 5. Retire BASA-AI-CREW | **Done (2026-09-13).** Orchestrator and dashboard disabled, host backed up and reprovisioned, WP application password and Azure AD app registration revoked, `basa-mec-api` deleted from the live site, product source archived to `MannyJMusic/basa-ai-crew`. The replacement flyer-to-event tool (#69) was built 2026-09-14 (PR #132); it needs a new `ANTHROPIC_API_KEY` on the host before it works in production. |
-| 6. Cut over and retire WordPress | **Scheduled: Friday 2026-09-18, close of business** (owner, 2026-09-14). Redirect map built (#70). Runbook on #71. |
+| 6. Cut over and retire WordPress | **Scheduled: Sunday 2026-09-20, 12:00 noon Pacific** (owner; set for Friday 2026-09-18 on 09-14, moved to Sunday on 09-15 to leave room for remaining work). Redirect map built (#70). Runbook on #71. |
 
 The gating decisions are all answered:
 
@@ -21,12 +21,12 @@ The gating decisions are all answered:
 3. ~~**The AI-CREW VPS.**~~ Resolved 2026-09-13 (#36).
 4. ~~**How imported members get in.**~~ Resolved 2026-09-13 (#104): claim on renewal only. Nobody is emailed by the migration; the forgot-password path issues a claim link to an unclaimed account.
 
-What stands between today and Friday, in order:
+What stands between today and Sunday, in order:
 
 - **Release `dev` to `main`.** Five PRs (#120–#124) are merged to `dev` and not yet deployed, including the published-only import rule and the redirect generator.
 - **First production import.** Production holds no imported data as of 2026-09-14 (0 events, 0 members). Run both importers plus the media push, reconcile against 259 events / 112 venues / 134 members / 298 legacy memberships, then walk the live app.
-- **Apex vhost on CloudPanel.** `businessassociationsa.com`, `www` and `member` are `server_name`s on the WordPress vhost today. basa-app needs its own reverse-proxy site for the apex with the redirect map included and a certificate issued before Friday.
-- **Friday COB:** freeze WordPress, final dump and re-import, swap the vhosts, test. Full runbook on #71.
+- **Apex vhost on CloudPanel.** `businessassociationsa.com`, `www` and `member` are `server_name`s on the WordPress vhost today. basa-app needs its own reverse-proxy site for the apex with the redirect map included and a certificate issued before Sunday.
+- **Sunday noon Pacific:** freeze WordPress, final dump and re-import, swap the vhosts, test. Full runbook on #71.
 
 Still open but not on the cutover path: the breach-notification decision (#125), the OpenHouse sidecar-vs-replacement decision (#131), and all of Phase 4.
 
@@ -147,7 +147,7 @@ Phases 0 and 1 are sequential and should be done first. Phases 2 to 4 can overla
 
 ### Phase 6. Cut over and retire WordPress
 
-**Scheduled for Friday 2026-09-18 at close of business** (owner decision, 2026-09-14). The step-by-step runbook, with what production looks like the week before, lives on #71 and is the source of truth; this section is the shape.
+**Scheduled for Sunday 2026-09-20 at 12:00 noon Pacific (2:00 PM Central)** (owner decision; moved from Friday on 2026-09-15). The step-by-step runbook, with what production looks like the week before, lives on #71 and is the source of truth; this section is the shape.
 
 - Freeze WP content edits; run final importers.
 - Redirect map: every URL in the 43 public pages plus `/events/*` and `/news/*` patterns → basa-app equivalents (301s in CloudPanel nginx).
