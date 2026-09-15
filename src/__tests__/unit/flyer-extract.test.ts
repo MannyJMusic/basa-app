@@ -3,7 +3,7 @@
  * not exercised here; this is the pure part that can silently produce a wrong
  * event if it drifts.
  */
-import { flyerToFormDraft, slugify, FlyerExtractionSchema, type FlyerExtraction } from '@/lib/flyer-draft'
+import { flyerToFormDraft, slugify, summarize, FlyerExtractionSchema, type FlyerExtraction } from '@/lib/flyer-draft'
 
 function extraction(overrides: Partial<FlyerExtraction> = {}): FlyerExtraction {
   return {
@@ -49,8 +49,7 @@ describe('flyerToFormDraft', () => {
     const draft = flyerToFormDraft(
       extraction({
         title: 'Monday Mixer @ Beerhead',
-        description: 'Casual networking over drinks.',
-        shortDescription: 'Networking mixer',
+        description: '<h1><strong>Casual networking over drinks.</strong></h1><p>Join BASA at Beerhead.</p>',
         startDate: '2026-10-13',
         startTime: '17:30',
         endTime: '19:30',
@@ -67,8 +66,8 @@ describe('flyerToFormDraft', () => {
     expect(draft.fields).toEqual({
       title: 'Monday Mixer @ Beerhead',
       slug: 'monday-mixer-beerhead',
-      description: 'Casual networking over drinks.',
-      shortDescription: 'Networking mixer',
+      description: '<h1><strong>Casual networking over drinks.</strong></h1><p>Join BASA at Beerhead.</p>',
+      shortDescription: 'Casual networking over drinks. Join BASA at Beerhead.',
       startDate: '2026-10-13T17:30',
       endDate: '2026-10-13T19:30',
       location: 'Beerhead Bar & Eatery',
@@ -140,6 +139,7 @@ describe('flyerToFormDraft', () => {
   it('uses the title as a placeholder description and flags it', () => {
     const draft = flyerToFormDraft(extraction({ title: 'Coffee Talk', startDate: '2026-10-01', startTime: '08:00', endTime: '09:00' }))
     expect(draft.fields.description).toBe('Coffee Talk')
+    expect(draft.fields.shortDescription).toBe('Coffee Talk')
     expect(draft.lowConfidence).toContain('description')
   })
 
@@ -155,6 +155,18 @@ describe('flyerToFormDraft', () => {
     expect(draft.fields.price).toBeUndefined()
     expect(draft.fields.memberPrice).toBe(10)
     expect(draft.fields.capacity).toBeUndefined()
+  })
+})
+
+describe('summarize', () => {
+  it('strips tags and entities and cuts at a word boundary with an ellipsis, like the imported events', () => {
+    const html = '<h1><strong>Strikes &amp; Spares!</strong></h1><p>Grab your shoes – it\u2019s time.</p><ul><li>One</li><li>Two</li></ul>'
+    expect(summarize(html)).toBe('Strikes & Spares! Grab your shoes – it\u2019s time. One Two')
+    const long = '<p>' + 'word '.repeat(100) + '</p>'
+    const out = summarize(long)
+    expect(out.length).toBeLessThanOrEqual(301)
+    expect(out.endsWith('\u2026')).toBe(true)
+    expect(out).not.toMatch(/\s\u2026$/)
   })
 })
 

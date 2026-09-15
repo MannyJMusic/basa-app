@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireAdmin, isResponse } from "@/lib/api-auth"
+import { parseEventDateTime } from "@/lib/event-time"
 
 // Get Prisma client dynamically to support test injection
 const getPrisma = () => {
@@ -16,8 +17,10 @@ const createEventSchema = z.object({
   slug: z.string().min(1, "Slug is required"),
   description: z.string().min(1, "Description is required"),
   shortDescription: z.string().optional(),
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
+  // ISO with a zone, or the naive wall clock a datetime-local input produces
+  // (read as America/Chicago). Validated properly below, after parsing.
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
   location: z.string().min(1, "Location is required"),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -31,7 +34,8 @@ const createEventSchema = z.object({
   status: z.enum(["DRAFT", "PUBLISHED", "CANCELLED", "COMPLETED"]).default("DRAFT"),
   isFeatured: z.boolean().default(false),
   image: z.string().url().optional(),
-  organizerId: z.string().min(1, "Organizer is required"),
+  // BASA runs its own events; an organizer is only recorded when there is a separate one.
+  organizerId: z.string().min(1).nullable().optional(),
   tags: z.array(z.string()).default([]),
 })
 
@@ -248,16 +252,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if organizer exists
-    const organizerCheck = await prisma.organizer.findUnique({
-      where: { id: validatedData.organizerId },
-    })
+    const startDate = parseEventDateTime(validatedData.startDate)
+    const endDate = parseEventDateTime(validatedData.endDate)
+    if (!startDate || !endDate) {
+      return NextResponse.json({ error: "Start and end must be valid dates and times" }, { status: 400 })
+    }
+    if (endDate <= startDate) {
+      return NextResponse.json({ error: "End must be after start" }, { status: 400 })
+    }
 
-    if (!organizerCheck) {
-      return NextResponse.json(
-        { error: "Organizer not found" },
-        { status: 400 }
-      )
+    // Check the organizer only when one was chosen
+    const organizerId = validatedData.organizerId || null
+    if (organizerId) {
+      const organizerCheck = await prisma.organizer.findUnique({ where: { id: organizerId } })
+      if (!organizerCheck) {
+        return NextResponse.json({ error: "Organizer not found" }, { status: 400 })
+      }
     }
 
     // Create event
@@ -267,8 +277,8 @@ export async function POST(request: NextRequest) {
         slug: validatedData.slug,
         description: validatedData.description,
         shortDescription: validatedData.shortDescription,
-        startDate: new Date(validatedData.startDate),
-        endDate: new Date(validatedData.endDate),
+        startDate,
+        endDate,
         location: validatedData.location,
         address: validatedData.address,
         city: validatedData.city,
@@ -282,7 +292,7 @@ export async function POST(request: NextRequest) {
         status: validatedData.status,
         isFeatured: validatedData.isFeatured,
         image: validatedData.image,
-        organizerId: validatedData.organizerId,
+        organizerId,
         tags: validatedData.tags,
       },
     })

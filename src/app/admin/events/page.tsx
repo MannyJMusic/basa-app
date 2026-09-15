@@ -129,7 +129,6 @@ export default function AdminEventsPage() {
       endDate: createFormData.endDate,
       location: createFormData.location,
       category: createFormData.category,
-      organizerId: createFormData.organizerId,
     }
 
     const missingFields = Object.entries(requiredFields)
@@ -150,7 +149,8 @@ export default function AdminEventsPage() {
     }
 
     try {
-      await createEvent(createFormData)
+      // BASA runs its own events; only send an organizer when one was picked.
+      await createEvent({ ...createFormData, organizerId: createFormData.organizerId || undefined } as CreateEventData)
       setShowCreateDialog(false)
       setCreateFormData({
         title: '',
@@ -481,7 +481,7 @@ export default function AdminEventsPage() {
 
                 {/* Organizer */}
                 <div>
-                  <Label htmlFor="organizer">Organizer *</Label>
+                  <Label htmlFor="organizer">Organizer <span className="text-gray-400 font-normal">(optional; leave empty for BASA)</span></Label>
                   <Select
                     value={createFormData.organizerId}
                     onValueChange={(value) => setCreateFormData({ ...createFormData, organizerId: value })}
@@ -535,7 +535,7 @@ export default function AdminEventsPage() {
                   </Button>
                   <Button
                     onClick={handleCreateEvent}
-                    disabled={createLoading || !createFormData.title || !createFormData.slug || !createFormData.description || !createFormData.organizerId}
+                    disabled={createLoading || !createFormData.title || !createFormData.slug || !createFormData.description}
                   >
                     {createLoading ? 'Creating...' : 'Create Event'}
                   </Button>
