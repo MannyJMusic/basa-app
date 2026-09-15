@@ -11,7 +11,7 @@ import type { JWT } from "next-auth/jwt"
 import type { Session } from "next-auth"
 
 export const authConfig: NextAuthConfig = {
-    debug: true, // Force debug mode to see what's happening
+    debug: process.env.NODE_ENV !== "production",
     adapter: PrismaAdapter(prisma),
     trustHost: true,
     useSecureCookies: process.env.NODE_ENV === 'production',

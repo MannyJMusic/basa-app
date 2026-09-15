@@ -28,12 +28,16 @@ export default auth((req) => {
     "/auth/verify",
     "/auth/verify-email",
     "/join",
-    "/testimonials"
+    "/testimonials",
+    // Stripe returns guest ticket buyers here after checkout; they have no session.
+    "/payment"
   ]
 
-  // Check if the current path is public
-  const isPublicRoute = publicRoutes.some(route => 
-    nextUrl.pathname.startsWith(route)
+  // Exact match for "/", prefix match for the rest. `startsWith("/")` is true for
+  // every path, which used to make every route public and left /dashboard and
+  // /admin protected only by their own page-level checks.
+  const isPublicRoute = publicRoutes.some(route =>
+    route === "/" ? nextUrl.pathname === "/" : nextUrl.pathname === route || nextUrl.pathname.startsWith(route + "/")
   )
 
   // Allow public routes
