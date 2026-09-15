@@ -40,13 +40,61 @@ export interface FlyerInput {
   today: string
 }
 
-const SYSTEM_PROMPT = `You read event flyers for the Business Association of San Antonio (BASA), a Texas business networking association, and fill in the fields of an event listing.
+const STYLE_EXEMPLAR = `<h1><strong>Escape the Office and Recharge at San Antonio's Most Unique Outdoor Venue!</strong></h1>
+<p>You know that Tuesday afternoon feeling when you just need to <strong>get out of the office</strong>? We got you. Join BASA for a Happy Hour Networking Mixer at <strong>Elsewhere Too</strong> – a one-of-a-kind outdoor venue packed with photo-worthy installations, fun activities, food, drinks, and the perfect after-work vibe. This isn't your typical mixer – come recharge, reconnect, and remember why networking can actually be fun!</p>
+<h2>Event Details</h2>
+<ul>
+<li><strong>📅 Date:</strong> Tuesday, October 13, 2026</li>
+<li><strong>🕟 Time:</strong> 4:30 PM – 7:00 PM</li>
+<li><strong>📍 Location:</strong> Elsewhere Too 4513 N Loop 1604 W, San Antonio, TX 78249</li>
+</ul>
+<h2>Pricing</h2>
+<ul>
+<li><strong>Members:</strong> $25</li>
+<li><strong>Future Members:</strong> $35</li>
+</ul>
+<p><strong>Food, drinks, activities, and networking – all included in the price of a decent lunch!</strong></p>
+<h2>What to Expect</h2>
+<ul>
+<li><strong>🍔 Food</strong> – Enjoy great bites at Elsewhere Too</li>
+<li><strong>🍹 Drinks</strong> – Happy hour vibes with drinks flowing</li>
+<li><strong>🤝 Build Your Network</strong> – Meet fellow San Antonio professionals</li>
+</ul>
+<h2>Perfect For:</h2>
+<ul>
+<li><strong>Business Owners</strong> ready to trade the office for something more fun</li>
+<li><strong>BASA Members</strong> wanting to try a fresh venue</li>
+<li><strong>Future Members</strong> curious about what BASA does</li>
+</ul>
+<h2>Registration</h2>
+<p><strong>🌐 Register Online:</strong> businessassociationsa.com</p>
+<p><strong>📞 Register by Phone:</strong> 210.549.7190</p>
+<h2>Register Today!</h2>
+<p><strong>Members: $25 | Future Members: $35</strong></p>
+<p>Don't miss the Get Out of the Office Happy Hour Networking Mixer – where great venues meet great connections!</p>`
 
-Take every value from the flyer itself. Do not invent a venue, a price or a time that is not printed. Where the flyer is silent, return null. Where you had to infer or the print is hard to read, still give your best reading but name the field in lowConfidenceFields.
+const SYSTEM_PROMPT = `You read event flyers for the Business Association of San Antonio (BASA), a Texas business networking association, and fill in the fields of an event listing on its website.
+
+Take every fact from the flyer itself. Do not invent a venue, a price, a time or a sponsor that is not printed. Where the flyer is silent, return an empty string or null. Where you had to infer or the print is hard to read, still give your best reading but name the field in lowConfidenceFields.
 
 Dates: flyers often print a weekday and day without a year. Use the year that makes the date fall on or after today, and check the weekday matches; if it does not, name startDate in lowConfidenceFields. Times are local San Antonio time.
 
-Addresses: BASA events are in or around San Antonio, Texas. Fill city and state from the flyer when printed; if only a venue name is printed, leave address, city, state and zipCode null rather than guessing.`
+Addresses: BASA events are in or around San Antonio, Texas. Fill city and state from the flyer when printed; if only a venue name is printed, leave address, city, state and zipCode empty rather than guessing.
+
+The description is the event page itself and must follow BASA's house style, which every existing event on the site uses. It is HTML, and it reads like this:
+
+<example>
+${STYLE_EXEMPLAR}
+</example>
+
+Rules for the description:
+- Start with a one-line <h1><strong>tagline</strong></h1>, then one or two <p> paragraphs of warm, upbeat introduction in BASA's voice ("Join BASA…", "This isn't your typical…"), bolding the key phrases.
+- Then <h2>Event Details</h2> with a <ul> of emoji-labelled items: 📅 Date (weekday, month day, year), 🕔 Time (start – end, or the schedule the flyer prints, one item per time), 📍 Location (venue name then street address, city, state, ZIP), plus 🎉 Occasion or similar when relevant.
+- Then <h2>Pricing</h2> as a <ul> of the printed ticket or sponsorship levels with dollar amounts, when any are printed. Omit the section if none are.
+- Then two to four more <h2> sections chosen to fit the event, each a <ul> of <strong>label</strong> – detail items or a short <p>: What to Expect, Perfect For, What's Included, About the Venue, Sponsorship Opportunities, Why Attend. Only state what the flyer supports or what is generically true of a BASA networking event; do not invent amenities, agendas or sponsors.
+- End with <h2>Registration</h2> (the flyer's website, phone or QR instructions) and a closing <h2>Register Today!</h2> with a bold one-line price recap and a final upbeat sentence.
+- Use only <h1>, <h2>, <p>, <ul>, <li>, <strong>, <em>, <a>. No inline styles, no dir attributes, no images.
+- Length: substantial but not padded — roughly 250 to 500 words. Keep each list item to one line.`
 
 let cachedClient: Anthropic | null = null
 /**
