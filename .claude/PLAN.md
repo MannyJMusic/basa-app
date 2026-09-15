@@ -2,28 +2,33 @@
 
 Status: written 2026-09-05 from a measured audit of the workspace, not from the repo's own docs (which overstate readiness). Phases 0 to 3 are largely done; see the progress note below before reading the phases as a to-do list.
 
-## 0. Where this stands (2026-09-10)
+## 0. Where this stands (2026-09-14)
 
 | Phase | State |
 |---|---|
 | 0. Safe and reproducible | **Done.** Dev routes gated, API auth audited, logging cleaned, single lockfile, Node 22, branch policy. |
 | 1. Strip scaffolding | **Done** except #73, a final sweep for what the deletion list missed. |
 | 2. Deployable build live | **Done, then redone.** `app.businessassociationsa.com` went live 2026-09-06, the host was compromised and rebuilt (#76), and both sites have been served from the rebuilt box since 2026-09-08. Deploys pass end to end. |
-| 3. Membership and events parity | **Substantially done.** Chapters and launch tiers, expiry lifecycle, venues and organizers, per-event ticket tiers, guest checkout, both importers, event series, iCal feed, renewal reminders. Open: the owner decisions listed below. |
-| 4. Modernize the stack | **Not started**, except the VPS work that #76 forced early. |
-| 5. Retire BASA-AI-CREW | **Mostly done (2026-09-13).** Orchestrator and dashboard disabled, port 8080 closed, host backed up and reprovisioned to bare Ubuntu 24.04, WP application password revoked, `basa-mec-api` deleted from the live site. Remaining: revoke the Azure AD app, rotate the leftover keys, build the replacement (#69). |
-| 6. Cut over and retire WordPress | **Not started.** |
+| 3. Membership and events parity | **Done.** Chapters and launch tiers, expiry lifecycle, venues and organizers, per-event ticket tiers, guest checkout, both importers, event series, iCal feed, renewal reminders, account claim for imported members (#104). Every Phase 3 issue is closed. |
+| 4. Modernize the stack | **Not started**, except the host rebuild that #76 forced early. #68 is re-scoped to the one piece left: a registry-based deploy, which also fixes #94. #81 closed as superseded. |
+| 5. Retire BASA-AI-CREW | **Done (2026-09-13).** Orchestrator and dashboard disabled, host backed up and reprovisioned, WP application password and Azure AD app registration revoked, `basa-mec-api` deleted from the live site, product source archived to `MannyJMusic/basa-ai-crew`. Remaining: the replacement flyer tool (#69), which is a feature, not a retirement step. |
+| 6. Cut over and retire WordPress | **Scheduled: Friday 2026-09-18, close of business** (owner, 2026-09-14). Redirect map built (#70). Runbook on #71. |
 
-Three things gate further progress and none of them are code:
+The gating decisions are all answered:
 
-1. **Where imported event images live.** All 163 can be downloaded, but `Event.image` still points at WordPress. It stops resolving the moment Phase 6 turns that site off.
-2. **The five nominally-active members.** Four are BASA staff accounts. They import as `EXPIRED` with no tier; placing anyone on a launch tier is a per-member decision (#51).
-3. ~~**The AI-CREW VPS.**~~ Resolved 2026-09-13. The owner confirmed `31.220.18.48` and that the co-hosted services were no longer needed, so the host was fully backed up and wiped rather than having the orchestrator alone switched off.
+1. ~~**Where imported event images live.**~~ Resolved 2026-09-13 (#111): rehosted on a bind-mounted volume on the production host, served at `/uploads/...`. Only published events come over (259, not 269).
+2. **The five nominally-active members.** Four are BASA staff accounts. They import as `EXPIRED` with no tier; placing anyone on a launch tier is a per-member decision (#51). Not a cutover blocker — they renew through the app like anyone else.
+3. ~~**The AI-CREW VPS.**~~ Resolved 2026-09-13 (#36).
+4. ~~**How imported members get in.**~~ Resolved 2026-09-13 (#104): claim on renewal only. Nobody is emailed by the migration; the forgot-password path issues a claim link to an unclaimed account.
 
-Two things are worth knowing before touching this work:
+What stands between today and Friday, in order:
 
-- **The importers have not been run against production.** They are verified against a local database loaded from the nightly dump. #101 and #102 must land first — they are the two bugs real content exposes.
-- **Imported members cannot sign in.** No password, `INACTIVE`, no claim flow (#104).
+- **Release `dev` to `main`.** Five PRs (#120–#124) are merged to `dev` and not yet deployed, including the published-only import rule and the redirect generator.
+- **First production import.** Production holds no imported data as of 2026-09-14 (0 events, 0 members). Run both importers plus the media push, reconcile against 259 events / 112 venues / 134 members / 298 legacy memberships, then walk the live app.
+- **Apex vhost on CloudPanel.** `businessassociationsa.com`, `www` and `member` are `server_name`s on the WordPress vhost today. basa-app needs its own reverse-proxy site for the apex with the redirect map included and a certificate issued before Friday.
+- **Friday COB:** freeze WordPress, final dump and re-import, swap the vhosts, test. Full runbook on #71.
+
+Still open but not on the cutover path: the flyer-to-event tool (#69), the breach-notification decision (#125), and all of Phase 4.
 
 ## 1. Where things stand
 
@@ -129,18 +134,20 @@ Phases 0 and 1 are sequential and should be done first. Phases 2 to 4 can overla
 
 ### Phase 5. Retire BASA-AI-CREW
 
-**Done 2026-09-13**, except the two items marked below. What the host actually turned out to hold, and every step taken, is recorded in #36.
+**Done 2026-09-13.** Only the replacement feature remains. What the host actually turned out to hold, and every step taken, is recorded in #36.
 
 - [x] Owner confirmed the VPS IP (`31.220.18.48`, Hostinger VPS `1320804`) and that the co-hosted services were no longer needed. It held three products, not one: the AI crew, Recaster Studio (`recaster.studio` + docs + downloads), and LA Rent Finder. None of the three directories was a git repo.
 - [x] Backed up before touching anything: a Hostinger snapshot, plus `~/Backups/vps-1320804-2026-09-13/` holding all three codebases, every `.env`, both SQLite DBs, nginx, Let's Encrypt, systemd units, PM2 dump and crontabs — and the 5.9 GB of Recaster installers, verified byte-identical.
 - [x] `systemctl disable --now basa-orchestrator basa-dashboard`; port 8080 closed and verified unreachable from outside.
-- [x] Revoked the WordPress application password (`MEC Automation`). **Still open: the Azure AD app registration**, which only the owner can revoke in the Entra portal, and rotation of `ANTHROPIC_API_KEY`, `ARCADE_*` and the cron bearer tokens that sat in plaintext on the host.
+- [x] Revoked the WordPress application password (`MEC Automation`) and, on 2026-09-13, the Azure AD app registration (owner, in the Entra portal). Rotation of the old `ANTHROPIC_API_KEY` and `ARCADE_*` keys was deliberately left: the owner does not consider the Anthropic key a blocker and is reconsidering Arcade entirely. Nothing they unlock still exists.
 - [x] Deactivated and deleted `basa-mec-api` from the live WordPress site. It was safe to remove because the events importer reads a mysqldump, not the REST API.
 - [x] Reprovisioned the box to a clean Ubuntu 24.04. Same IP, same subscription.
-- [ ] Archive the local `BASA-AI-CREW/` folder. Left in place — it is the only remaining copy of the product source and the plugin.
+- [x] Archived the product source and plugin to `MannyJMusic/basa-ai-crew` (private, archived, with an `ARCHIVED.md`). The local `BASA-AI-CREW/` folder stays in the workspace as a convenience copy.
 - [ ] Build the replacement (#69): an admin "create event from flyer" upload in basa-app that uses Claude to extract fields into a pre-filled form for human confirmation. No email polling, no Azure AD app, no MEC REST plugin.
 
 ### Phase 6. Cut over and retire WordPress
+
+**Scheduled for Friday 2026-09-18 at close of business** (owner decision, 2026-09-14). The step-by-step runbook, with what production looks like the week before, lives on #71 and is the source of truth; this section is the shape.
 
 - Freeze WP content edits; run final importers.
 - Redirect map: every URL in the 43 public pages plus `/events/*` and `/news/*` patterns → basa-app equivalents (301s in CloudPanel nginx).
@@ -215,6 +222,15 @@ Filed 2026-09-09 and 2026-09-10, as the work turned them up:
 | 101 | Phase 3 | The "Upcoming Events" page has no date filter, and leaks debug text |
 | 102 | Phase 3 | Event descriptions render as escaped HTML |
 | 104 | Phase 3 | Imported members have no way to claim their account |
+| 111 | Phase 6 | Decide where imported event images live before WordPress is retired |
+| 113 | — | No firewall on any VPS in the Hostinger account |
+
+Filed 2026-09-13 and 2026-09-14:
+
+| # | Milestone | Issue |
+|---|---|---|
+| 116 | — | Password reset accepted any token (fixed and released the same day) |
+| 125 | — | Decide whether members must be notified about the September 2026 host compromise (spun out of #76 when it closed) |
 
 What the importers found, which changed the plan rather than just implementing it:
 

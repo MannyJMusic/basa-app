@@ -55,6 +55,8 @@ The app is deployed to `https://app.businessassociationsa.com` on a Hostinger VP
 
 **Architecture:** CloudPanel (nginx reverse proxy + SSL) → Docker containers (Next.js + PostgreSQL)
 
+The app's vhost is hand-written, not CloudPanel-managed: `nginx/basa-app.conf` in this repo is a copy of `/etc/nginx/sites-enabled/app.businessassociationsa.com.conf` on the host, and the two should be kept identical. It proxies `/` to the container and serves `/uploads/` (imported event and venue images, `/opt/basa-app/uploads`) straight from disk, because Next only lists `public/` at startup.
+
 ```bash
 # SSH to production server
 ssh root@31.97.214.26
