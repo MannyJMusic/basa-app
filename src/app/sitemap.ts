@@ -3,8 +3,9 @@ import { prisma } from '@/lib/db'
 
 const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.businessassociationsa.com'
 
-// Regenerated at most hourly; events change rarely and the list is short.
-export const revalidate = 3600
+// Rendered on request, never at build time: CI builds have no DATABASE_URL, and a
+// prerendered sitemap would freeze the event list at the moment of the deploy.
+export const dynamic = 'force-dynamic'
 
 const STATIC_PAGES: Array<{ path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'] }> = [
   { path: '/', priority: 1, changeFrequency: 'weekly' },
@@ -26,11 +27,14 @@ const STATIC_PAGES: Array<{ path: string; priority: number; changeFrequency: Met
  * they should be discoverable here too.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const events = await prisma.event.findMany({
-    where: { status: 'PUBLISHED' },
-    select: { slug: true, updatedAt: true, startDate: true },
-    orderBy: { startDate: 'desc' },
-  })
+  // A database hiccup should degrade to the static pages, not a 500 for crawlers.
+  const events = await prisma.event
+    .findMany({
+      where: { status: 'PUBLISHED' },
+      select: { slug: true, updatedAt: true, startDate: true },
+      orderBy: { startDate: 'desc' },
+    })
+    .catch(() => [] as Array<{ slug: string; updatedAt: Date; startDate: Date }>)
   const now = Date.now()
 
   return [
