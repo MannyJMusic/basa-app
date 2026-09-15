@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { SITE_URL } from '@/lib/site-url'
 import { requireDevAdmin, isResponse } from '@/lib/api-auth'
 import { generateWelcomeEmailHtml, generatePasswordResetEmailHtml, generateEventInvitationEmailHtml, generateContactFormEmailHtml, generatePaymentReceiptEmailHtml } from '@/lib/basa-emails'
 
@@ -10,22 +11,22 @@ export async function GET(request: NextRequest) {
   const template = searchParams.get('template') || 'welcome'
   const email = searchParams.get('email') || 'test@example.com'
   const firstName = searchParams.get('firstName') || 'John'
-  const activationUrl = searchParams.get('activationUrl') || 'https://app.businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com'
-  const resetUrl = searchParams.get('resetUrl') || 'https://app.businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com'
+  const activationUrl = searchParams.get('activationUrl') || 'https://businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com'
+  const resetUrl = searchParams.get('resetUrl') || 'https://businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com'
 
   let html = ''
 
   switch (template) {
     case 'welcome':
       html = generateWelcomeEmailHtml(firstName, activationUrl, {
-        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
-        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`
+        siteUrl: SITE_URL,
+        logoUrl: `${SITE_URL}/images/BASA-LOGO.png`
       })
       break
     case 'password-reset':
       html = generatePasswordResetEmailHtml(firstName, resetUrl, {
-        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
-        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`
+        siteUrl: SITE_URL,
+        logoUrl: `${SITE_URL}/images/BASA-LOGO.png`
       })
       break
     case 'event-invitation':
@@ -42,13 +43,13 @@ export async function GET(request: NextRequest) {
           { name: 'John Smith', title: 'CEO, Tech Solutions Inc.' },
           { name: 'Sarah Johnson', title: 'Director of Business Development' }
         ],
-        rsvpUrl: searchParams.get('rsvpUrl') || 'https://app.businessassociationsa.com/events/mixer/rsvp',
-        calendarUrl: searchParams.get('calendarUrl') || 'https://app.businessassociationsa.com/events/mixer/calendar',
-        shareUrl: searchParams.get('shareUrl') || 'https://app.businessassociationsa.com/events/mixer'
+        rsvpUrl: searchParams.get('rsvpUrl') || 'https://businessassociationsa.com/events/mixer/rsvp',
+        calendarUrl: searchParams.get('calendarUrl') || 'https://businessassociationsa.com/events/mixer/calendar',
+        shareUrl: searchParams.get('shareUrl') || 'https://businessassociationsa.com/events/mixer'
       }
       html = generateEventInvitationEmailHtml(firstName, eventData, {
-        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
-        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`
+        siteUrl: SITE_URL,
+        logoUrl: `${SITE_URL}/images/BASA-LOGO.png`
       })
       break
     case 'contact-form':
@@ -64,8 +65,8 @@ export async function GET(request: NextRequest) {
         membershipInterest: searchParams.get('membershipInterest') === 'true'
       }
       html = generateContactFormEmailHtml(contactData, {
-        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
-        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`
+        siteUrl: SITE_URL,
+        logoUrl: `${SITE_URL}/images/BASA-LOGO.png`
       })
       break
     case 'payment-receipt':
@@ -91,8 +92,8 @@ export async function GET(request: NextRequest) {
         paymentDate: searchParams.get('paymentDate') || new Date().toISOString()
       }
       html = generatePaymentReceiptEmailHtml(firstName, paymentData, {
-        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
-        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`
+        siteUrl: SITE_URL,
+        logoUrl: `${SITE_URL}/images/BASA-LOGO.png`
       })
       break;
     default:

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { SITE_URL } from '@/lib/site-url'
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { SessionProvider } from "@/components/providers/session-provider"
@@ -31,7 +32,7 @@ export function generateMetadata(): Metadata {
       address: false,
       telephone: false,
     },
-    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.businessassociationsa.com'),
+    metadataBase: new URL(SITE_URL),
     alternates: {
       canonical: '/',
     },
