@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { SITE_URL } from '@/lib/site-url'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/db'
 import { sendAdminCreatedWelcomeEmail, sendPaymentReceiptEmail } from '@/lib/basa-emails'
@@ -175,11 +176,7 @@ export async function POST(request: NextRequest) {
     // Send welcome email with generated password
     try {
       // Get the correct site URL based on environment
-      const siteUrl = process.env.NEXTAUTH_URL || 
-                     process.env.NEXT_PUBLIC_APP_URL || 
-                     (process.env.NODE_ENV === 'production' 
-                       ? 'https://app.businessassociationsa.com' 
-                       : 'https://dev.businessassociationsa.com')
+      const siteUrl = SITE_URL
       const activationUrl = `${siteUrl}/auth/verify-email?token=${verificationToken}&email=${user.email}`
       
       await sendAdminCreatedWelcomeEmail(
@@ -203,11 +200,7 @@ export async function POST(request: NextRequest) {
       try {
         const membershipTier = MEMBERSHIP_TIERS[memberData.membershipTier as keyof typeof MEMBERSHIP_TIERS]
         // Get the correct site URL based on environment
-        const siteUrl = process.env.NEXTAUTH_URL || 
-                       process.env.NEXT_PUBLIC_APP_URL || 
-                       (process.env.NODE_ENV === 'production' 
-                         ? 'https://app.businessassociationsa.com' 
-                         : 'https://dev.businessassociationsa.com')
+        const siteUrl = SITE_URL
         
         await sendPaymentReceiptEmail(
           user.email!,

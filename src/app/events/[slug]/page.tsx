@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { slugCandidates } from '@/lib/slug'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { Button } from '@/components/ui/button'
@@ -21,7 +22,7 @@ import { sanitizeRichText, looksLikeHtml, toPlainText } from '@/lib/sanitize-htm
 async function getEvent(slug: string) {
   return prisma.event.findFirst({
     // Draft and cancelled events must not be publicly reachable by guessing a slug.
-    where: { slug, status: 'PUBLISHED' },
+    where: { slug: { in: slugCandidates(slug) }, status: 'PUBLISHED' },
     include: {
       organizer: true,
       venue: true,

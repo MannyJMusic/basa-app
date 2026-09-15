@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { SITE_URL } from '@/lib/site-url'
 import { z } from 'zod'
 import { sendContactFormEmail } from '@/lib/basa-emails'
 
@@ -32,8 +33,8 @@ export async function POST(request: NextRequest) {
       'info@businessassociationsa.com',
       validatedData,
       {
-        siteUrl: process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com',
-        logoUrl: `${process.env.NEXTAUTH_URL || 'https://app.businessassociationsa.com'}/images/BASA-LOGO.png`,
+        siteUrl: SITE_URL,
+        logoUrl: `${SITE_URL}/images/BASA-LOGO.png`,
         ipAddress,
         userAgent,
         referrer

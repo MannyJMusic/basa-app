@@ -1,4 +1,5 @@
 import formData from 'form-data'
+import { SITE_URL } from '@/lib/site-url'
 import Mailgun from 'mailgun.js'
 import * as Sentry from '@sentry/nextjs'
 
@@ -40,7 +41,7 @@ function getFromName(): string {
 }
 
 function getSiteUrl(): string {
-  return process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'development' ? 'https://dev.businessassociationsa.com' : 'https://app.businessassociationsa.com')
+  return SITE_URL
 }
 
 // Base email sending function
