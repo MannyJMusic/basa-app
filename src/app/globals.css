@@ -772,6 +772,15 @@
   margin: 1.75rem 0 0.75rem;
 }
 
+/* The house-style tagline. Sits inside a card under the page's own title, so it is
+   a heading in weight and colour but not much bigger than an h2. */
+.rich-text h1 {
+  color: #111827;
+  font-weight: 700;
+  line-height: 1.3;
+  font-size: 1.5rem;
+  margin: 1.5rem 0 0.75rem;
+}
 .rich-text h2 { font-size: 1.375rem; }
 .rich-text h3 { font-size: 1.175rem; }
 .rich-text h4,
@@ -831,3 +840,14 @@
   padding: 0.5rem 0.75rem;
   text-align: left;
 }
+
+/* The admin editor (src/components/admin/rich-text-editor.tsx) reuses .rich-text so
+   the admin sees what a visitor sees; these are the editor-only extras. */
+.rich-text-editor .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.rich-text-editor a { cursor: text; }

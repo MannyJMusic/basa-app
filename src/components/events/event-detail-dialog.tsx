@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { RichTextEditor } from '@/components/admin/rich-text-editor'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -239,12 +240,11 @@ export function EventDetailDialog({
 
                 <div>
                   <Label htmlFor="description">Description *</Label>
-                  <Textarea
+                  <RichTextEditor
                     id="description"
                     value={formData.description || ''}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Enter event description"
-                    rows={4}
+                    onChange={(html) => setFormData(prev => ({ ...prev, description: html }))}
+                    minHeight={220}
                   />
                 </div>
 
