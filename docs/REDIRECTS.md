@@ -104,16 +104,20 @@ the same disposition. `pnpm migrate:urls --nginx <file>` emits every one of them
 pnpm migrate:urls --nginx redirects.conf
 ```
 
-The file holds two `map` blocks, which are only valid in the **http** context - on CloudPanel,
-`/etc/nginx/conf.d/` is included there already. Then add two lines inside the `server` block
-for `businessassociationsa.com`:
+The file is one exact-match `location` per URL (each with and without its trailing slash),
+and it is included **inside** the `server` block for `businessassociationsa.com`, after the
+host the redirects point at has been set:
 
 ```nginx
-if ($basa_gone)            { return 410; }
-if ($basa_redirect != "")  { return 301 $basa_redirect; }
+set $basa_target https://app.businessassociationsa.com;   # "" once the app itself is on the apex
+include /etc/nginx/basa-redirects.conf;
 ```
 
-Lookup is a hash, not thousands of sequential regex tests.
+The cutover kit in `nginx/cutover/` does exactly this. It was two `map` blocks at first, but
+`map` is http-context only and CloudPanel's nginx.conf already declares one, which fixes the
+hash sizes before these 147-byte keys can ask for bigger ones.
+
+Exact locations are a sorted array searched by binary search, not thousands of regex tests.
 
 Keys are stored **decoded**, because nginx matches `$uri` after percent-decoding it - 19 of
 these slugs contain encoded emoji and would silently never match otherwise. Destinations keep
