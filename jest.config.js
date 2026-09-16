@@ -24,6 +24,7 @@ const customJestConfig = {
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
     '<rootDir>/cypress/',
+    '<rootDir>/e2e/',
     '<rootDir>/src/__tests__/integration/',
     '<rootDir>/src/__tests__/helpers/',
   ],

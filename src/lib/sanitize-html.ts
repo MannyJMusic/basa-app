@@ -17,8 +17,10 @@ const OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: [
     'p', 'br', 'hr',
     'strong', 'b', 'em', 'i', 'u', 's', 'sup', 'sub', 'mark',
-    // The WordPress house style opens with an <h1> tagline; the editor emits it too.
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    // No h1 here on purpose: transformTags below turns a description's <h1> tagline
+    // (house style, and what the admin editor emits) into an <h2>, because the page
+    // title is the only h1 on an event page.
+    'h2', 'h3', 'h4', 'h5', 'h6',
     'ul', 'ol', 'li',
     'blockquote', 'pre', 'code',
     'a', 'img', 'figure', 'figcaption',

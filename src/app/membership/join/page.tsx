@@ -680,6 +680,7 @@ export default function JoinPage() {
                                           updateQuantity(tier.id, quantity - 1)
                                         }}
                                         disabled={quantity === 0}
+                                        aria-label={`Remove one ${tier.name}`}
                                         className="hover:bg-red-50 hover:border-red-300 w-8 h-8 p-0"
                                       >
                                         <Minus className="w-3 h-3" />
@@ -694,6 +695,7 @@ export default function JoinPage() {
                                           testButtonClick(tier.id, 'plus')
                                           updateQuantity(tier.id, quantity + 1)
                                         }}
+                                        aria-label={`Add one ${tier.name}`}
                                         className="hover:bg-green-50 hover:border-green-300 w-8 h-8 p-0"
                                       >
                                         <Plus className="w-3 h-3" />
@@ -773,6 +775,7 @@ export default function JoinPage() {
                                           updateQuantity(tier.id, quantity - 1)
                                         }}
                                         disabled={quantity === 0}
+                                        aria-label={`Remove one ${tier.name}`}
                                         className="hover:bg-red-50 hover:border-red-300 w-8 h-8 p-0"
                                       >
                                         <Minus className="w-3 h-3" />
@@ -787,6 +790,7 @@ export default function JoinPage() {
                                           testButtonClick(tier.id, 'plus')
                                           updateQuantity(tier.id, quantity + 1)
                                         }}
+                                        aria-label={`Add one ${tier.name}`}
                                         className="hover:bg-green-50 hover:border-green-300 w-8 h-8 p-0"
                                       >
                                         <Plus className="w-3 h-3" />

@@ -68,9 +68,95 @@ jobs:
           NEXT_PUBLIC_APP_URL: https://app.businessassociationsa.com
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
+  # The money path in a real browser against a real build (#65): a guest buys a
+  # ticket, a visitor joins as a member, a declined card confirms nothing. Runs on
+  # every PR and every push to main, and the deploy waits for it: a broken checkout
+  # must not reach production.
+  e2e:
+    name: End-to-end (money path)
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: basa
+          POSTGRES_PASSWORD: basa
+          POSTGRES_DB: basa_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U basa -d basa_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      E2E_DATABASE_URL: postgresql://basa:basa@localhost:5432/basa_e2e
+      DATABASE_URL: postgresql://basa:basa@localhost:5432/basa_e2e
+      NEXTAUTH_URL: http://localhost:3100
+      NEXT_PUBLIC_APP_URL: http://localhost:3100
+      NEXTAUTH_SECRET: e2e-only-not-a-real-secret-0123456789abcdef
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_TEST_PUBLISHABLE_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_TEST_WEBHOOK_SECRET }}
+      # No mail leaves CI.
+      MAILGUN_API_KEY: ''
+      SMTP_HOST: ''
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      # A production build, so the specs exercise what ships. NEXT_PUBLIC_* values
+      # are baked in here, which is why the Stripe test publishable key is set above.
+      - name: Build application
+        run: pnpm exec next build
+
+      - name: Run end-to-end tests
+        run: pnpm exec playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
   deploy:
     name: Deploy to Production
-    needs: build-and-test
+    needs: [build-and-test, e2e]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
