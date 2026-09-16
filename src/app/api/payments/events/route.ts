@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { newTicketToken } from '@/lib/tickets'
 import { z } from 'zod'
 import * as Sentry from '@sentry/nextjs'
 import { stripe } from '@/lib/stripe'
@@ -103,6 +104,7 @@ export async function POST(request: NextRequest) {
             totalAmount: order.total,
             status: 'PENDING',
             paymentIntentId: paymentIntent.id,
+            ticketToken: newTicketToken(),
             attendees: attendees.length ? attendees : undefined,
           },
         })

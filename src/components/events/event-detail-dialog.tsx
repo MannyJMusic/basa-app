@@ -608,10 +608,18 @@ export function EventDetailDialog({
           </TabsContent>
 
           <TabsContent value="registrations" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Registrations ({event.registrations.length})</h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-lg font-semibold">
+                Registrations ({event.registrations.length})
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  {event.registrations.filter(r => r.status === 'CONFIRMED').length} confirmed · {event.registrations.filter(r => r.checkedInAt).length} checked in
+                </span>
+              </h3>
+              <Button asChild variant="outline" size="sm">
+                <a href={`/api/events/${event.id}/registrations/export`}>Export CSV</a>
+              </Button>
             </div>
-            
+
             {event.registrations.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No registrations yet
@@ -619,20 +627,7 @@ export function EventDetailDialog({
             ) : (
               <div className="space-y-2">
                 {event.registrations.map((registration) => (
-                  <div key={registration.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Registration #{registration.id.slice(-8)}</p>
-                        <p className="text-sm text-gray-600">Status: {registration.status}</p>
-                      </div>
-                    </div>
-                    <Badge className={registration.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                      {registration.status}
-                    </Badge>
-                  </div>
+                  <RegistrationRow key={registration.id} registration={registration} />
                 ))}
               </div>
             )}
@@ -692,3 +687,63 @@ export function EventDetailDialog({
     </Dialog>
   )
 } 
+
+/** One registration in the admin list: who, what, paid or not, and a check-in toggle (#159). */
+function RegistrationRow({ registration }: { registration: Event['registrations'][number] }) {
+  const [checkedInAt, setCheckedInAt] = useState<string | null>(registration.checkedInAt ?? null)
+  const [busy, setBusy] = useState(false)
+  const confirmed = registration.status === 'CONFIRMED'
+
+  const toggle = async () => {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/admin/registrations/${registration.id}/check-in`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ checkedIn: !checkedInAt }),
+      })
+      if (res.ok) {
+        const json = await res.json()
+        setCheckedInAt(json.checkedInAt)
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 p-3 border rounded-lg">
+      <div className="flex items-center space-x-3 min-w-0">
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${checkedInAt ? 'bg-green-100' : 'bg-blue-100'}`}>
+          <User className={`w-4 h-4 ${checkedInAt ? 'text-green-700' : 'text-blue-600'}`} />
+        </div>
+        <div className="min-w-0">
+          <p className="font-medium truncate">{registration.name ?? `Registration #${registration.id.slice(-8)}`}</p>
+          <p className="text-sm text-gray-600 truncate">
+            {registration.email}{registration.company ? ` · ${registration.company}` : ''}
+            {registration.ticketCount ? ` · ${registration.ticketCount} ticket${registration.ticketCount === 1 ? '' : 's'}` : ''}
+            {registration.totalAmount !== undefined ? ` · $${Number(registration.totalAmount).toFixed(2)}` : ''}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge className={confirmed ? 'bg-green-100 text-green-800' : registration.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-700'}>
+          {registration.status}
+        </Badge>
+        {registration.ticketToken && (
+          <Button asChild variant="ghost" size="sm">
+            <a href={`/tickets/${registration.ticketToken}`} target="_blank" rel="noreferrer">Ticket</a>
+          </Button>
+        )}
+        <Button
+          type="button"
+          size="sm"
+          variant={checkedInAt ? 'secondary' : 'default'}
+          disabled={busy || !confirmed}
+          title={confirmed ? '' : 'Only confirmed registrations can be checked in'}
+          onClick={toggle}
+        >
+          {checkedInAt ? 'Checked in ✓' : 'Check in'}
+        </Button>
+      </div>
+    </div>
+  )
+}
