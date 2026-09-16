@@ -351,6 +351,12 @@ model EventRegistration {
   totalAmount     Decimal                 @db.Decimal(10, 2)
   status          RegistrationStatus      @default(PENDING)
   paymentIntentId String?                 @unique
+  /// Random token that identifies this registration on its ticket page and in its
+  /// QR code. Unguessable; the only credential a guest has for their ticket.
+  ticketToken     String?                 @unique
+  /// Set when the door marks the registration as arrived (QR scan or manual).
+  checkedInAt     DateTime?
+  checkedInBy     String?
   /// Per-ticket attendee details, as [{ name, email? }]. The columns above are the
   /// buyer; this is who is actually coming. Collected by the registration form and
   /// previously discarded.

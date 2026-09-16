@@ -1,4 +1,6 @@
 import * as Sentry from '@sentry/nextjs'
+import { loadTicket } from '@/lib/tickets'
+import { sendEventTicketEmail } from '@/lib/basa-emails'
 import { prisma } from '@/lib/db'
 import {
   sendWelcomeEmail,
@@ -284,7 +286,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
  * actually arrived. This is the only place a registration becomes CONFIRMED - the
  * payment route deliberately writes PENDING, because it runs before the card is charged.
  */
-async function confirmEventRegistration(paymentIntent: any) {
+export async function confirmEventRegistration(paymentIntent: any) {
   // Looked up by PaymentIntent, which is unique on EventRegistration. Stripe
   // redelivers webhooks, so this has to be safe to run repeatedly.
   const registration = await prisma.eventRegistration.findUnique({
@@ -334,6 +336,21 @@ async function confirmEventRegistration(paymentIntent: any) {
     registrationId: registration.id,
     eventId: registration.eventId,
   })
+
+  // The buyer's confirmation, with the ticket link and QR code (#159). A failed
+  // send must never fail the webhook: the registration is confirmed regardless,
+  // and the ticket page exists whether or not the email lands.
+  try {
+    const ticket = await loadTicket((await prisma.eventRegistration.findUnique({ where: { id: registration.id }, select: { ticketToken: true } }))?.ticketToken ?? '')
+    if (ticket?.ticketToken) {
+      await sendEventTicketEmail(ticket)
+    } else {
+      logger.warn('Confirmed registration has no ticket token; no confirmation email sent', { registrationId: registration.id })
+    }
+  } catch (error) {
+    Sentry.captureException(error)
+    logger.error('Failed to send the event ticket email', { registrationId: registration.id })
+  }
 }
 
 /**

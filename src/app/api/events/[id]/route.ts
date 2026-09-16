@@ -178,7 +178,16 @@ export async function PUT(
           select: {
             id: true,
             status: true,
+            name: true,
+            email: true,
+            company: true,
+            ticketCount: true,
+            totalAmount: true,
+            checkedInAt: true,
+            ticketToken: true,
+            createdAt: true,
           },
+          orderBy: { createdAt: 'desc' },
         },
         speakers: {
           select: {
