@@ -156,7 +156,7 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
       <Elements stripe={stripePromise} options={{ clientSecret }}>
         <StripeForm
           clientSecret={clientSecret}
-          amount={serverTotalCents / 100}
+          amount={serverTotalCents} // StripeForm takes cents; this was passed dollars and showed "Pay $0.45" for a $45 ticket
           description={`${totalTickets} ticket${totalTickets === 1 ? '' : 's'} — ${eventTitle}`}
           type="event"
           onSuccess={() => {

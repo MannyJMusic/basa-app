@@ -107,3 +107,23 @@ describe('Database Integration Tests', () => {
 - **Container won't start**: confirm Docker Desktop (or your Docker daemon) is running; check disk space.
 - **Database connection errors in integration tests**: run `pnpm db:generate` to refresh the Prisma client, and confirm no other process is holding port 5432.
 - **Flaky failures**: look for state shared between tests — integration tests should use `withEmptyTestDatabase` when order-independence matters.
+
+## End-to-end: the money path (Playwright)
+
+`e2e/` holds browser tests for the two flows that take money (#65): a guest buying an event ticket and a visitor joining as a member, plus a declined card that must confirm nothing. They run a real Next server against a real Postgres of their own, pay through Stripe **test mode** in the real PaymentElement, and then deliver the webhook Stripe would send, signed with the app's webhook secret, so the seat or membership is confirmed the way it is in production.
+
+```bash
+createdb basa_e2e                 # once; the run resets it every time
+pnpm test:e2e                     # headless, dev server on :3100
+pnpm test:e2e:ui                  # Playwright UI
+pnpm exec playwright test e2e/event-registration.spec.ts   # one spec
+```
+
+What it needs from `.env` / `.env.local`: `DATABASE_URL` (its database name is swapped for `basa_e2e`, or set `E2E_DATABASE_URL`), and Stripe **test** keys: `sk_test_`/`rk_test_`, `pk_test_`, and the `whsec_` the app is configured with. `e2e/global-setup.ts` refuses live keys and refuses a database whose name lacks `e2e` or `test`.
+
+In CI the `End-to-end (money path)` job builds the app, starts `next start`, and runs the same specs against a Postgres service container; the deploy waits for it. The Stripe test keys come from the `STRIPE_TEST_*` repository secrets. On failure the Playwright report and traces are uploaded as an artifact.
+
+Two things learned building it:
+
+- Node 22+ can expose an experimental `localStorage` global on the server whose methods are undefined, so `typeof localStorage !== 'undefined'` checks run during SSR and the page 500s. The test server runs with `--no-experimental-webstorage`; production runs in Docker without it.
+- The ticket form passed dollars to `StripeForm`, which takes cents, so the button read "Pay $0.45" for a $45 ticket while Stripe charged $45. The first run of the spec found it.
