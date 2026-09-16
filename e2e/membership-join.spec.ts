@@ -13,11 +13,9 @@ test.describe('Membership join', () => {
     const email = `e2e-member-${stamp}@example.com`
 
     await page.goto('/membership/join')
-    // The cart opens with an Associate Member already in it; this run buys one Meeting Member only.
-    const removeAssociate = page.getByRole('button', { name: 'Remove one Associate Member' })
-    while (await removeAssociate.isEnabled().catch(() => false)) {
-      await removeAssociate.click()
-    }
+    // The cart must start empty: nothing pre-selected, and no way forward until something is.
+    await expect(page.getByRole('button', { name: 'Next', exact: true }).last()).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Remove one Associate Member' })).toBeDisabled()
     await page.getByRole('button', { name: 'Add one Meeting Member' }).first().click()
     await page.getByRole('button', { name: 'Next', exact: true }).last().click()
 
