@@ -97,6 +97,10 @@ Automated deployment via `.github/workflows/deploy.yml`:
 - `SERVER_HOST` - Server IP (31.97.214.26)
 - `SERVER_USER` - SSH user (root)
 
+## Feature gates
+
+`src/lib/feature-flags.ts`, read from the server environment at request time and passed to client components as props. `MEMBERSHIP_SALES_ENABLED` (off unless exactly `true`) controls whether memberships can be bought or renewed online: off means the join and payment pages show how to reach the office, tier listings show no prices or buy buttons, the dashboard shows no upgrade offers, renewal emails point at the office, and `POST /api/payments/membership` answers 403. Event tickets are unaffected. The e2e suite runs with it on so the join wizard stays tested.
+
 ## Architecture
 
 ### Directory Structure

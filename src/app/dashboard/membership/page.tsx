@@ -1,4 +1,6 @@
 import Link from "next/link"
+import { MEMBERSHIP_SALES_ENABLED } from "@/lib/feature-flags"
+import { MembershipOfficeNotice } from "@/components/membership/MembershipOfficeNotice"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -417,57 +419,61 @@ export default function MembershipPage() {
         </div>
       </div>
 
-      {/* Upgrade Options */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Zap className="w-5 h-5 text-yellow-600" />
-            <span>Upgrade Your Experience</span>
-          </CardTitle>
-          <CardDescription>
-            Unlock additional benefits and features with our premium tiers
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-4 border rounded-lg">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Crown className="w-6 h-6 text-blue-600" />
+      {/* Upgrade Options: only while online sales are on; otherwise how to reach the office */}
+      {MEMBERSHIP_SALES_ENABLED ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Zap className="w-5 h-5 text-yellow-600" />
+              <span>Upgrade Your Experience</span>
+            </CardTitle>
+            <CardDescription>
+              Unlock additional benefits and features with our premium tiers
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center p-4 border rounded-lg">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Crown className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="font-semibold mb-2">Executive Membership</h3>
+                <p className="text-sm text-gray-600 mb-3">Enhanced networking and exclusive events</p>
+                <p className="text-2xl font-bold text-blue-600 mb-3">$499/year</p>
+                <Button variant="outline" size="sm">
+                  Learn More
+                </Button>
               </div>
-              <h3 className="font-semibold mb-2">Executive Membership</h3>
-              <p className="text-sm text-gray-600 mb-3">Enhanced networking and exclusive events</p>
-              <p className="text-2xl font-bold text-blue-600 mb-3">$499/year</p>
-              <Button variant="outline" size="sm">
-                Learn More
-              </Button>
-            </div>
-            
-            <div className="text-center p-4 border rounded-lg bg-yellow-50 border-yellow-200">
-              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Award className="w-6 h-6 text-yellow-600" />
+              
+              <div className="text-center p-4 border rounded-lg bg-yellow-50 border-yellow-200">
+                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Award className="w-6 h-6 text-yellow-600" />
+                </div>
+                <h3 className="font-semibold mb-2">Founder's Circle</h3>
+                <p className="text-sm text-gray-600 mb-3">VIP access and leadership opportunities</p>
+                <p className="text-2xl font-bold text-yellow-600 mb-3">$999/year</p>
+                <Button size="sm">
+                  Upgrade Now
+                </Button>
               </div>
-              <h3 className="font-semibold mb-2">Founder's Circle</h3>
-              <p className="text-sm text-gray-600 mb-3">VIP access and leadership opportunities</p>
-              <p className="text-2xl font-bold text-yellow-600 mb-3">$999/year</p>
-              <Button size="sm">
-                Upgrade Now
-              </Button>
-            </div>
-            
-            <div className="text-center p-4 border rounded-lg">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Heart className="w-6 h-6 text-purple-600" />
+              
+              <div className="text-center p-4 border rounded-lg">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Heart className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="font-semibold mb-2">Lifetime Membership</h3>
+                <p className="text-sm text-gray-600 mb-3">One-time payment for lifetime access</p>
+                <p className="text-2xl font-bold text-purple-600 mb-3">$2,999</p>
+                <Button variant="outline" size="sm">
+                  Learn More
+                </Button>
               </div>
-              <h3 className="font-semibold mb-2">Lifetime Membership</h3>
-              <p className="text-sm text-gray-600 mb-3">One-time payment for lifetime access</p>
-              <p className="text-2xl font-bold text-purple-600 mb-3">$2,999</p>
-              <Button variant="outline" size="sm">
-                Learn More
-              </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : (
+        <MembershipOfficeNotice variant="card" intent="upgrade" />
+      )}
     </div>
   )
 } 

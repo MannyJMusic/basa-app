@@ -64,6 +64,8 @@ export default defineConfig({
       DATABASE_URL: e2eDatabaseUrl(),
       NEXTAUTH_URL: BASE_URL,
       NEXT_PUBLIC_APP_URL: BASE_URL,
+      // The membership spec exercises the join wizard, which is gated in production.
+      MEMBERSHIP_SALES_ENABLED: 'true',
       // Email must never leave a test run.
       MAILGUN_API_KEY: '',
       SMTP_HOST: '',
