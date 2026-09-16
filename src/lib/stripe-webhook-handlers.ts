@@ -286,7 +286,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
  * actually arrived. This is the only place a registration becomes CONFIRMED - the
  * payment route deliberately writes PENDING, because it runs before the card is charged.
  */
-async function confirmEventRegistration(paymentIntent: any) {
+export async function confirmEventRegistration(paymentIntent: any) {
   // Looked up by PaymentIntent, which is unique on EventRegistration. Stripe
   // redelivers webhooks, so this has to be safe to run repeatedly.
   const registration = await prisma.eventRegistration.findUnique({
