@@ -1,5 +1,6 @@
 import formData from 'form-data'
 import { SITE_URL } from '@/lib/site-url'
+import { MEMBERSHIP_SALES_ENABLED, OFFICE_CONTACT } from '@/lib/feature-flags'
 import Mailgun from 'mailgun.js'
 import * as Sentry from '@sentry/nextjs'
 
@@ -2479,14 +2480,18 @@ export function generateMembershipRenewalReminderEmailHtml(
     accent: '#FFD700',
     siteUrl,
     logoUrl,
-    ctaLabel: 'Renew my membership',
-    ctaUrl: `${siteUrl}/membership/join`,
+    // While online sales are off, the button reaches the office instead of a wizard that would only say the same.
+    ctaLabel: MEMBERSHIP_SALES_ENABLED ? 'Renew my membership' : `Email the office to renew`,
+    ctaUrl: MEMBERSHIP_SALES_ENABLED ? `${siteUrl}/membership/join` : `mailto:${OFFICE_CONTACT.email}?subject=BASA%20membership%20renewal`,
     bodyHtml: `
               <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${escapeHtml(firstName)},</p>
               <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
                 Your BASA membership ends on <strong style="color:#1B365D;">${formatRenewalDate(renewalDate)}</strong>.
                 Renewing keeps your member rate on every event, your place in the member directory, and your chapter membership running without a gap.
-              </p>
+              </p>${MEMBERSHIP_SALES_ENABLED ? '' : `
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
+                Renewals are handled by the BASA office for now: call ${OFFICE_CONTACT.name} at <strong>${OFFICE_CONTACT.phone}</strong> or email <a href="mailto:${OFFICE_CONTACT.email}" style="color:#1B365D;">${OFFICE_CONTACT.email}</a>. Digital membership purchase and account management are coming soon.
+              </p>`}
               <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
                 There is no automatic charge - BASA memberships are renewed by hand each year, so nothing happens unless you renew.
               </p>`,
@@ -2508,8 +2513,8 @@ export function generateMembershipExpiredEmailHtml(
     accent: '#17A2B8',
     siteUrl,
     logoUrl,
-    ctaLabel: 'Rejoin BASA',
-    ctaUrl: `${siteUrl}/membership/join`,
+    ctaLabel: MEMBERSHIP_SALES_ENABLED ? 'Rejoin BASA' : 'Email the office to rejoin',
+    ctaUrl: MEMBERSHIP_SALES_ENABLED ? `${siteUrl}/membership/join` : `mailto:${OFFICE_CONTACT.email}?subject=BASA%20membership`,
     bodyHtml: `
               <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${escapeHtml(firstName)},</p>
               <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
@@ -2518,7 +2523,7 @@ export function generateMembershipExpiredEmailHtml(
               </p>
               <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
                 Rejoining takes a couple of minutes and puts everything back as it was.
-                If you meant to renew and something got in the way, reply to this email and we will sort it out.
+                If you meant to renew and something got in the way, reply to this email and we will sort it out.${MEMBERSHIP_SALES_ENABLED ? '' : ` You can also call ${OFFICE_CONTACT.name} at <strong>${OFFICE_CONTACT.phone}</strong> or email <a href="mailto:${OFFICE_CONTACT.email}" style="color:#1B365D;">${OFFICE_CONTACT.email}</a>; memberships are handled by the office for now.`}
               </p>`,
   })
 }

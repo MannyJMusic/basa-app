@@ -96,11 +96,13 @@ const groups = [
   { label: "Resource Memberships", type: "Resource", indices: [3, 4, 5] }
 ];
 
-const ComparisonTable = () => {
+const ComparisonTable = ({ salesEnabled = true }: { salesEnabled?: boolean }) => {
+  // Prices only while memberships can be bought online; otherwise the office handles them.
+  const visibleRows = salesEnabled ? allBenefits : allBenefits.filter(r => r.label !== 'Annual Price')
   const [group, setGroup] = useState(0); // 0: Full, 1: Resource
   const { indices } = groups[group];
   const tiers = indices.map(i => allTiers[i]);
-  const benefits = allBenefits.map(b => ({
+  const benefits = visibleRows.map(b => ({
     ...b,
     values: indices.map(i => b.values[i]),
     highlight: b.highlight !== undefined && indices.includes(b.highlight) ? indices.indexOf(b.highlight) : undefined
@@ -134,7 +136,7 @@ const ComparisonTable = () => {
             {tiers.map((tier, idx) => (
               <div key={tier.name} className="min-w-[260px] max-w-[320px] bg-gray-50 rounded-xl shadow-lg p-5 flex-shrink-0 border border-gray-200">
                 <div className={`text-lg font-bold mb-1 ${tier.color}`}>{tier.name}</div>
-                <div className="text-2xl font-bold mb-2">{tier.price}</div>
+                {salesEnabled && <div className="text-2xl font-bold mb-2">{tier.price}</div>}
                 <ul className="divide-y divide-gray-100">
                   {benefits.map((benefit, bidx) => (
                     <li key={benefit.label} className="py-2 flex items-center justify-between text-sm">

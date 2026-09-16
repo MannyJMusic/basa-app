@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { MEMBERSHIP_SALES_ENABLED, OFFICE_CONTACT } from '@/lib/feature-flags'
 import { auth } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/db'
@@ -40,6 +41,12 @@ interface PaymentRequest {
 }
 
 export async function POST(request: NextRequest) {
+  if (!MEMBERSHIP_SALES_ENABLED) {
+    return NextResponse.json(
+      { error: `Online membership purchase is not available yet. Call ${OFFICE_CONTACT.name} at ${OFFICE_CONTACT.phone} or email ${OFFICE_CONTACT.email}.` },
+      { status: 403 }
+    )
+  }
   const startTime = Date.now()
   try {
     

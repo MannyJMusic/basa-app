@@ -1,5 +1,7 @@
 import React from "react";
 import Link from "next/link";
+import { MEMBERSHIP_SALES_ENABLED } from "@/lib/feature-flags";
+import { MembershipOfficeNotice } from "@/components/membership/MembershipOfficeNotice";
 import { MEMBERSHIP_TIERS, formatTierPrice } from "@/lib/membership-tiers";
 
 const resources = [
@@ -85,7 +87,7 @@ const ResourceMemberships = () => {
             {/* Name */}
             <div className="text-2xl font-bold mb-2 text-white text-center">{res.name}</div>
             {/* Pricing */}
-            <div className={`text-4xl font-bold mb-1 ${res.price === 'Included' ? 'text-red-400' : 'text-white'}`}>{res.price}</div>
+            {MEMBERSHIP_SALES_ENABLED && (<div className={`text-4xl font-bold mb-1 ${res.price === 'Included' ? 'text-red-400' : 'text-white'}`}>{res.price}</div>)}
             <div className="text-gray-200 mb-4">{res.priceNote}</div>
             {/* Benefits */}
             <ul className="space-y-3 mb-8 text-gray-100 text-sm text-left max-w-xs mx-auto">
@@ -97,9 +99,9 @@ const ResourceMemberships = () => {
               ))}
             </ul>
             {/* CTA */}
-            <Link href={`/membership/join?tier=${res.name.toLowerCase().replace(/\s/g, '-')}`} className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors shadow text-center block mt-auto ${res.ctaColor} focus:ring-2 focus:ring-offset-2 focus:ring-white`}>
+            {MEMBERSHIP_SALES_ENABLED ? (<Link href={`/membership/join?tier=${res.name.toLowerCase().replace(/\s/g, '-')}`} className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors shadow text-center block mt-auto ${res.ctaColor} focus:ring-2 focus:ring-offset-2 focus:ring-white`}>
               {res.cta}
-            </Link>
+            </Link>) : (<MembershipOfficeNotice variant="inline" />)}
           </div>
         ))}
       </div>
