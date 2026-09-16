@@ -212,14 +212,10 @@ interface ContactInfo {
 }
 
 export default function JoinPage() {
-  const [cart, setCart] = useState<CartItem[]>([
-    {
-      tierId: 'associate-member',
-      quantity: 1,
-      price: 245,
-      name: 'Associate Member'
-    }
-  ])
+  // The cart starts empty. It used to open with an Associate Member pre-selected,
+  // so a visitor who added the tier they wanted was billed for two unless they
+  // noticed the summary (owner, 2026-09-15).
+  const [cart, setCart] = useState<CartItem[]>([])
   const [additionalMembers, setAdditionalMembers] = useState<AdditionalMember[]>([])
   const [activeTab, setActiveTab] = useState("chapter")
   const [showAdditionalMembers, setShowAdditionalMembers] = useState(false)
