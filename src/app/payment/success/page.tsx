@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { EventTicketPanel } from '@/components/events/event-ticket-panel'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -512,6 +513,9 @@ export default function PaymentSuccessPage() {
                     </div>
                   </div>
                   {/* Membership Details (collapsible) */}
+                  {isEvent && paymentId && (
+                    <div className="mb-6"><EventTicketPanel paymentId={paymentId} /></div>
+                  )}
                   {isMembership && checkoutData && (
                     <div className="mb-6">
                       <h4 className="font-semibold text-gray-900 flex items-center mb-2">

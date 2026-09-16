@@ -44,6 +44,20 @@ test.describe('Event registration', () => {
     const confirmed = await db().eventRegistration.findUnique({ where: { id: pending!.id } })
     expect(confirmed!.status).toBe('CONFIRMED')
 
+    // The buyer's ticket page exists, is confirmed, carries the QR code, and its
+    // check-in page is behind the admin sign-in.
+    const withToken = await db().eventRegistration.findUnique({ where: { id: pending!.id }, select: { ticketToken: true } })
+    expect(withToken!.ticketToken).toMatch(/^[a-f0-9]{64}$/)
+    await page.goto(`/tickets/${withToken!.ticketToken}`)
+    await expect(page.getByRole('heading', { name: FIXTURE_EVENT.title })).toBeVisible()
+    await expect(page.getByText('Confirmed', { exact: true })).toBeVisible()
+    expect(await page.locator('svg').filter({ has: page.locator('path') }).count()).toBeGreaterThan(0)
+    const qr = await request.get(`${baseURL}/tickets/${withToken!.ticketToken}/qr.png`)
+    expect(qr.status()).toBe(200)
+    expect(qr.headers()['content-type']).toBe('image/png')
+    const gated = await request.get(`${baseURL}/admin/check-in/${withToken!.ticketToken}`, { maxRedirects: 0 })
+    expect([302, 307]).toContain(gated.status())
+
     // Redelivery must be harmless.
     const again = await deliverWebhook(request, baseURL!, paymentIntentId, 'payment_intent.succeeded')
     expect(again.status).toBe(200)

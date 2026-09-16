@@ -42,6 +42,14 @@ export interface Event {
   registrations: Array<{
     id: string
     status: string
+    name?: string
+    email?: string
+    company?: string | null
+    ticketCount?: number
+    totalAmount?: number | string
+    checkedInAt?: string | null
+    ticketToken?: string | null
+    createdAt?: string
   }>
   speakers: Array<{
     id: string

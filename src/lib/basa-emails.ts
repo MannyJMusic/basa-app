@@ -2561,3 +2561,65 @@ export async function sendMembershipExpiredEmail(
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Event ticket confirmation (#159)
+// ---------------------------------------------------------------------------
+
+import type { Ticket } from '@/lib/tickets'
+import { formatEventWhen, formatEventWhere, ticketAttendees, ticketUrl } from '@/lib/tickets'
+
+/**
+ * Sent once, from the Stripe webhook, when an event payment succeeds. Carries the
+ * ticket link, the QR code (as a hosted PNG - mail clients drop inline SVG and
+ * data: URIs), what was bought, and the event as an .ics attachment.
+ */
+export async function sendEventTicketEmail(t: Ticket): Promise<void> {
+  const siteUrl = getSiteUrl()
+  const when = formatEventWhen(t.event.startDate, t.event.endDate)
+  const where = formatEventWhere(t.event)
+  const link = ticketUrl(t.ticketToken!)
+  const attendees = ticketAttendees(t)
+  const lines = t.items.map(i => `<tr><td style="padding:4px 0;color:#374151;">${i.quantity} × ${escapeHtml(i.ticketTier.name)}</td><td style="padding:4px 0;text-align:right;color:#374151;">$${(Number(i.unitPrice) * i.quantity).toFixed(2)}</td></tr>`).join('')
+
+  const html = renderNoticeEmail({
+    title: `Your ticket: ${t.event.title}`,
+    preheader: `${when.date}, ${when.time} · ${t.ticketCount} ticket${t.ticketCount === 1 ? '' : 's'}`,
+    heading: `You're registered for ${escapeHtml(t.event.title)}`,
+    accent: '#17A2B8',
+    siteUrl,
+    logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
+    ctaLabel: 'View and print your ticket',
+    ctaUrl: link,
+    bodyHtml: `
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${escapeHtml(t.name.split(' ')[0] || t.name)},</p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Thanks for registering. Here is everything you need for the day.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 14px;font-size:15px;">
+                <tr><td style="padding:4px 0;color:#6b7280;width:90px;">When</td><td style="padding:4px 0;color:#111827;"><strong>${when.date}</strong><br>${when.time}</td></tr>
+                <tr><td style="padding:4px 0;color:#6b7280;">Where</td><td style="padding:4px 0;color:#111827;">${escapeHtml(where)}</td></tr>
+              </table>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 6px;font-size:15px;border-top:1px solid #e5e7eb;padding-top:8px;">
+                ${lines}
+                <tr><td style="padding:6px 0;color:#111827;font-weight:700;border-top:1px solid #e5e7eb;">Total</td><td style="padding:6px 0;text-align:right;color:#111827;font-weight:700;border-top:1px solid #e5e7eb;">$${Number(t.totalAmount).toFixed(2)}</td></tr>
+              </table>
+              ${attendees.length ? `<p style="margin:0 0 14px;font-size:14px;color:#374151;"><strong>Attendees:</strong> ${attendees.map(a => escapeHtml(a.name)).join(', ')}</p>` : ''}
+              <p style="margin:18px 0 6px;font-size:15px;line-height:1.6;color:#374151;">Show this code at the door, or print the ticket from the link below:</p>
+              <p style="margin:0 0 14px;text-align:center;"><a href="${link}"><img src="${link}/qr.png" width="180" height="180" alt="Your ticket QR code" style="display:inline-block;border:1px solid #e5e7eb;border-radius:8px;"></a></p>
+              <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#6b7280;">A calendar file is attached. Questions: reply to this email or call (210) 549-7190.</p>`,
+  })
+
+  // Loaded here rather than at the top: @/lib/ics pulls in sanitize-html, which is
+  // ESM-only and would stop this whole module from loading under jest's CJS transform
+  // (the webhook integration suite imports this file).
+  const { buildCalendar, icsFilename } = await import('@/lib/ics')
+  const ics = buildCalendar([{
+    id: t.event.id, slug: t.event.slug, title: t.event.title, description: t.event.description,
+    startDate: t.event.startDate, endDate: t.event.endDate, location: t.event.location,
+    address: t.event.address, city: t.event.city, state: t.event.state, zipCode: t.event.zipCode,
+    category: t.event.category, status: t.event.status, updatedAt: t.event.updatedAt,
+  }], { origin: siteUrl, calendarName: 'BASA Events' })
+
+  await sendEmail(t.email, `Your ticket: ${t.event.title}`, html, {
+    attachments: [{ filename: icsFilename(t.event.slug), data: Buffer.from(ics, 'utf8'), contentType: 'text/calendar; charset=utf-8; method=PUBLISH' }],
+  })
+}
