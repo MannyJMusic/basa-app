@@ -2568,7 +2568,6 @@ export async function sendMembershipExpiredEmail(
 
 import type { Ticket } from '@/lib/tickets'
 import { formatEventWhen, formatEventWhere, ticketAttendees, ticketUrl } from '@/lib/tickets'
-import { buildCalendar, icsFilename } from '@/lib/ics'
 
 /**
  * Sent once, from the Stripe webhook, when an event payment succeeds. Carries the
@@ -2609,6 +2608,10 @@ export async function sendEventTicketEmail(t: Ticket): Promise<void> {
               <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#6b7280;">A calendar file is attached. Questions: reply to this email or call (210) 549-7190.</p>`,
   })
 
+  // Loaded here rather than at the top: @/lib/ics pulls in sanitize-html, which is
+  // ESM-only and would stop this whole module from loading under jest's CJS transform
+  // (the webhook integration suite imports this file).
+  const { buildCalendar, icsFilename } = await import('@/lib/ics')
   const ics = buildCalendar([{
     id: t.event.id, slug: t.event.slug, title: t.event.title, description: t.event.description,
     startDate: t.event.startDate, endDate: t.event.endDate, location: t.event.location,
