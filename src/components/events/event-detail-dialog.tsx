@@ -32,6 +32,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react'
 import { Event, UpdateEventData } from '@/hooks/use-events'
+import { TicketTiersPanel } from '@/components/events/ticket-tiers-panel'
 import { useMembers } from '@/hooks/use-members'
 
 interface EventDetailDialogProps {
@@ -206,8 +207,9 @@ export function EventDetailDialog({
         )}
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="details">Event Details</TabsTrigger>
+            <TabsTrigger value="tickets">Tickets</TabsTrigger>
             <TabsTrigger value="registrations">Registrations</TabsTrigger>
             <TabsTrigger value="speakers">Speakers</TabsTrigger>
             <TabsTrigger value="sponsors">Sponsors</TabsTrigger>
@@ -605,6 +607,10 @@ export function EventDetailDialog({
                 </div>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="tickets" className="space-y-4">
+            <TicketTiersPanel eventId={event.id} />
           </TabsContent>
 
           <TabsContent value="registrations" className="space-y-4">
