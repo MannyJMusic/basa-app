@@ -1,5 +1,7 @@
 import React from "react";
 import Link from "next/link";
+import { MEMBERSHIP_SALES_ENABLED } from "@/lib/feature-flags";
+import { MembershipOfficeNotice } from "@/components/membership/MembershipOfficeNotice";
 import { MEMBERSHIP_TIERS, formatTierPrice } from "@/lib/membership-tiers";
 
 const tiers = [
@@ -85,7 +87,7 @@ const ChapterMemberships = () => {
             {/* Badge */}
             <div className={`absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-semibold ${tier.badgeColor} shadow`}>{tier.badge}</div>
             {/* Pricing */}
-            <div className="text-4xl font-bold text-gray-900 mb-2 mt-2">{tier.price}</div>
+            {MEMBERSHIP_SALES_ENABLED && <div className="text-4xl font-bold text-gray-900 mb-2 mt-2">{tier.price}</div>}
             <div className="text-gray-500 mb-4">per year</div>
             {/* Benefits */}
             <ul className="space-y-3 mb-8 text-gray-700 text-sm flex-1">
@@ -98,9 +100,9 @@ const ChapterMemberships = () => {
             </ul>
             {/* CTA */}
             <div className="mt-auto pt-2 flex items-end">
-              <Link href={`/membership/join?tier=${tier.name.toLowerCase().replace(/\s/g, '-')}`} className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors shadow text-center block ${tier.ctaColor} text-white focus:ring-2 focus:ring-offset-2`}>
+              {MEMBERSHIP_SALES_ENABLED ? (<Link href={`/membership/join?tier=${tier.name.toLowerCase().replace(/\s/g, '-')}`} className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors shadow text-center block ${tier.ctaColor} text-white focus:ring-2 focus:ring-offset-2`}>
                 {tier.cta}
-              </Link>
+              </Link>) : (<MembershipOfficeNotice variant="inline" />)}
             </div>
           </div>
         ))}
