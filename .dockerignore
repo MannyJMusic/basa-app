@@ -120,7 +120,8 @@ media/
 uploads/
 .claude/
 docs/
-e2e/
+# e2e/ must stay in the context: tsconfig includes **/*.ts and playwright.config.ts
+# imports ./e2e/helpers/env, so excluding it breaks the type-check inside the build.
 test-results/
 playwright-report/
 *.sql
