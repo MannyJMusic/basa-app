@@ -52,8 +52,12 @@ const sentryWebpackPluginOptions = {
   // For all available options, see:
   // https://github.com/getsentry/sentry-webpack-plugin#options
 
-  org: process.env.SENTRY_ORG || "business-association-sa",
-  project: process.env.SENTRY_PROJECT || "javascript-nextjs",
+  org: process.env.SENTRY_ORG || "basa-0f",
+  project: process.env.SENTRY_PROJECT || "basa-v3",
+
+  // Source-map upload. Read from .env.production during the image build on the
+  // host; an empty value means "build without uploading", not a failed build.
+  authToken: process.env.SENTRY_AUTH_TOKEN,
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
