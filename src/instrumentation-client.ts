@@ -6,7 +6,10 @@ import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
   _experiments: { enableLogs: true },
-  dsn: "https://1e595e01ef451af7d0e1d6d920dadcd9@o4509550898905088.ingest.us.sentry.io/4509550900150272",
+  // Inlined at build time. The production image is built on the host from a
+  // checkout that includes .env.production, so this is set there; CI builds
+  // leave it empty and the browser SDK simply stays disabled.
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // Add optional integrations for additional features
   integrations: [
