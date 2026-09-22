@@ -68,11 +68,12 @@ export async function POST(request: NextRequest) {
     const fileContent = await file.text()
     
     // Parse CSV
+    // csv-parse 7 types the sync result as unknown[]; rows are header-keyed strings here.
     const records = parse(fileContent, {
       columns: true,
       skip_empty_lines: true,
       trim: true,
-    })
+    }) as Record<string, string>[]
 
     if (records.length === 0) {
       return NextResponse.json({ error: "CSV file is empty" }, { status: 400 })

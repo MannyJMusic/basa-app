@@ -50,10 +50,12 @@ export async function GET() {
     // If user exists but doesn't have a member record, create one
     let member = user.member
     if (!member) {
+      // Not a member until the office or a paid membership says so (#166):
+      // member pricing keys off membershipStatus === "ACTIVE".
       member = await prisma.member.create({
         data: {
           userId: user.id,
-          membershipStatus: "ACTIVE",
+          membershipStatus: "PENDING",
           joinedAt: new Date(),
           showInDirectory: true,
           allowContact: true,
