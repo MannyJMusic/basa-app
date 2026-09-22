@@ -55,7 +55,7 @@ The app is deployed to `https://app.businessassociationsa.com` on a Hostinger VP
 
 **Architecture:** CloudPanel (nginx reverse proxy + SSL) → Docker containers (Next.js + PostgreSQL)
 
-The app's vhost is hand-written, not CloudPanel-managed: `nginx/basa-app.conf` in this repo is a copy of `/etc/nginx/sites-enabled/app.businessassociationsa.com.conf` on the host, and the two should be kept identical. It proxies `/` to the container and serves `/uploads/` (imported event and venue images, `/opt/basa-app/uploads`) straight from disk, because Next only lists `public/` at startup.
+The app's vhost is hand-written, not CloudPanel-managed: `nginx/basa-app.conf` in this repo is a copy of `/etc/nginx/sites-enabled/app.businessassociationsa.com.conf` on the host, and the two should be kept identical (re-synced 2026-09-22: access logs, the `Next-Action` 403, and the `/_next/image` source guard live there; the host also has hardening outside this repo, see the audit report in the BASA workspace root). Note `.env.production` is inside the Docker build context on purpose: `next build` reads `NEXT_PUBLIC_*` and `SENTRY_AUTH_TOKEN` from it. `images.remotePatterns` in `next.config.js` is a closed list; add hosts deliberately. It proxies `/` to the container and serves `/uploads/` (imported event and venue images, `/opt/basa-app/uploads`) straight from disk, because Next only lists `public/` at startup.
 
 ```bash
 # SSH to production server
@@ -96,6 +96,16 @@ Automated deployment via `.github/workflows/deploy.yml`:
 - `SSH_PRIVATE_KEY` - Deploy key for server access
 - `SERVER_HOST` - Server IP (31.97.214.26)
 - `SERVER_USER` - SSH user (root)
+
+## Accounts and registration
+
+There is **no self-registration** (owner decision 2026-09-22, #166). Accounts are created only by BASA staff (admin UI, bulk upload) or by a membership purchase once `MEMBERSHIP_SALES_ENABLED` is on. Consequences that must stay true:
+
+- `/api/auth/register` does not exist; `/auth/sign-up` is a notice page that points at the office and sign-in.
+- Google sign-in only works for an existing, active account; an unknown address is refused (`signIn` callback returns `false`, which lands on `/auth/sign-in?error=AccessDenied`). Deactivated or suspended accounts are refused by both providers.
+- Nothing creates a `Member` row with `membershipStatus: "ACTIVE"` except the Stripe webhook and admin routes. Implicit rows (`/api/account`, `/api/profile`, newsletter) are `PENDING`; member pricing keys off `ACTIVE`.
+- Newsletter subscribe (`POST /api/newsletter`, public) may create an inactive `GUEST` user to hang the flag on, never a login-capable one, and never edits an existing user's name. Bulk sending is `POST /api/admin/newsletter` (admin only).
+- The audit-log principal `system@basa.org` (`src/lib/system-user.ts`) is inactive, non-admin, and denied in auth; `getSystemUser()` self-heals the row if it is ever found active.
 
 ## Feature gates
 

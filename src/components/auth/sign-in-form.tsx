@@ -29,6 +29,18 @@ export default function SignInForm({ prefillEmail }: SignInFormProps) {
     }
   }, [prefillEmail])
 
+  // NextAuth lands here with ?error=AccessDenied when the signIn callback refuses
+  // a Google account: unknown address (no self-registration, #166) or a
+  // deactivated account. Say so instead of showing a blank form.
+  useEffect(() => {
+    if (searchParams.get("error") === "AccessDenied") {
+      setError(
+        "That Google account is not linked to a BASA membership. BASA accounts are set up by our office; " +
+          "contact info@businessassociationsa.com or sign in with the email address on your membership."
+      )
+    }
+  }, [searchParams])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")

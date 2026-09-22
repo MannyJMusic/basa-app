@@ -759,7 +759,7 @@ export async function sendNewsletter(email: string, firstName: string, content: 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h1>BASA Newsletter</h1>
-      <p>Hi ${firstName},</p>
+      <p>Hi ${escapeHtml(firstName)},</p>
       <div>${content}</div>
       <p>Best regards,<br>The BASA Team</p>
     </div>

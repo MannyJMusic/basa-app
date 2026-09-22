@@ -1,7 +1,7 @@
 import { useSession, signIn, signOut, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { LoginFormData, RegisterFormData, PasswordResetRequestData } from "@/lib/validations"
+import { LoginFormData, PasswordResetRequestData } from "@/lib/validations"
 import { getRedirectUrl } from "@/lib/utils"
 import { Role } from "@/lib/types"
 
@@ -40,48 +40,6 @@ export function useAuth() {
       return false
     } catch (err) {
       setError("An error occurred during login")
-      return false
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const register = async (userData: RegisterFormData) => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || "Registration failed")
-        return false
-      }
-
-      // Auto-login after successful registration
-      const loginResult = await signIn("credentials", {
-        email: userData.email,
-        password: userData.password,
-        redirect: false,
-      })
-
-      if (loginResult?.ok) {
-        const redirectUrl = getRedirectUrl(Role.MEMBER)
-        router.push(redirectUrl)
-        return true
-      }
-
-      return false
-    } catch (err) {
-      setError("An error occurred during registration")
       return false
     } finally {
       setIsLoading(false)
@@ -185,7 +143,6 @@ export function useAuth() {
     isLoading,
     error,
     login,
-    register,
     logout,
     forgotPassword,
     resetPassword,

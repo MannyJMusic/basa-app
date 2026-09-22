@@ -6,6 +6,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { getRedirectUrl } from "@/lib/utils"
+import { SYSTEM_USER_EMAIL } from "@/lib/system-user"
 import type { NextAuthConfig } from "next-auth"
 import type { JWT } from "next-auth/jwt"
 import type { Session } from "next-auth"
@@ -51,7 +52,7 @@ export const authConfig: NextAuthConfig = {
               where: { email: credentials.email as string }
             })
 
-            if (!user) {
+            if (!user || user.email === SYSTEM_USER_EMAIL) {
               return null
             }
 
@@ -59,7 +60,7 @@ export const authConfig: NextAuthConfig = {
               return null
             }
 
-            if (!user.isActive) {
+            if (!user.isActive || user.accountStatus === "INACTIVE" || user.accountStatus === "SUSPENDED") {
               return null
             }
 
@@ -160,7 +161,22 @@ export const authConfig: NextAuthConfig = {
             });
 
             if (existingUser) {
-              
+              // Same gate as the credentials provider (2026-09-22 audit): a
+              // deactivated or suspended account must not get back in through
+              // Google, and the audit-log system principal never signs in.
+              if (
+                existingUser.email === SYSTEM_USER_EMAIL ||
+                !existingUser.isActive ||
+                existingUser.accountStatus === "INACTIVE" ||
+                existingUser.accountStatus === "SUSPENDED"
+              ) {
+                return false;
+              }
+              // Only link a Google identity whose address Google has verified.
+              if (profile && profile.email_verified === false) {
+                return false;
+              }
+
               // Check if this provider account already exists for this user
               if (account?.providerAccountId) {
                 const existingAccount = await prisma.account.findUnique({
@@ -220,58 +236,11 @@ export const authConfig: NextAuthConfig = {
               
               return true;
             } else {
-              // User doesn't exist - automatically create account for social login
-              
-              // Split name into first and last name
-              const { firstName, lastName } = splitName(user.name);
-              
-              // Create new user
-              const newUser = await prisma.user.create({
-                data: {
-                  email: user.email,
-                  firstName: firstName,
-                  lastName: lastName,
-                  image: user.image,
-                  role: "MEMBER",
-                  isActive: true,
-                  lastLogin: new Date(),
-                  // Create the social account link
-                  accounts: {
-                    create: {
-                      type: account.type,
-                      provider: account.provider,
-                      providerAccountId: account.providerAccountId,
-                      refresh_token: account.refresh_token,
-                      access_token: account.access_token,
-                      expires_at: account.expires_at,
-                      token_type: account.token_type,
-                      scope: account.scope,
-                      id_token: account.id_token,
-                      session_state: account.session_state,
-                    }
-                  }
-                }
-              });
-
-              // Log account creation
-              await prisma.auditLog.create({
-                data: {
-                  userId: newUser.id,
-                  action: "ACCOUNT_CREATED",
-                  entityType: "USER",
-                  entityId: newUser.id,
-                  newValues: {
-                    timestamp: new Date().toISOString(),
-                    provider: account.provider,
-                    email: user.email,
-                    firstName: firstName,
-                    lastName: lastName,
-                    image: user.image || null
-                  }
-                }
-              });
-
-              return true;
+              // Unknown address. Accounts are created only by BASA staff or by a
+              // membership purchase (owner decision 2026-09-22, #166); there is no
+              // self-registration, so social sign-in cannot create one either.
+              // NextAuth turns `false` into /auth/sign-in?error=AccessDenied.
+              return false;
             }
 
           } catch (error) {
@@ -294,13 +263,4 @@ export const authConfig: NextAuthConfig = {
     },
   }
   
-  // Helper to split a full name into first and last name
-  function splitName(name: string | null | undefined) {
-    if (!name) return { firstName: '', lastName: '' };
-    const parts = name.trim().split(' ');
-    const firstName = parts[0] || '';
-    const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
-    return { firstName, lastName };
-  }
-
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig) 

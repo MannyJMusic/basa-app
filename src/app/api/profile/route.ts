@@ -244,7 +244,8 @@ export async function PUT(request: NextRequest) {
           create: {
             userId: session.user.id,
             ...memberUpdateData,
-            membershipStatus: "ACTIVE",
+            // Never self-activate (#166); ACTIVE comes from the office or a payment.
+            membershipStatus: "PENDING",
             joinedAt: new Date(),
           },
         })
