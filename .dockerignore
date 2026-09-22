@@ -112,3 +112,19 @@ jest.config.js
 cypress.config.ts
 .eslintrc.js
 .prettierrc 
+
+# Never part of the image (2026-09-22 audit): production DB dumps with member PII,
+# imported media (bind-mounted at runtime instead), agent notes, build caches.
+backups/
+media/
+uploads/
+.claude/
+docs/
+e2e/
+test-results/
+playwright-report/
+*.sql
+*.sql.gz
+*.dump
+*.tsbuildinfo
+.env.sentry-build-plugin

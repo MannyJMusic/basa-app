@@ -15,18 +15,24 @@ const nextConfig = {
     "dom-serializer",
     "entities",
   ],
+  // The image optimizer fetches whatever url= names and hands it to sharp, so
+  // the allowed sources must be a closed list (2026-09-22 audit: a wildcard here
+  // exposed GHSA-2xp9-vwfh-vxw4 on Next < 15.5.24). Add hosts deliberately.
   images: {
+    formats: ["image/webp"],
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**"
-      }
-    ]
+      { protocol: "https", hostname: "app.businessassociationsa.com" },
+      { protocol: "https", hostname: "businessassociationsa.com" },
+      { protocol: "https", hostname: "www.businessassociationsa.com" },
+      // Google account avatars for OAuth users
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+    ],
   },
-  env: {
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET
-  },
+  // No `env:` block. NextAuth reads NEXTAUTH_URL / NEXTAUTH_SECRET from the
+  // runtime environment; inlining them here compiled the secret into every
+  // image layer (2026-09-22 audit), which is why rotating the env file alone
+  // did not rotate it.
+  poweredByHeader: false,
   // Allow development origins for HMR
   allowedDevOrigins: [
     'dev.businessassociationsa.com',
