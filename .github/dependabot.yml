@@ -1,0 +1,35 @@
+# 2026-09-22 audit (H-B4): the Next RCE fix only arrived after exploitation,
+# because nothing told anyone a patched version existed.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 10
+    target-branch: dev
+    groups:
+      # Next and its ESLint config move together.
+      next:
+        patterns: ["next", "eslint-config-next", "@next/*"]
+      sentry:
+        patterns: ["@sentry/*"]
+      prisma:
+        patterns: ["prisma", "@prisma/*"]
+    # Majors are deliberate upgrades, not background PRs; security updates for
+    # them still arrive through Dependabot security updates.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: dev
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: dev

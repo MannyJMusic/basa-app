@@ -35,8 +35,10 @@ RUN pnpm prisma generate
 # Copy source code
 COPY . .
 
-# Build the application (prebuild runs type-check and lint)
-RUN pnpm run build
+# Build the application (prebuild runs type-check and lint). The webpack cache
+# (~600 MB) is only useful to the next build on the same machine; left in, it is
+# copied into the runtime image with the rest of .next.
+RUN pnpm run build && rm -rf .next/cache
 
 # Copy Prisma client to a location that won't be excluded by .dockerignore
 RUN find node_modules -name ".prisma" -type d | head -1 | xargs -I {} cp -r {} /tmp/prisma-client || \
