@@ -6,7 +6,27 @@ import { sendAdminCreatedWelcomeEmail, sendPaymentReceiptEmail } from '@/lib/bas
 import { hash } from 'bcryptjs'
 import { randomBytes } from 'crypto'
 import { requireAdmin, isResponse } from '@/lib/api-auth'
-import { tierFromSlug } from '@/lib/membership-tiers'
+import { tierFromSlug, tierPriceCents } from '@/lib/membership-tiers'
+import { z } from 'zod'
+
+// Unknown keys are dropped rather than rejected: the admin form posts its whole
+// state (phone, billing info) and only these fields are used.
+const bodySchema = z.object({
+  memberData: z.object({
+    firstName: z.string().trim().min(1).max(100),
+    lastName: z.string().trim().min(1).max(100),
+    email: z.string().trim().toLowerCase().email().max(254),
+    businessName: z.string().trim().max(200).optional(),
+    membershipTier: z.string().refine(slug => tierFromSlug(slug) !== undefined, 'Unknown membership tier'),
+    role: z.enum(['MEMBER', 'MODERATOR', 'ADMIN']).default('MEMBER'),
+  }),
+  paymentData: z.object({
+    method: z.enum(['credit_card', 'cash', 'check']),
+    clientSecret: z.string().max(300).optional(),
+    checkNumber: z.string().trim().max(50).optional(),
+    cashAmount: z.number().min(0).max(100000).optional(),
+  }),
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,17 +34,17 @@ export async function POST(request: NextRequest) {
     const session = await requireAdmin()
     if (isResponse(session)) return session
 
-    const body = await request.json()
-    const { memberData, paymentData } = body
-
-    // Validate member data
-    
-    if (!memberData.firstName || !memberData.lastName || !memberData.email) {
+    const parsed = bodySchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Missing required member information' },
+        { error: parsed.error.errors[0]?.message ?? 'Missing required member information' },
         { status: 400 }
       )
     }
+    const { memberData, paymentData } = parsed.data
+    // What the tier costs, from the server's table. Recorded payments use this,
+    // not an amount from the request (2026-09-22 audit, M-A4).
+    const tierPrice = tierPriceCents(memberData.membershipTier)
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -38,6 +58,28 @@ export async function POST(request: NextRequest) {
       )
     }
     
+
+    // A card payment is checked before anything is written, so a bad one leaves
+    // no half-created account behind. Only an admin-created intent, paid in full
+    // for this tier, and not already recorded against another member, counts.
+    let paymentIntent: Awaited<ReturnType<typeof stripe.paymentIntents.retrieve>> | null = null
+    if (paymentData.method === 'credit_card' && paymentData.clientSecret) {
+      paymentIntent = await stripe.paymentIntents.retrieve(paymentData.clientSecret.split('_secret_')[0])
+      const alreadyRecorded = await prisma.payment.findFirst({
+        where: { stripePaymentIntentId: paymentIntent.id },
+        select: { id: true },
+      })
+      if (
+        paymentIntent.metadata?.admin_created !== 'true' ||
+        paymentIntent.amount < tierPrice ||
+        alreadyRecorded
+      ) {
+        return NextResponse.json(
+          { error: 'That payment cannot be used for this membership' },
+          { status: 400 }
+        )
+      }
+    }
 
     // Generate random password and verification token
     const randomPassword = randomBytes(12).toString('base64').replace(/[^a-zA-Z0-9]/g, '').substring(0, 12)
@@ -76,15 +118,8 @@ export async function POST(request: NextRequest) {
     let paymentRecord = null
     let stripeCustomerId = null
 
-    if (paymentData.method === 'credit_card' && paymentData.clientSecret) {
-      // For credit card payments, verify the payment intent
+    if (paymentIntent) {
       try {
-        // Extract payment intent ID from client secret
-        const paymentIntentId = paymentData.clientSecret.split('_secret_')[0]
-        
-        // Retrieve the payment intent directly
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
-        
         if (paymentIntent && paymentIntent.status === 'succeeded') {
           // Update member status to active
           await prisma.member.update({
@@ -124,9 +159,7 @@ export async function POST(request: NextRequest) {
       }
     } else if (paymentData.method === 'cash' || paymentData.method === 'check') {
       // For cash/check payments, create payment record directly
-      const amount = paymentData.method === 'cash' 
-        ? (paymentData.cashAmount || 0) * 100 // Convert to cents
-        : paymentData.amount
+      const amount = tierPrice
 
       paymentRecord = await prisma.payment.create({
         data: {
@@ -254,12 +287,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating member with payment:', error)
-    if (error instanceof Error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
-    }
     return NextResponse.json(
       { error: 'Failed to create member' },
       { status: 500 }

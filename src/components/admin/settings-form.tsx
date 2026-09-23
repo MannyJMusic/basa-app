@@ -396,15 +396,6 @@ export function SettingsForm() {
                   onChange={(e) => handleInputChange('stripePublicKey', e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Stripe Secret Key</Label>
-                <Input 
-                  type="password" 
-                  placeholder="sk_test_..." 
-                  value={formData.stripeSecretKey || ''}
-                  onChange={(e) => handleInputChange('stripeSecretKey', e.target.value)}
-                />
-              </div>
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Test Mode</Label>
@@ -446,15 +437,6 @@ export function SettingsForm() {
                   placeholder="noreply@basa.org" 
                   value={formData.smtpUsername || ''}
                   onChange={(e) => handleInputChange('smtpUsername', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email Password</Label>
-                <Input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={formData.smtpPassword || ''}
-                  onChange={(e) => handleInputChange('smtpPassword', e.target.value)}
                 />
               </div>
             </CardContent>

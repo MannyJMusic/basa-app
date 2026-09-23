@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
-import { requireAdmin, isResponse } from '@/lib/api-auth'
+import { z } from 'zod'
+import { requireAdmin, isResponse, USER_ROLES } from '@/lib/api-auth'
+
+const updateAdminUserSchema = z.object({
+  name: z.string().trim().max(200).optional(),
+  firstName: z.string().trim().max(100).optional(),
+  lastName: z.string().trim().max(100).optional(),
+  role: z.enum(USER_ROLES).optional(),
+  isActive: z.boolean().optional(),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(200).optional().or(z.literal('')),
+}).strict()
+
+/** What an audit row may record about a user: never hashes or tokens. */
+function auditableUser(user: { email: string | null; name: string | null; firstName: string | null; lastName: string | null; role: string; isActive: boolean }) {
+  const { email, name, firstName, lastName, role, isActive } = user
+  return { email, name, firstName, lastName, role, isActive }
+}
 
 // GET /api/admin/users/[id] - Get specific admin user
 export async function GET(
@@ -52,8 +68,26 @@ export async function PUT(
     if (isResponse(session)) return session
     const params = await context.params
 
-    const body = await request.json()
-    
+    const parsed = updateAdminUserSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors[0]?.message ?? 'Invalid request' },
+        { status: 400 }
+      )
+    }
+    const body = parsed.data
+
+    // An admin cannot lock themselves out: no self-demotion or self-deactivation.
+    if (
+      session.user.id === params.id &&
+      ((body.role !== undefined && body.role !== 'ADMIN') || body.isActive === false)
+    ) {
+      return NextResponse.json(
+        { error: 'You cannot demote or deactivate your own account' },
+        { status: 400 }
+      )
+    }
+
     // Get existing user
     const existingUser = await prisma.user.findUnique({
       where: { id: params.id }
@@ -72,9 +106,11 @@ export async function PUT(
       isActive: body.isActive
     }
 
-    // Hash password if provided
+    // Hash password if provided. Setting a new password also ends that user's
+    // existing sessions (see the jwt callback in src/lib/auth.ts).
     if (body.password) {
       updateData.hashedPassword = await bcrypt.hash(body.password, 12)
+      updateData.sessionsInvalidBefore = new Date()
     }
 
     // Update user
@@ -101,8 +137,8 @@ export async function PUT(
         action: 'UPDATE_ADMIN_USER',
         entityType: 'USER',
         entityId: updatedUser.id,
-        oldValues: existingUser,
-        newValues: updateData
+        oldValues: auditableUser(existingUser),
+        newValues: { ...auditableUser(updatedUser), passwordChanged: Boolean(body.password) }
       }
     })
 
@@ -155,7 +191,7 @@ export async function DELETE(
         action: 'DELETE_ADMIN_USER',
         entityType: 'USER',
         entityId: params.id,
-        oldValues: existingUser
+        oldValues: auditableUser(existingUser)
       }
     })
 

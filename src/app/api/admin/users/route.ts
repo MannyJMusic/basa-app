@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
-import { requireAdmin, isResponse } from '@/lib/api-auth'
+import { z } from 'zod'
+import { requireAdmin, isResponse, USER_ROLES } from '@/lib/api-auth'
+
+const createAdminUserSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(200),
+  name: z.string().trim().max(200).optional(),
+  firstName: z.string().trim().max(100).optional(),
+  lastName: z.string().trim().max(100).optional(),
+  role: z.enum(USER_ROLES),
+}).strict()
 
 // GET /api/admin/users - Get all admin users
 export async function GET() {
@@ -47,15 +57,14 @@ export async function POST(request: NextRequest) {
     const session = await requireAdmin()
     if (isResponse(session)) return session
 
-    const body = await request.json()
-    
-    // Validate required fields
-    if (!body.email || !body.password || !body.role) {
+    const parsed = createAdminUserSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Email, password, and role are required' },
+        { error: parsed.error.errors[0]?.message ?? 'Invalid request' },
         { status: 400 }
       )
     }
+    const body = parsed.data
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({

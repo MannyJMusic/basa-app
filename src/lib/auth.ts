@@ -7,9 +7,14 @@ import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { getRedirectUrl } from "@/lib/utils"
 import { SYSTEM_USER_EMAIL } from "@/lib/system-user"
+import { revalidateToken } from "@/lib/session-revalidation"
 import type { NextAuthConfig } from "next-auth"
 import type { JWT } from "next-auth/jwt"
 import type { Session } from "next-auth"
+
+// A bcrypt hash of a random string nobody knows, at the cost factor real
+// passwords use, compared against when the account does not exist.
+const DUMMY_PASSWORD_HASH = "$2a$12$mZklb3sT3z7yq3LOD8hQQ.47NzImodJm3MRwE/N6rfOxe6LXGE4qC"
 
 export const authConfig: NextAuthConfig = {
     debug: process.env.NODE_ENV !== "production",
@@ -52,22 +57,21 @@ export const authConfig: NextAuthConfig = {
               where: { email: credentials.email as string }
             })
 
-            if (!user || user.email === SYSTEM_USER_EMAIL) {
-              return null
-            }
+            // Always pay for one bcrypt compare, even when there is no usable
+            // account, so response time does not reveal which emails exist
+            // (2026-09-22 audit, M-A6).
+            const isPasswordValid = await bcrypt.compare(
+              credentials.password as string,
+              user?.hashedPassword ?? DUMMY_PASSWORD_HASH
+            )
 
-            if (!user.hashedPassword) {
+            if (!user || user.email === SYSTEM_USER_EMAIL || !user.hashedPassword) {
               return null
             }
 
             if (!user.isActive || user.accountStatus === "INACTIVE" || user.accountStatus === "SUSPENDED") {
               return null
             }
-
-            const isPasswordValid = await bcrypt.compare(
-              credentials.password as string,
-              user.hashedPassword
-            )
 
             if (!isPasswordValid) {
               return null
@@ -100,9 +104,11 @@ export const authConfig: NextAuthConfig = {
           token.isActive = user.isActive
           token.image = user.image
           token.accountStatus = user.accountStatus
+          return token
         }
-        
-        return token
+
+        // Every later request re-reads the account; null ends the session.
+        return revalidateToken(token)
       },
       async session({ session, token }: { session: Session; token: JWT }) {
         if (token) {

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     switch (template) {
       case 'welcome':
-        const activationUrl = body.activationUrl || 'https://businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com'
+        const activationUrl = body.activationUrl || 'https://businessassociationsa.com/auth/verify-email?token=test123&email=test@example.com'
         result = await sendWelcomeEmail(email, firstName, activationUrl, { fromName })
         break
       case 'password-reset':

@@ -53,6 +53,9 @@ model User {
   accountStatus           AccountStatus          @default(PENDING_VERIFICATION)
   verificationToken       String?                @unique
   verificationTokenExpiry DateTime?
+  /// Session JWTs issued before this moment are refused (see the `jwt` callback
+  /// in src/lib/auth.ts). Set on password reset; null means no cut-off.
+  sessionsInvalidBefore   DateTime?
   accounts                Account[]
   auditLogs               AuditLog[]
   blogPosts               BlogPost[]
@@ -471,12 +474,10 @@ model Settings {
   notifySystemAlerts       Boolean  @default(true)
   adminEmails              String?
   stripePublicKey          String?
-  stripeSecretKey          String?
   stripeTestMode           Boolean  @default(true)
   smtpHost                 String?
   smtpPort                 Int?
   smtpUsername             String?
-  smtpPassword             String?
   googleAnalyticsId        String?
   googleTagManagerId       String?
   logoUrl                  String?
@@ -669,4 +670,12 @@ enum PaymentMethod {
   CHECK
   BANK_TRANSFER
   PAYPAL
+}
+
+/// Stripe event ids already handled by /api/webhooks/stripe. Stripe delivers at
+/// least once; inserting the id before processing makes a redelivery a no-op.
+model StripeEvent {
+  id         String   @id
+  type       String
+  receivedAt DateTime @default(now())
 }

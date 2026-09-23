@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server"
 import type { Session } from "next-auth"
+import { timingSafeEqual } from "crypto"
 import { auth } from "@/lib/auth"
+
+/**
+ * The roles the app actually checks, for validating any write to `User.role`.
+ * SUPER_ADMIN used to be offered in the admin UI, but nothing grants it
+ * anything (`requireAdmin` is `role === "ADMIN"`), so it is not accepted.
+ */
+export const USER_ROLES = ["GUEST", "MEMBER", "MODERATOR", "ADMIN"] as const
 
 /**
  * Resolve the current session or return a 401 response.
@@ -34,4 +42,14 @@ export async function requireDevAdmin(): Promise<Session | NextResponse> {
 
 export function isResponse(value: unknown): value is NextResponse {
   return value instanceof NextResponse
+}
+
+/**
+ * True when the request carries `Authorization: Bearer <secret>`. Compared in
+ * constant time so the secret cannot be recovered byte by byte from timings.
+ */
+export function hasBearerSecret(request: Request, secret: string): boolean {
+  const given = Buffer.from(request.headers.get("authorization") ?? "")
+  const expected = Buffer.from(`Bearer ${secret}`)
+  return given.length === expected.length && timingSafeEqual(given, expected)
 }

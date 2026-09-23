@@ -85,12 +85,10 @@ model Settings {
   
   // Integration Settings
   stripePublicKey       String?
-  stripeSecretKey       String?
   stripeTestMode        Boolean  @default(true)
   smtpHost              String?
   smtpPort              Int?
   smtpUsername          String?
-  smtpPassword          String?
   googleAnalyticsId     String?
   googleTagManagerId    String?
   

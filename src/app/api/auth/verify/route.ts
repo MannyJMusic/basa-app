@@ -3,13 +3,16 @@ import { prisma } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
-    const { token } = await request.json()
-    if (!token) {
+    const body = await request.json().catch(() => null)
+    const token = body?.token
+    // Must be a plain string: an object here would reach Prisma as a filter
+    // (`{ not: "" }` matches any pending token).
+    if (typeof token !== "string" || token.length < 16 || token.length > 200) {
       return NextResponse.json({ error: "Missing token" }, { status: 400 })
     }
 
     // Find user by verification token
-    const user = await prisma.user.findFirst({
+    const user = await prisma.user.findUnique({
       where: { verificationToken: token },
     })
 

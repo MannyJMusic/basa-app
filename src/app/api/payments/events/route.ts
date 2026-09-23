@@ -6,6 +6,19 @@ import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { priceSelection, TicketAvailabilityError } from '@/lib/ticket-tiers'
+import { STALE_HOLD_MINUTES } from '@/lib/stale-holds'
+import { hitRateLimit, clientIp } from '@/lib/rate-limit'
+import { createHash } from 'crypto'
+
+/**
+ * Every call holds seats for up to STALE_HOLD_MINUTES before anyone pays, so an
+ * unthrottled public route is a free way to sell an event out (2026-09-22 audit,
+ * M-A9). One address gets a handful of checkouts per window, and one buyer
+ * email a few unpaid holds per event at a time.
+ */
+const CHECKOUTS_PER_IP = 10
+const CHECKOUT_WINDOW_MS = 10 * 60 * 1000
+const PENDING_HOLDS_PER_EMAIL = 3
 
 /**
  * Buying a ticket does not require an account.
@@ -21,7 +34,7 @@ import { priceSelection, TicketAvailabilityError } from '@/lib/ticket-tiers'
 const bodySchema = z.object({
   eventId: z.string().min(1),
   items: z
-    .array(z.object({ ticketTierId: z.string().min(1), quantity: z.number().int().positive() }))
+    .array(z.object({ ticketTierId: z.string().min(1), quantity: z.number().int().positive().max(50) }))
     .min(1)
     .max(20),
   buyer: z.object({
@@ -41,10 +54,55 @@ const bodySchema = z.object({
     .optional(),
 })
 
+/**
+ * The prices come back so the client can show what it is about to charge
+ * without recomputing them itself. The server's figure is the only one that counts.
+ */
+function checkoutResponse(
+  registrationId: string,
+  clientSecret: string | null,
+  order: Awaited<ReturnType<typeof priceSelection>>
+) {
+  return {
+    registrationId,
+    clientSecret,
+    totalCents: order.totalCents,
+    totalTickets: order.totalTickets,
+    lines: order.lines.map(l => ({
+      ticketTierId: l.ticketTierId,
+      name: l.name,
+      quantity: l.quantity,
+      unitPrice: l.unitPrice.toString(),
+    })),
+  }
+}
+
 export async function POST(request: NextRequest) {
   return Sentry.startSpan({ op: 'http.server', name: 'POST /api/payments/events' }, async span => {
     try {
+      if (hitRateLimit(`event-checkout:${clientIp(request)}`, CHECKOUTS_PER_IP, CHECKOUT_WINDOW_MS)) {
+        return NextResponse.json(
+          { error: 'Too many checkout attempts. Please wait a few minutes and try again.' },
+          { status: 429 }
+        )
+      }
+
       const body = bodySchema.parse(await request.json())
+
+      const openHolds = await prisma.eventRegistration.count({
+        where: {
+          eventId: body.eventId,
+          email: { equals: body.buyer.email, mode: 'insensitive' },
+          status: 'PENDING',
+          createdAt: { gte: new Date(Date.now() - STALE_HOLD_MINUTES * 60 * 1000) },
+        },
+      })
+      if (openHolds >= PENDING_HOLDS_PER_EMAIL) {
+        return NextResponse.json(
+          { error: 'You already have unfinished checkouts for this event. Complete one, or wait 30 minutes and try again.' },
+          { status: 429 }
+        )
+      }
 
       // Member status is resolved from the session, never taken from the request.
       // The previous client sent its own `isMember` flag, which would have let
@@ -74,6 +132,20 @@ export async function POST(request: NextRequest) {
       // Elements, so card details never reach this server. The old code passed
       // `confirm: true` with a `payment_method` the client had no way to send,
       // which is why this route could never actually complete a purchase.
+      //
+      // A double-click or client retry sends the same order twice. The
+      // idempotency key (same order, same buyer, same minute) makes Stripe hand
+      // back the first intent instead of opening a second hold.
+      const idempotencyKey = 'event-checkout:' + createHash('sha256')
+        .update(JSON.stringify([
+          body.eventId,
+          body.buyer.email.toLowerCase(),
+          order.lines.map(l => [l.ticketTierId, l.quantity]),
+          order.totalCents,
+          session?.user?.id ?? null,
+          Math.floor(Date.now() / 60_000),
+        ]))
+        .digest('hex')
       const paymentIntent = await stripe.paymentIntents.create({
         amount: order.totalCents,
         currency: 'usd',
@@ -86,7 +158,23 @@ export async function POST(request: NextRequest) {
           buyerEmail: body.buyer.email,
           ...(session?.user?.id ? { userId: session.user.id } : {}),
         },
+      }, { idempotencyKey })
+
+      // Stripe returned an intent this route already recorded: answer with the
+      // existing hold rather than writing a second registration for it.
+      const existing = await prisma.eventRegistration.findUnique({
+        where: { paymentIntentId: paymentIntent.id },
+        select: { id: true, status: true },
       })
+      if (existing) {
+        if (existing.status !== 'PENDING') {
+          return NextResponse.json(
+            { error: 'This checkout was already used. Please wait a minute and try again.' },
+            { status: 409 }
+          )
+        }
+        return NextResponse.json(checkoutResponse(existing.id, paymentIntent.client_secret, order))
+      }
 
       // PENDING holds the seat while the buyer finishes paying; the Stripe webhook
       // promotes it to CONFIRMED. Writing CONFIRMED here, as the old code did,
@@ -123,20 +211,7 @@ export async function POST(request: NextRequest) {
         return created
       })
 
-      return NextResponse.json({
-        registrationId: registration.id,
-        clientSecret: paymentIntent.client_secret,
-        // Returned so the client can show what it is about to charge without
-        // recomputing prices itself. The server's figure is the only one that counts.
-        totalCents: order.totalCents,
-        totalTickets: order.totalTickets,
-        lines: order.lines.map(l => ({
-          ticketTierId: l.ticketTierId,
-          name: l.name,
-          quantity: l.quantity,
-          unitPrice: l.unitPrice.toString(),
-        })),
-      })
+      return NextResponse.json(checkoutResponse(registration.id, paymentIntent.client_secret, order))
     } catch (error) {
       // Sold out or closed is the buyer's answer, not a server fault.
       if (error instanceof TicketAvailabilityError) {

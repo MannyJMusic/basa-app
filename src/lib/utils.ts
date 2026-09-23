@@ -84,10 +84,6 @@ export function isValidPassword(password: string): boolean {
   return passwordRegex.test(password)
 }
 
-export function generatePasswordResetToken(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-}
-
 // Format utilities
 export function formatName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim()
@@ -142,10 +138,17 @@ export function getRedirectUrl(role: UserRole): string {
 
 // Generate a random verification token
 export function generateVerificationToken(length = 48) {
+  // These tokens activate accounts, so they come from the CSPRNG, not
+  // Math.random (2026-09-22 audit, M-A6). Web Crypto exists in Node and browsers.
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  const bytes = new Uint8Array(length)
+  globalThis.crypto.getRandomValues(bytes)
   let token = ''
   for (let i = 0; i < length; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length))
+    // 248 = 4 * 62: rejecting bytes at or above it keeps every character equally likely.
+    let b = bytes[i]
+    while (b >= 248) b = globalThis.crypto.getRandomValues(new Uint8Array(1))[0]
+    token += chars.charAt(b % chars.length)
   }
   return token
 } 

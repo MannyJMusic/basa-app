@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { hasBearerSecret } from "@/lib/api-auth"
 import * as Sentry from "@sentry/nextjs"
 import { expireLapsedMemberships } from "@/lib/membership-lifecycle"
 import { sendDueRenewalNotices } from "@/lib/membership-reminders"
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not configured" }, { status: 503 })
   }
 
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!hasBearerSecret(request, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
