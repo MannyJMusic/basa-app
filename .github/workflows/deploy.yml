@@ -11,6 +11,11 @@ on:
       - dev
   workflow_dispatch:
 
+# Actions are pinned by commit SHA (tags can be moved) and the token is
+# read-only; Dependabot proposes updates (.github/dependabot.yml). 2026-09-22 audit.
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     name: Build and Test
@@ -18,17 +23,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9
+        # No `version`: it reads package.json's packageManager (pnpm 9.12.2), the
+        # same pin the Dockerfile uses.
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
       - name: Get pnpm store directory
         shell: bash
@@ -36,7 +41,7 @@ jobs:
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
       - name: Setup pnpm cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ env.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -45,6 +50,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # Critical only for now: the remaining highs (30 on 2026-09-22) are all in
+      # the build toolchain under next/sentry, with no fixed version yet. Raise
+      # to --audit-level=high once they clear.
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level=critical
 
       - name: Run type check
         run: pnpm run type-check
@@ -67,6 +78,21 @@ jobs:
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder' }}
           NEXT_PUBLIC_APP_URL: https://app.businessassociationsa.com
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+  # The production image, built exactly as the host builds it. Without this a
+  # Dockerfile or .dockerignore change was first tested by the production deploy,
+  # which is how release #168 failed (e2e/ dockerignored). No .env.production
+  # here, so NEXT_PUBLIC_* are empty and no source maps upload; the point is
+  # that the image builds, not what it is configured with.
+  docker-build:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Build production image
+        run: DOCKER_BUILDKIT=1 docker build --target production -t basa-app:ci .
 
   # The money path in a real browser against a real build (#65): a guest buys a
   # ticket, a visitor joins as a member, a declined card confirms nothing. Runs on
@@ -106,17 +132,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9
+        # No `version`: it reads package.json's packageManager (pnpm 9.12.2), the
+        # same pin the Dockerfile uses.
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
       - name: Get pnpm store directory
         shell: bash
@@ -124,7 +150,7 @@ jobs:
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
       - name: Setup pnpm cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ env.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -147,7 +173,7 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-report
           path: |
@@ -157,13 +183,21 @@ jobs:
 
   deploy:
     name: Deploy to Production
-    needs: [build-and-test, e2e]
+    needs: [build-and-test, docker-build, e2e]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    environment: production
+    # Two quick pushes to main must not run two deploys at once: both would
+    # `git reset --hard` and build on the host, and the second would take the
+    # first's half-built image as its rollback point. Queue instead of cancel,
+    # so a deploy that has started always finishes (or rolls back).
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Secrets are read through env rather than interpolated straight into the
       # command line, and whitespace-trimmed before use. A SERVER_HOST saved with
@@ -221,15 +255,24 @@ jobs:
           echo "SSH_USER=$user" >> "$GITHUB_ENV"
           echo "Deploy secrets validated."
 
+      # The host key comes from the SSH_KNOWN_HOSTS secret (taken from the server's
+      # own /etc/ssh keys), not from ssh-keyscan at run time: a keyscan trusts
+      # whoever answers, which is exactly what host-key checking exists to stop.
       - name: Setup SSH Key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
+          if [ -z "${SSH_KNOWN_HOSTS:-}" ]; then
+            echo "::error::SSH_KNOWN_HOSTS is not set; refusing to deploy without a verified host key."
+            exit 1
+          fi
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
           # Keepalives matter more than they look. The image build on this 2-CPU VPS
           # runs for minutes, and the deploy is a single ssh session held open for the
@@ -237,7 +280,7 @@ jobs:
           # "client_loop: send disconnect: Broken pipe": the deploy step failed while
           # the build carried on server-side, orphaned, with none of the steps after it
           # - up, health check, rollback - ever running.
-          echo "SSH_OPTS=-i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes" >> "$GITHUB_ENV"
+          echo "SSH_OPTS=-i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes" >> "$GITHUB_ENV"
 
       - name: Test SSH Connection
         run: |
