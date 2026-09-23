@@ -27,9 +27,17 @@ updates:
     schedule:
       interval: weekly
     target-branch: dev
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
+  # Majors are skipped here too: for the node base image a "major" is a Node
+  # release line, and production stays on an LTS line (22) until moved on purpose.
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
     target-branch: dev
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
