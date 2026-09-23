@@ -116,7 +116,11 @@ export default class TestcontainersSetup {
         .withUsername('test_user')
         .withPassword('test_password')
         .withExposedPorts(5432)
-        .withWaitStrategy(Wait.forLogMessage('database system is ready to accept connections'))
+        // Twice, not once: the image's init script starts a temporary server
+        // (first "ready"), then restarts it for real (second "ready"). Waiting
+        // for the first let a suite's first query land in the restart gap and
+        // fail with P1001, which made whichever file hit it flaky in CI.
+        .withWaitStrategy(Wait.forLogMessage('database system is ready to accept connections', 2))
         .withStartupTimeout(120000) // 2 minutes
         .start();
 
