@@ -59,7 +59,7 @@ stripe trigger invoice.payment_failed
 
 ## Webhook handling
 
-Both `POST /api/webhooks/stripe` (current) and the older `POST /api/payments/webhook` verify the signature and delegate to `handleWebhookEvent` in `src/lib/stripe-webhook-handlers.ts`, which processes: `payment_intent.succeeded`, `payment_intent.payment_failed`, `customer.subscription.{created,updated,deleted}`, `invoice.payment_{succeeded,failed}`. On success it updates membership status, creates membership records, and sends the welcome/receipt/invitation emails. Errors go to Sentry (`captureException`, tag `source: stripe-webhook`) rather than console output — check Sentry, not server logs, when a webhook fails silently.
+`POST /api/webhooks/stripe` verifies the signature, dedupes by event id (`StripeEvent`), and delegates to `handleWebhookEvent` in `src/lib/stripe-webhook-handlers.ts`, which processes: `payment_intent.succeeded`, `payment_intent.payment_failed`, `customer.subscription.{created,updated,deleted}`, `invoice.payment_{succeeded,failed}`. On success it updates membership status, creates membership records, and sends the welcome/receipt/invitation emails. Errors go to Sentry (`captureException`, tag `source: stripe-webhook`) rather than console output — check Sentry, not server logs, when a webhook fails silently.
 
 ### Troubleshooting
 

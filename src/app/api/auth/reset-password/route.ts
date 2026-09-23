@@ -50,6 +50,9 @@ export async function POST(request: NextRequest) {
         hashedPassword,
         resetToken: null,
         resetTokenExpiry: null,
+        // A reset is what someone does when they think their password is out:
+        // every session signed in before it ends (see the jwt callback in auth.ts).
+        sessionsInvalidBefore: new Date(),
         ...(claiming ? CLAIM_ACTIVATION : {}),
       },
     })

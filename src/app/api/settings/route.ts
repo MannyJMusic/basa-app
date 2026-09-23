@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { z } from 'zod'
 import { requireAdmin, isResponse } from '@/lib/api-auth'
 
 // GET /api/settings - Retrieve all settings
@@ -18,14 +19,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Don't return sensitive data like API keys
-    const safeSettings = {
-      ...settings,
-      stripeSecretKey: undefined,
-      smtpPassword: undefined
-    }
-
-    return NextResponse.json(safeSettings)
+    return NextResponse.json(settings)
   } catch (error) {
     console.error('Error fetching settings:', error)
     return NextResponse.json(
@@ -35,104 +29,77 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Everything an admin may change. Unknown keys (the form posts back `id`,
+// `createdAt`, ...) are dropped, never written (2026-09-22 audit, M-A4). Secrets
+// are not settings: Stripe and mail credentials live only in the server env.
+const optionalText = (max: number) => z.string().trim().max(max).nullish()
+const settingsSchema = z.object({
+  organizationName: z.string().trim().min(1, 'Organization name is required').max(200),
+  contactEmail: z.string().trim().email('A valid contact email is required').max(254),
+  phoneNumber: optionalText(40),
+  website: z.string().trim().max(300).optional(),
+  address: optionalText(500),
+  description: optionalText(2000),
+  maintenanceMode: z.boolean().optional(),
+  autoApproveMembers: z.boolean().optional(),
+  emailNotifications: z.boolean().optional(),
+  requireTwoFactor: z.boolean().optional(),
+  sessionTimeout: z.number().int().min(1).max(100000).optional(),
+  enforcePasswordPolicy: z.boolean().optional(),
+  allowedIpAddresses: optionalText(2000),
+  apiRateLimit: z.number().int().min(1).max(100000).optional(),
+  notifyNewMembers: z.boolean().optional(),
+  notifyPayments: z.boolean().optional(),
+  notifyEventRegistrations: z.boolean().optional(),
+  notifySystemAlerts: z.boolean().optional(),
+  adminEmails: optionalText(2000),
+  stripePublicKey: optionalText(200),
+  stripeTestMode: z.boolean().optional(),
+  smtpHost: optionalText(200),
+  smtpPort: z.number().int().min(1).max(65535).nullish(),
+  smtpUsername: optionalText(200),
+  googleAnalyticsId: optionalText(50),
+  googleTagManagerId: optionalText(50),
+  logoUrl: optionalText(500),
+  faviconUrl: optionalText(500),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).optional(),
+  secondaryColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).optional(),
+  showMemberCount: z.boolean().optional(),
+  showEventCalendar: z.boolean().optional(),
+  showTestimonials: z.boolean().optional(),
+})
+
 // PUT /api/settings - Update settings
 export async function PUT(request: NextRequest) {
   try {
     const session = await requireAdmin()
     if (isResponse(session)) return session
 
-    const body = await request.json()
-    
-    // Validate required fields
-    if (!body.organizationName || !body.contactEmail) {
+    const parsed = settingsSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Organization name and contact email are required' },
+        { error: parsed.error.errors[0]?.message ?? 'Invalid settings' },
         { status: 400 }
       )
     }
+    const data = parsed.data
 
-    // Get existing settings or create new ones
-    let settings = await prisma.settings.findFirst()
-    
-    if (settings) {
-      // Update existing settings
-      settings = await prisma.settings.update({
-        where: { id: settings.id },
-        data: {
-          // Organization Information
-          organizationName: body.organizationName,
-          contactEmail: body.contactEmail,
-          phoneNumber: body.phoneNumber,
-          website: body.website,
-          address: body.address,
-          description: body.description,
-          
-          // System Settings
-          maintenanceMode: body.maintenanceMode,
-          autoApproveMembers: body.autoApproveMembers,
-          emailNotifications: body.emailNotifications,
-          
-          // Security Settings
-          requireTwoFactor: body.requireTwoFactor,
-          sessionTimeout: body.sessionTimeout,
-          enforcePasswordPolicy: body.enforcePasswordPolicy,
-          allowedIpAddresses: body.allowedIpAddresses,
-          apiRateLimit: body.apiRateLimit,
-          
-          // Notification Settings
-          notifyNewMembers: body.notifyNewMembers,
-          notifyPayments: body.notifyPayments,
-          notifyEventRegistrations: body.notifyEventRegistrations,
-          notifySystemAlerts: body.notifySystemAlerts,
-          adminEmails: body.adminEmails,
-          
-          // Integration Settings
-          stripePublicKey: body.stripePublicKey,
-          stripeSecretKey: body.stripeSecretKey,
-          stripeTestMode: body.stripeTestMode,
-          smtpHost: body.smtpHost,
-          smtpPort: body.smtpPort,
-          smtpUsername: body.smtpUsername,
-          smtpPassword: body.smtpPassword,
-          googleAnalyticsId: body.googleAnalyticsId,
-          googleTagManagerId: body.googleTagManagerId,
-          
-          // Appearance Settings
-          logoUrl: body.logoUrl,
-          faviconUrl: body.faviconUrl,
-          primaryColor: body.primaryColor,
-          secondaryColor: body.secondaryColor,
-          showMemberCount: body.showMemberCount,
-          showEventCalendar: body.showEventCalendar,
-          showTestimonials: body.showTestimonials,
-        }
-      })
-    } else {
-      // Create new settings
-      settings = await prisma.settings.create({
-        data: body
-      })
-    }
+    const existing = await prisma.settings.findFirst({ select: { id: true } })
+    const settings = existing
+      ? await prisma.settings.update({ where: { id: existing.id }, data })
+      : await prisma.settings.create({ data })
 
-    // Log the settings update
     await prisma.auditLog.create({
       data: {
         userId: session.user.id,
         action: 'UPDATE_SETTINGS',
         entityType: 'SETTINGS',
         entityId: settings.id,
-        newValues: body
+        newValues: data
       }
     })
 
-    // Don't return sensitive data
-    const safeSettings = {
-      ...settings,
-      stripeSecretKey: undefined,
-      smtpPassword: undefined
-    }
-
-    return NextResponse.json(safeSettings)
+    return NextResponse.json(settings)
   } catch (error) {
     console.error('Error updating settings:', error)
     return NextResponse.json(
@@ -140,4 +107,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     )
   }
-} 
+}

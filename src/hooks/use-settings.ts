@@ -25,12 +25,10 @@ export interface Settings {
   notifySystemAlerts: boolean
   adminEmails?: string
   stripePublicKey?: string
-  stripeSecretKey?: string
   stripeTestMode: boolean
   smtpHost?: string
   smtpPort?: number
   smtpUsername?: string
-  smtpPassword?: string
   googleAnalyticsId?: string
   googleTagManagerId?: string
   logoUrl?: string

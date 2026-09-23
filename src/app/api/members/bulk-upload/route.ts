@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { parse } from "csv-parse/sync"
+import { randomBytes } from "crypto"
 import { requireAdmin, isResponse } from "@/lib/api-auth"
 import { MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
 
@@ -305,12 +306,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to generate random password
+// A throwaway initial password from the CSPRNG; members set their own via reset.
 function generateRandomPassword(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
-  let password = ""
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return password
+  return randomBytes(18).toString("base64url")
 } 

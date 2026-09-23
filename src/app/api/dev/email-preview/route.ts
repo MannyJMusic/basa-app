@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const template = searchParams.get('template') || 'welcome'
   const email = searchParams.get('email') || 'test@example.com'
   const firstName = searchParams.get('firstName') || 'John'
-  const activationUrl = searchParams.get('activationUrl') || 'https://businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com'
+  const activationUrl = searchParams.get('activationUrl') || 'https://businessassociationsa.com/auth/verify-email?token=test123&email=test@example.com'
   const resetUrl = searchParams.get('resetUrl') || 'https://businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com'
 
   let html = ''

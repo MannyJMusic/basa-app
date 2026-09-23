@@ -5,6 +5,7 @@ import { sendEmailVerification } from "@/lib/basa-emails"
 import { generateVerificationToken } from "@/lib/utils"
 import { requireAdmin, requireSession, isResponse } from "@/lib/api-auth"
 import { MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
+import { adminMemberSelect, directoryMemberSelect, applyMemberPrivacy } from '@/lib/member-privacy'
 
 // Validation schemas
 const createMemberSchema = z.object({
@@ -53,8 +54,10 @@ export async function GET(request: NextRequest) {
       },
     }
 
+    const isAdmin = session.user.role === "ADMIN"
+
     // For non-admin users, only show members who have opted to be in directory
-    if (session.user.role !== "ADMIN") {
+    if (!isAdmin) {
       where.showInDirectory = true
     }
 
@@ -63,9 +66,15 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { user: { firstName: { contains: params.search, mode: "insensitive" } } },
         { user: { lastName: { contains: params.search, mode: "insensitive" } } },
-        { user: { email: { contains: params.search, mode: "insensitive" } } },
         { businessName: { contains: params.search, mode: "insensitive" } },
-        { businessEmail: { contains: params.search, mode: "insensitive" } },
+        // Searching by address would let a member confirm who owns an email
+        // they are not allowed to see; only staff search that way.
+        ...(isAdmin
+          ? [
+              { user: { email: { contains: params.search, mode: "insensitive" } } },
+              { businessEmail: { contains: params.search, mode: "insensitive" } },
+            ]
+          : []),
       ]
     }
 
@@ -101,33 +110,7 @@ export async function GET(request: NextRequest) {
     const [members, total] = await Promise.all([
       prisma.member.findMany({
         where,
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              role: true,
-              isActive: true,
-              lastLogin: true,
-              createdAt: true,
-            },
-          },
-          eventRegistrations: {
-            select: {
-              id: true,
-              event: {
-                select: {
-                  id: true,
-                  title: true,
-                  startDate: true,
-                  status: true,
-                },
-              },
-            },
-          },
-        },
+        select: isAdmin ? adminMemberSelect : directoryMemberSelect,
         orderBy,
         skip,
         take: params.limit,
@@ -141,7 +124,9 @@ export async function GET(request: NextRequest) {
     const hasPrevPage = params.page > 1
 
     return NextResponse.json({
-      members,
+      members: isAdmin
+        ? members
+        : members.map((m) => applyMemberPrivacy(m, session.user.id)),
       pagination: {
         page: params.page,
         limit: params.limit,

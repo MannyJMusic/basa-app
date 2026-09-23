@@ -186,7 +186,7 @@ export function AdminUsersManager() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ADMIN">Admin</SelectItem>
-                      <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                      <SelectItem value="MODERATOR">Moderator</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -365,7 +365,7 @@ function EditUserForm({ user, onSave, onCancel, saving }: EditUserFormProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ADMIN">Admin</SelectItem>
-            <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+            <SelectItem value="MODERATOR">Moderator</SelectItem>
           </SelectContent>
         </Select>
       </div>

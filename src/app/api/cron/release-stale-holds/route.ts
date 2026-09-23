@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { hasBearerSecret } from '@/lib/api-auth'
 import * as Sentry from '@sentry/nextjs'
 import { releaseStaleHolds, STALE_HOLD_MINUTES } from '@/lib/stale-holds'
 
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     logger.error('CRON_SECRET is not set; refusing to run the stale hold sweep')
     return NextResponse.json({ error: 'Not configured' }, { status: 503 })
   }
-  if (request.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!hasBearerSecret(request, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

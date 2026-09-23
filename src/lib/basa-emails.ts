@@ -92,6 +92,9 @@ export function generateWelcomeEmailHtml(firstName: string, activationUrl: strin
   siteUrl?: string
   logoUrl?: string
 } = {}) {
+  // Every caller-supplied value is escaped before it meets the markup (2026-09-22 audit, M-A2).
+  firstName = escapeHtml(firstName)
+  activationUrl = escapeHtml(activationUrl)
   const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOG%20-SIDE2%20-%20WHITE%20-PROOF.png`
   
@@ -746,9 +749,9 @@ export async function sendEmailVerification(email: string, firstName: string, ve
   const verificationUrl = `${process.env.NEXTAUTH_URL}/auth/verify?token=${verificationToken}`
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h1>Verify your email, ${firstName}</h1>
+      <h1>Verify your email, ${escapeHtml(firstName)}</h1>
       <p>Please confirm your email address for your BASA account:</p>
-      <p><a href="${verificationUrl}">Verify Email Address</a></p>
+      <p><a href="${escapeHtml(verificationUrl)}">Verify Email Address</a></p>
       <p>If you didn't request this, you can ignore this email.</p>
     </div>
   `
@@ -877,6 +880,9 @@ export function generatePasswordResetEmailHtml(firstName: string, resetUrl: stri
   logoUrl?: string
   copy?: ResetEmailCopy
 } = {}) {
+  // Every caller-supplied value is escaped before it meets the markup (2026-09-22 audit, M-A2).
+  firstName = escapeHtml(firstName)
+  resetUrl = escapeHtml(resetUrl)
   const copy = options.copy || RESET_COPY
   const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOG%20-SIDE2%20-%20WHITE%20-PROOF.png`
@@ -1060,6 +1066,19 @@ export function generateEventInvitationEmailHtml(firstName: string, event: {
   siteUrl?: string
   logoUrl?: string
 } = {}) {
+  // Every caller-supplied value is escaped before it meets the markup (2026-09-22 audit, M-A2).
+  firstName = escapeHtml(firstName)
+  event = {
+    ...event,
+    title: escapeHtml(event.title),
+    time: escapeHtml(event.time),
+    location: escapeHtml(event.location),
+    address: escapeHtml(event.address),
+    description: event.description === undefined ? undefined : escapeHtml(event.description),
+    rsvpUrl: escapeHtml(event.rsvpUrl),
+    calendarUrl: escapeHtml(event.calendarUrl),
+    shareUrl: escapeHtml(event.shareUrl),
+  }
   const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOG%20-SIDE2%20-%20WHITE%20-PROOF.png`
   
@@ -1483,6 +1502,15 @@ export function generatePaymentReceiptEmailHtml(firstName: string, paymentData: 
   siteUrl?: string
   logoUrl?: string
 } = {}) {
+  // Every caller-supplied value is escaped before it meets the markup (2026-09-22 audit, M-A2).
+  firstName = escapeHtml(firstName)
+  paymentData = {
+    ...paymentData,
+    paymentId: escapeHtml(String(paymentData.paymentId)),
+    currency: escapeHtml(String(paymentData.currency)),
+    // Item names come from PaymentIntent metadata, which the client's cart fed.
+    cart: paymentData.cart.map(item => ({ ...item, name: escapeHtml(String(item.name ?? '')) })),
+  }
   const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
   const paymentDate = new Date(paymentData.paymentDate).toLocaleDateString('en-US', {
@@ -1728,6 +1756,8 @@ export function generateMembershipInvitationEmailHtml(name: string, tierId: stri
   siteUrl?: string
   logoUrl?: string
 } = {}) {
+  // Every caller-supplied value is escaped before it meets the markup (2026-09-22 audit, M-A2).
+  name = escapeHtml(name)
   const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
   
@@ -1914,6 +1944,25 @@ export function generateContactFormEmailHtml(contact: {
   userAgent?: string
   referrer?: string
 } = {}) {
+  // Every caller-supplied value is escaped before it meets the markup (2026-09-22 audit, M-A2).
+  // The contact form is public, and this lands in the staff inbox.
+  contact = {
+    ...contact,
+    firstName: escapeHtml(contact.firstName),
+    lastName: escapeHtml(contact.lastName),
+    email: escapeHtml(contact.email),
+    phone: contact.phone === undefined ? undefined : escapeHtml(contact.phone),
+    company: contact.company === undefined ? undefined : escapeHtml(contact.company),
+    subject: escapeHtml(contact.subject),
+    message: escapeHtml(contact.message),
+    preferredContact: escapeHtml(contact.preferredContact),
+  }
+  options = {
+    ...options,
+    ipAddress: options.ipAddress && escapeHtml(options.ipAddress),
+    userAgent: options.userAgent && escapeHtml(options.userAgent),
+    referrer: options.referrer && escapeHtml(options.referrer),
+  }
   const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
   const submissionDate = new Date()
@@ -2152,6 +2201,11 @@ export function generateAdminCreatedWelcomeEmailHtml(firstName: string, email: s
   siteUrl?: string
   logoUrl?: string
 } = {}) {
+  // Every caller-supplied value is escaped before it meets the markup (2026-09-22 audit, M-A2).
+  firstName = escapeHtml(firstName)
+  email = escapeHtml(email)
+  password = escapeHtml(password)
+  activationUrl = escapeHtml(activationUrl)
   const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
   
@@ -2453,6 +2507,7 @@ function escapeHtml(value: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 function formatRenewalDate(date: Date): string {
@@ -2585,7 +2640,7 @@ export async function sendEventTicketEmail(t: Ticket): Promise<void> {
   const html = renderNoticeEmail({
     title: `Your ticket: ${t.event.title}`,
     preheader: `${when.date}, ${when.time} · ${t.ticketCount} ticket${t.ticketCount === 1 ? '' : 's'}`,
-    heading: `You're registered for ${escapeHtml(t.event.title)}`,
+    heading: `You're registered for ${t.event.title}`,
     accent: '#17A2B8',
     siteUrl,
     logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
