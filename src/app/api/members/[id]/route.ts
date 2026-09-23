@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireAdmin, requireSession, isResponse } from "@/lib/api-auth"
 import { MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
+import { adminMemberSelect, directoryMemberSelect, applyMemberPrivacy } from '@/lib/member-privacy'
 
 const updateMemberSchema = z.object({
   firstName: z.string().min(1, "First name is required").optional(),
@@ -34,65 +35,36 @@ export async function GET(
 
     const { id } = await params
 
+    const isAdmin = session.user.role === "ADMIN"
     const member = await prisma.member.findUnique({
       where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            role: true,
-            isActive: true,
-            lastLogin: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        },
-        eventRegistrations: {
-          include: {
-            event: {
-              select: {
-                id: true,
-                title: true,
-                startDate: true,
-                status: true,
+      select: isAdmin
+        ? {
+            ...adminMemberSelect,
+            eventSponsors: {
+              include: {
+                event: { select: { id: true, title: true, startDate: true } },
               },
+              orderBy: { id: "desc" },
+              take: 10,
             },
-          },
-          orderBy: { id: "desc" },
-          take: 10,
-        },
-        eventSponsors: {
-          include: {
-            event: {
-              select: {
-                id: true,
-                title: true,
-                startDate: true,
-              },
-            },
-          },
-          orderBy: { id: "desc" },
-          take: 10,
-        },
-      },
+          }
+        : directoryMemberSelect,
     })
-
-    if (member) {
-    }
 
     if (!member) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 })
     }
 
-    // For non-admins, only allow viewing if showInDirectory is true
-    if (session.user.role !== "ADMIN" && !member.showInDirectory) {
+    if (isAdmin) return NextResponse.json(member)
+
+    // Non-admins see a member only if they opted into the directory (or it is
+    // their own profile), and only what that member agreed to share.
+    if (!member.showInDirectory && member.userId !== session.user.id) {
       return NextResponse.json({ error: "Not allowed" }, { status: 403 })
     }
 
-    return NextResponse.json(member)
+    return NextResponse.json(applyMemberPrivacy(member, session.user.id))
   } catch (error) {
     console.error("Error fetching member:", error)
     return NextResponse.json(

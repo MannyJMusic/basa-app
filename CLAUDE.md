@@ -146,7 +146,13 @@ There is **no request middleware**. A `middleware.ts` sat in the repo root until
 
 Static files under `public/` and `/uploads/` (served by nginx) are public by definition.
 
-There are two Stripe webhook handlers: `/api/webhooks/stripe` (the one the dev script and Stripe are pointed at, verifies the signature with `STRIPE_WEBHOOK_SECRET` and sends welcome/receipt emails) and the older `/api/payments/webhook`. Change the former.
+There is one Stripe webhook handler, `/api/webhooks/stripe` (the legacy `/api/payments/webhook` was deleted 2026-09-22). It verifies the signature with `STRIPE_WEBHOOK_SECRET`, then claims the event id in `StripeEvent` before calling `handleWebhookEvent`: a redelivery is acknowledged without running again, and a failed run deletes the claim so Stripe's retry is processed. It is the only place a membership purchase takes effect; `POST /api/payments/membership` creates the PaymentIntent (and at most a `GUEST` user with a `PENDING` member row) and grants nothing. A purchase promotes `GUEST` to `MEMBER` and never changes any other role.
+
+### Sessions and member data
+- The `jwt` callback re-reads `role`, `isActive` and `accountStatus` on every request (`src/lib/session-revalidation.ts`), so demotion and deactivation take effect immediately. Setting `User.sessionsInvalidBefore` ends every session issued before it; password reset and an admin password change set it.
+- Member endpoints return explicit selects from `src/lib/member-privacy.ts`. Non-admins get the directory view through `applyMemberPrivacy`, which honours `allowContact`/`showAddress`; registrations appear only as event summaries, never with buyer details, payment intents or ticket tokens.
+- Write routes validate with Zod and write only listed fields. `User.role` accepts only `USER_ROLES` from `src/lib/api-auth.ts`. Audit rows record allowlisted fields, never hashes or tokens. Stripe and mail secrets live only in the server env, not in `Settings`.
+- `POST /api/payments/events` is limited per client IP (`src/lib/rate-limit.ts`, in memory) and to three unpaid holds per buyer email per event, and uses a Stripe idempotency key so a double submit reuses the first PaymentIntent.
 
 ### Database Schema
 Key models in `prisma/schema.prisma`:

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireAdmin, isResponse } from "@/lib/api-auth"
+import { auth } from "@/lib/auth"
 import { parseEventDateTime } from "@/lib/event-time"
 
 // Get Prisma client dynamically to support test injection
@@ -74,9 +75,17 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    // Status filter
-    if (params.status) {
-      where.status = params.status
+    // Status filter. This route is public: drafts and cancelled events are only
+    // visible to admins (2026-09-22 audit, M-A4). Asking for a non-public status
+    // without being an admin matches nothing.
+    const session = await auth()
+    if (session?.user?.role === "ADMIN") {
+      if (params.status) where.status = params.status
+    } else {
+      const PUBLIC_STATUSES = ["PUBLISHED", "COMPLETED"]
+      where.status = {
+        in: PUBLIC_STATUSES.filter(s => !params.status || s === params.status),
+      }
     }
 
     // Type filter

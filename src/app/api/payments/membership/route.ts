@@ -4,41 +4,48 @@ import { auth } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/db'
 import { MEMBERSHIP_PRICES } from '@/lib/stripe'
-import { tierFromSlug } from '@/lib/membership-tiers'
+import { z } from 'zod'
 
-interface CartItem {
-  tierId: string
-  quantity: number
-  price: number
-  name: string
-}
-
-interface AdditionalMember {
-  id: string
-  name: string
-  email: string
-  tierId: string
-  sendInvitation: boolean
-}
-
-interface PaymentRequest {
-  cart: CartItem[]
-  additionalMembers: AdditionalMember[]
-  customerInfo: {
-    name: string
-    email: string
-    company: string
-    phone: string
-  }
-  autoRenew: boolean
-  businessInfo?: {
-    businessName: string
-  }
-  contactInfo?: {
-    firstName: string
-    lastName: string
-  }
-}
+// The body is client-controlled. Unknown keys inside the nested objects are
+// dropped rather than rejected: the join wizard posts its whole form state, and
+// only the fields below are used (and fit in Stripe's 500-char metadata values).
+const paymentRequestSchema = z.object({
+  cart: z
+    .array(
+      z.object({
+        tierId: z.string().min(1).max(64),
+        quantity: z.number().int().min(1).max(20),
+        name: z.string().max(200).optional(),
+      })
+    )
+    .min(1, 'No memberships selected')
+    .max(10),
+  additionalMembers: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(200),
+        email: z.string().trim().email().max(254),
+        tierId: z.string().min(1).max(64),
+        sendInvitation: z.boolean().default(false),
+      })
+    )
+    .max(20)
+    .default([]),
+  customerInfo: z.object({
+    name: z.string().trim().min(2, 'Valid name is required').max(200),
+    email: z.string().trim().email('Valid email address is required').max(254),
+    company: z.string().trim().max(200).optional().default(''),
+    phone: z.string().trim().max(40).optional().default(''),
+  }),
+  autoRenew: z.boolean().default(false),
+  businessInfo: z.object({ businessName: z.string().trim().max(200).optional() }).optional(),
+  contactInfo: z
+    .object({
+      firstName: z.string().trim().max(100).optional(),
+      lastName: z.string().trim().max(100).optional(),
+    })
+    .optional(),
+}).strict()
 
 export async function POST(request: NextRequest) {
   if (!MEMBERSHIP_SALES_ENABLED) {
@@ -47,44 +54,27 @@ export async function POST(request: NextRequest) {
       { status: 403 }
     )
   }
-  const startTime = Date.now()
   try {
     
     const session = await auth()
     
-    const body: PaymentRequest = await request.json()
-    
-    const { cart, additionalMembers, customerInfo, autoRenew, businessInfo, contactInfo } = body
-
-    // Validate cart
-    if (!cart || cart.length === 0) {
+    const parsed = paymentRequestSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'No memberships selected' },
+        { error: parsed.error.errors[0]?.message ?? 'Invalid request' },
         { status: 400 }
       )
     }
+    const { cart, additionalMembers, customerInfo, autoRenew, businessInfo, contactInfo } = parsed.data
 
-    // Validate customer info
-    if (!customerInfo?.email || !customerInfo.email.includes('@')) {
-      return NextResponse.json(
-        { error: 'Valid email address is required' },
-        { status: 400 }
-      )
+    // Prices come from the server's tier table, never from the client's cart.
+    if (cart.some(item => !Object.prototype.hasOwnProperty.call(MEMBERSHIP_PRICES, item.tierId))) {
+      return NextResponse.json({ error: 'Unknown membership tier' }, { status: 400 })
     }
-
-    if (!customerInfo?.name || customerInfo.name.trim().length < 2) {
-      return NextResponse.json(
-        { error: 'Valid name is required' },
-        { status: 400 }
-      )
-    }
-
-
-    // Calculate total amount
-    const totalAmount = cart.reduce((sum, item) => {
-      const priceInCents = MEMBERSHIP_PRICES[item.tierId as keyof typeof MEMBERSHIP_PRICES] || 0
-      return sum + (priceInCents * item.quantity)
-    }, 0)
+    const totalAmount = cart.reduce(
+      (sum, item) => sum + MEMBERSHIP_PRICES[item.tierId] * item.quantity,
+      0
+    )
 
     if (totalAmount === 0) {
       return NextResponse.json(
@@ -124,17 +114,22 @@ export async function POST(request: NextRequest) {
       throw stripeError
     }
 
+    // Nothing here grants anything: this runs before the card is charged. The
+    // Stripe webhook (payment_intent.succeeded) is the only place a purchase
+    // becomes a membership (2026-09-22 audit, H-A2).
     let userId: string
+    // True only when this request created the account, so the webhook may fill
+    // in its name. An existing account found by email is never renamed.
+    let isNewUser = false
 
     if (session?.user) {
-      // Authenticated user - use existing user ID
       userId = session.user.id
     } else {
-      // Unauthenticated user - check if user exists, otherwise create
       let tempUser = await prisma.user.findUnique({
         where: { email: customerInfo.email }
       })
       if (!tempUser) {
+        isNewUser = true
         tempUser = await prisma.user.create({
           data: {
             email: customerInfo.email,
@@ -149,7 +144,7 @@ export async function POST(request: NextRequest) {
               create: {
                 businessName: businessInfo?.businessName || customerInfo.company || 'Temporary Business',
                 membershipTier: 'MEETING_MEMBER',
-                membershipStatus: 'ACTIVE',
+                membershipStatus: 'PENDING',
                 joinedAt: new Date(),
                 stripeCustomerId: customer.id
               }
@@ -161,7 +156,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Create payment intent
-    const stripeStartTime = Date.now()
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalAmount,
       currency: 'usd',
@@ -178,90 +172,9 @@ export async function POST(request: NextRequest) {
         contactInfo: JSON.stringify(contactInfo || {}),
         autoRenew: autoRenew.toString(),
         type: 'membership',
-        isNewUser: (!session?.user).toString()
+        isNewUser: isNewUser.toString()
       }
     })
-
-    // If authenticated user, update their membership immediately
-    if (session?.user) {
-      const dbStartTime = Date.now()
-      await prisma.user.update({
-        where: { id: session.user.id },
-        data: {
-          role: 'MEMBER',
-          member: {
-            upsert: {
-              create: {
-                membershipTier: 'MEETING_MEMBER', // Default tier, will be updated based on cart
-                membershipStatus: 'ACTIVE',
-                joinedAt: new Date(),
-                stripeCustomerId: customer.id
-              },
-              update: {
-                membershipStatus: 'ACTIVE',
-                stripeCustomerId: customer.id
-              }
-            }
-          }
-        }
-      })
-
-      // Create membership records for each cart item
-      for (const item of cart) {
-        const membershipTier = tierFromSlug(item.tierId) ?? 'MEETING_MEMBER'
-
-        // Update member record with tier information
-        await prisma.member.update({
-          where: { userId: session.user.id },
-          data: {
-            membershipTier: membershipTier,
-            membershipStatus: 'ACTIVE'
-          }
-        })
-      }
-
-      // Handle additional members
-      if (additionalMembers.length > 0) {
-        for (const member of additionalMembers) {
-          if (member.sendInvitation) {
-            // Create invitation record using MembershipInvitation model
-            await prisma.membershipInvitation.create({
-              data: {
-                email: member.email,
-                name: member.name,
-                tierId: member.tierId,
-                invitedBy: session.user.id,
-                status: 'PENDING',
-                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-                metadata: {
-                  paymentIntentId: paymentIntent.id
-                }
-              }
-            })
-
-            // TODO: Send invitation email
-            // await sendMembershipInvitation(member.email, member.name, member.tierId)
-          }
-        }
-      }
-
-      // Log payment
-      await prisma.auditLog.create({
-        data: {
-          userId: session.user.id,
-          action: 'MEMBERSHIP_PAYMENT_COMPLETED',
-          entityType: 'PAYMENT',
-          entityId: paymentIntent.id,
-          newValues: {
-            cart: JSON.stringify(cart),
-            additionalMembers: JSON.stringify(additionalMembers),
-            totalAmount,
-            currency: 'usd',
-            autoRenew
-          }
-        }
-      })
-    }
 
     return NextResponse.json({
       success: true,
@@ -270,14 +183,9 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('=== Membership Payment Error ===')
-    console.error('Error type:', typeof error)
-    console.error('Error message:', error.message)
-    console.error('Error stack:', error.stack)
-    console.error('Full error object:', error)
-    
+    console.error('Membership payment error:', error)
     return NextResponse.json(
-      { error: 'Payment failed', details: error.message },
+      { error: 'Payment failed' },
       { status: 500 }
     )
   }

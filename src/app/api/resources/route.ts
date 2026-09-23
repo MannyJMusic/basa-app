@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { z } from 'zod'
 import { requireAdmin, requireSession, isResponse } from '@/lib/api-auth'
+
+const createResourceSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(5000).nullish(),
+  fileUrl: z.string().trim().url().max(1000).refine(u => /^https?:\/\//i.test(u), 'fileUrl must be http(s)').nullish(),
+  fileType: z.string().trim().max(100).nullish(),
+  fileSize: z.number().int().min(0).nullish(),
+  category: z.string().trim().max(100).nullish(),
+  tags: z.array(z.string().trim().max(50)).max(20).optional(),
+  memberId: z.string().max(50).nullish(),
+  isActive: z.boolean().default(true),
+}).strict()
 
 // GET /api/resources - Get all resources
 export async function GET(request: NextRequest) {
@@ -19,7 +32,6 @@ export async function GET(request: NextRequest) {
             user: {
               select: {
                 name: true,
-                email: true,
               },
             },
           },
@@ -43,21 +55,15 @@ export async function POST(request: NextRequest) {
     const session = await requireAdmin()
     if (isResponse(session)) return session
 
-    const body = await request.json()
-    
-    const resource = await prisma.resource.create({
-      data: {
-        title: body.title,
-        description: body.description,
-        fileUrl: body.fileUrl,
-        fileType: body.fileType,
-        fileSize: body.fileSize,
-        category: body.category,
-        tags: body.tags,
-        memberId: body.memberId,
-        isActive: body.isActive ?? true,
-      },
-    })
+    const parsed = createResourceSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors[0]?.message ?? 'Invalid resource' },
+        { status: 400 }
+      )
+    }
+
+    const resource = await prisma.resource.create({ data: parsed.data })
 
     return NextResponse.json(resource, { status: 201 })
   } catch (error) {

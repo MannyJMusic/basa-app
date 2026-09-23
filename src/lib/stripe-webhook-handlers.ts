@@ -14,8 +14,9 @@ import { tierFromSlug } from '@/lib/membership-tiers'
 import { renewalDateForPayment } from '@/lib/membership-lifecycle'
 
 /**
- * Stripe webhook event handlers, shared by /api/webhooks/stripe and /api/payments/webhook.
- * Kept out of the route files because Next.js only allows HTTP method exports there.
+ * Stripe webhook event handlers for /api/webhooks/stripe, which dedupes events
+ * by id before calling in. Kept out of the route file because Next.js only
+ * allows HTTP method exports there.
 
  */
 const { logger } = Sentry
@@ -38,10 +39,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
         // Parse metadata safely
         let parsedBusinessInfo: any = {}
         let parsedContactInfo: any = {}
-        
+        let parsedCustomer: { name?: string; company?: string } = {}
+
         try {
           parsedBusinessInfo = businessInfo ? JSON.parse(businessInfo) : {}
           parsedContactInfo = contactInfo ? JSON.parse(contactInfo) : {}
+          parsedCustomer = customerInfo ? JSON.parse(customerInfo) : {}
         } catch (parseError) {
           console.error('Failed to parse metadata:', parseError)
           // Use fallback values
@@ -53,16 +56,24 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
         await prisma.user.update({
           where: { id: userId },
           data: {
-            firstName: parsedContactInfo.firstName || customerInfo?.name?.split(' ')[0] || 'Member',
-            lastName: parsedContactInfo.lastName || customerInfo?.name?.split(' ').slice(1).join(' ') || '',
-            role: 'MEMBER',
+            firstName: parsedContactInfo.firstName || (parsedCustomer.name ?? '').split(' ')[0] || 'Member',
+            lastName: parsedContactInfo.lastName || (parsedCustomer.name ?? '').split(' ').slice(1).join(' ') || '',
             member: {
-              update: {
-                businessName: parsedBusinessInfo.businessName || customerInfo?.company || 'Business',
-                membershipTier: 'MEETING_MEMBER',
-                membershipStatus: 'ACTIVE',
-                renewalDate: renewalDateForPayment(),
-                stripeCustomerId: paymentIntent.customer
+              upsert: {
+                create: {
+                  businessName: parsedBusinessInfo.businessName || parsedCustomer.company || 'Business',
+                  membershipTier: 'MEETING_MEMBER',
+                  membershipStatus: 'ACTIVE',
+                  renewalDate: renewalDateForPayment(),
+                  stripeCustomerId: paymentIntent.customer
+                },
+                update: {
+                  businessName: parsedBusinessInfo.businessName || parsedCustomer.company || 'Business',
+                  membershipTier: 'MEETING_MEMBER',
+                  membershipStatus: 'ACTIVE',
+                  renewalDate: renewalDateForPayment(),
+                  stripeCustomerId: paymentIntent.customer
+                }
               }
             }
           }
@@ -108,7 +119,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
         await prisma.user.update({
           where: { id: userId },
           data: {
-            role: 'MEMBER',
             member: {
               upsert: {
                 create: {
@@ -128,6 +138,13 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
           }
         })
       }
+
+      // A purchase makes a GUEST a MEMBER. It never touches any other role: an
+      // admin or moderator who buys a membership must not be demoted by it.
+      await prisma.user.updateMany({
+        where: { id: userId, role: 'GUEST' },
+        data: { role: 'MEMBER' },
+      })
 
       // Send payment receipt email to all users
       const user = await prisma.user.findUnique({

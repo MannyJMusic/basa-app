@@ -9,7 +9,7 @@ export default function EmailPreviewPage() {
   const [firstName, setFirstName] = useState('John')
   const [email, setEmail] = useState('test@example.com')
   const [fromName, setFromName] = useState('BASA')
-  const [activationUrl, setActivationUrl] = useState('https://businessassociationsa.com/api/auth/activate?token=test123&email=test@example.com')
+  const [activationUrl, setActivationUrl] = useState('https://businessassociationsa.com/auth/verify-email?token=test123&email=test@example.com')
   const [resetUrl, setResetUrl] = useState('https://businessassociationsa.com/auth/reset-password?token=reset123&email=test@example.com')
   const [isSending, setIsSending] = useState(false)
   
