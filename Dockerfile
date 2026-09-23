@@ -1,5 +1,5 @@
 # Production Dockerfile
-FROM node:22-alpine AS base
+FROM node:25-alpine AS base
 
 # Install pnpm and OpenSSL dependencies for Prisma
 RUN apk add --no-cache openssl
@@ -48,7 +48,7 @@ RUN find node_modules -name ".prisma" -type d | head -1 | xargs -I {} cp -r {} /
      (echo "Prisma client still not found" && find node_modules -name "*prisma*" -type d && exit 1))
 
 # Production stage
-FROM node:22-alpine AS production
+FROM node:25-alpine AS production
 
 # Install pnpm and OpenSSL dependencies for Prisma
 RUN apk add --no-cache openssl
