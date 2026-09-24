@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { hashPassword, verifyPassword } from "@/lib/utils"
+import { hashPassword, verifyPassword } from "@/lib/password"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireSession, isResponse } from "@/lib/api-auth"

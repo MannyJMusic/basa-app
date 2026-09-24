@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { passwordResetSchema } from "@/lib/validations"
-import { hashPassword } from "@/lib/utils"
+import { hashPassword } from "@/lib/password"
 import { prisma } from "@/lib/db"
 import { isUnclaimedLegacyAccount, CLAIM_ACTIVATION } from "@/lib/account-claim"
 
