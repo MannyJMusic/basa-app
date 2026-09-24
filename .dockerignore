@@ -12,12 +12,12 @@ out
 # Production build
 dist
 
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Environment files. None enter the build context (2026-09-22 audit, H-B2):
+# .env.production used to, so every secret in it sat in the build stage's layers
+# and the BuildKit cache. The build now gets its few values as build args and a
+# BuildKit secret from docker-compose.prod.yml.
+.env*
+!.env.example
 
 # IDE files
 .vscode
@@ -128,4 +128,3 @@ playwright-report/
 *.sql.gz
 *.dump
 *.tsbuildinfo
-.env.sentry-build-plugin

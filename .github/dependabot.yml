@@ -16,6 +16,10 @@ updates:
         patterns: ["@sentry/*"]
       prisma:
         patterns: ["prisma", "@prisma/*"]
+      # Everything else arrives as one PR instead of one per package.
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
     # Majors are deliberate upgrades, not background PRs; security updates for
     # them still arrive through Dependabot security updates.
     ignore:
@@ -34,6 +38,16 @@ updates:
   # Majors are skipped here too: for the node base image a "major" is a Node
   # release line, and production stays on an LTS line (22) until moved on purpose.
   - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: dev
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # docker-compose.prod.yml pins postgres and node by digest.
+  - package-ecosystem: docker-compose
     directory: /
     schedule:
       interval: weekly

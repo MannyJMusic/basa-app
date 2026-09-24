@@ -1,5 +1,9 @@
+# syntax=docker/dockerfile:1
 # Production Dockerfile
-FROM node:22-alpine AS base
+#
+# Base images are pinned by digest so a rebuild gets exactly the same base;
+# Dependabot (docker ecosystem) proposes digest bumps.
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS base
 
 # Install pnpm and OpenSSL dependencies for Prisma
 RUN apk add --no-cache openssl
@@ -35,10 +39,30 @@ RUN pnpm prisma generate
 # Copy source code
 COPY . .
 
+# Build-time configuration. .env.production is no longer in the build context
+# (2026-09-22 audit, H-B2): docker-compose.prod.yml passes the values the build
+# needs. NEXT_PUBLIC_* are compiled into the browser bundle by design, so they are
+# public anyway; they live only in this build stage, not the runtime image.
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_SENTRY_DSN
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN \
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
+    SENTRY_ORG=$SENTRY_ORG \
+    SENTRY_PROJECT=$SENTRY_PROJECT
+
 # Build the application (prebuild runs type-check and lint). The webpack cache
 # (~600 MB) is only useful to the next build on the same machine; left in, it is
 # copied into the runtime image with the rest of .next.
-RUN pnpm run build && rm -rf .next/cache
+# The Sentry token (source-map upload) arrives as a BuildKit secret: mounted for
+# this one command, never written to a layer or the image history. Absent (as in
+# CI), the build simply skips the upload.
+RUN --mount=type=secret,id=sentry_auth_token,required=false \
+    SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null || true)" \
+    pnpm run build && rm -rf .next/cache
 
 # Copy Prisma client to a location that won't be excluded by .dockerignore
 RUN find node_modules -name ".prisma" -type d | head -1 | xargs -I {} cp -r {} /tmp/prisma-client || \
@@ -48,7 +72,7 @@ RUN find node_modules -name ".prisma" -type d | head -1 | xargs -I {} cp -r {} /
      (echo "Prisma client still not found" && find node_modules -name "*prisma*" -type d && exit 1))
 
 # Production stage
-FROM node:22-alpine AS production
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS production
 
 # Install pnpm and OpenSSL dependencies for Prisma
 RUN apk add --no-cache openssl
@@ -93,8 +117,9 @@ COPY --from=base --chown=nextjs:nodejs /app/next.config.js ./
 COPY --chown=nextjs:nodejs scripts/setup-prod.js ./
 
 # prisma/seed.ts imports shared definitions (chapters, membership tiers) from
-# src/lib. The seed runs at container start via tsx, so that module has to ship
-# with the runtime image or seeding fails with MODULE_NOT_FOUND.
+# src/lib. The seed is a one-off run from this image (the `seed` service in
+# docker-compose.prod.yml) via tsx, so that module has to ship with it or seeding
+# fails with MODULE_NOT_FOUND.
 COPY --chown=nextjs:nodejs src/lib ./src/lib
 
 # Only the directory itself and the pieces Next writes to (.next/cache) are owned
@@ -106,12 +131,11 @@ RUN chown nextjs:nodejs /app
 # Switch to non-root user
 USER nextjs
 
-# Expose port
+# Expose port. (5555 was Prisma Studio, which runs in its own opt-in container.)
 EXPOSE 3000
-EXPOSE 5555
 
 # Set environment variable
 ENV NODE_ENV=production
 
-# Start the application with database setup
+# Apply migrations, then start. Seeding is not part of startup any more.
 CMD ["sh", "-c", "node setup-prod.js && pnpm start"] 
