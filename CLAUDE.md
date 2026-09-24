@@ -105,7 +105,7 @@ There is **no self-registration** (owner decision 2026-09-22, #166). Accounts ar
 - Google sign-in only works for an existing, active account; an unknown address is refused (`signIn` callback returns `false`, which lands on `/auth/sign-in?error=AccessDenied`). Deactivated or suspended accounts are refused by both providers.
 - Nothing creates a `Member` row with `membershipStatus: "ACTIVE"` except the Stripe webhook and admin routes. Implicit rows (`/api/account`, `/api/profile`, newsletter) are `PENDING`; member pricing keys off `ACTIVE`.
 - Newsletter subscribe (`POST /api/newsletter`, public) may create an inactive `GUEST` user to hang the flag on, never a login-capable one, and never edits an existing user's name. Bulk sending is `POST /api/admin/newsletter` (admin only).
-- The audit-log principal `system@basa.org` (`src/lib/system-user.ts`) is inactive, non-admin, and denied in auth; `getSystemUser()` self-heals the row if it is ever found active.
+- The audit-log principal `system@businessassociationsa.invalid` (`src/lib/system-user.ts`; a reserved TLD, so the mailbox can never exist) is inactive, non-admin, and denied in auth; `getSystemUser()` self-heals the row if it is ever found active.
 
 ## Feature gates
 

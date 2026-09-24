@@ -7,7 +7,9 @@ import { prisma } from '@/lib/db'
  * which made it claimable through "forgot password" or OAuth linking by whoever
  * controls the mailbox. It is now inactive, non-admin, and denied in auth.
  */
-export const SYSTEM_USER_EMAIL = 'system@basa.org'
+// `.invalid` is a reserved TLD (RFC 2606): the address can never exist, so no one
+// can ever hold its mailbox. (It was system@basa.org, a domain BASA does not own.)
+export const SYSTEM_USER_EMAIL = 'system@businessassociationsa.invalid'
 
 const SAFE_SYSTEM_USER = {
   role: 'GUEST' as const,
