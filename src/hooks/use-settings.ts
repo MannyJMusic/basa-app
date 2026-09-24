@@ -107,8 +107,8 @@ export function useSettings() {
       
       const defaultSettings = {
         organizationName: 'BASA - Business Association of San Antonio',
-        contactEmail: 'admin@basa.org',
-        website: 'https://basa.org',
+        contactEmail: 'info@businessassociationsa.com',
+        website: 'https://businessassociationsa.com',
         maintenanceMode: false,
         autoApproveMembers: false,
         emailNotifications: true,

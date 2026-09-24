@@ -371,7 +371,7 @@ export function SettingsForm() {
                 <Label>Admin Email Addresses</Label>
                 <textarea 
                   className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="admin@basa.org&#10;manager@basa.org"
+                  placeholder="info@businessassociationsa.com&#10;events@businessassociationsa.com"
                   value={formData.adminEmails || ''}
                   onChange={(e) => handleInputChange('adminEmails', e.target.value)}
                 />
@@ -434,7 +434,7 @@ export function SettingsForm() {
               <div className="space-y-2">
                 <Label>Email Username</Label>
                 <Input 
-                  placeholder="noreply@basa.org" 
+                  placeholder="noreply@businessassociationsa.com" 
                   value={formData.smtpUsername || ''}
                   onChange={(e) => handleInputChange('smtpUsername', e.target.value)}
                 />

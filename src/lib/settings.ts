@@ -9,8 +9,8 @@ export async function getSettings() {
       settings = await db.settings.create({
         data: {
           organizationName: 'BASA - Business Association of San Antonio',
-          contactEmail: 'admin@basa.org',
-          website: 'https://basa.org',
+          contactEmail: 'info@businessassociationsa.com',
+          website: 'https://businessassociationsa.com',
           maintenanceMode: false,
           autoApproveMembers: false,
           emailNotifications: true,
@@ -39,8 +39,8 @@ export async function getSettings() {
     return {
       id: 'default',
       organizationName: 'BASA - Business Association of San Antonio',
-      contactEmail: 'admin@basa.org',
-      website: 'https://basa.org',
+      contactEmail: 'info@businessassociationsa.com',
+      website: 'https://businessassociationsa.com',
       maintenanceMode: false,
       autoApproveMembers: false,
       emailNotifications: true,

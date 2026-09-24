@@ -58,9 +58,9 @@ model Settings {
   
   // Organization Information
   organizationName      String   @default("BASA - Business Association of San Antonio")
-  contactEmail          String   @default("admin@basa.org")
+  contactEmail          String   @default("info@businessassociationsa.com")
   phoneNumber           String?
-  website               String   @default("https://basa.org")
+  website               String   @default("https://businessassociationsa.com")
   address               String?
   description           String?  @db.Text
   

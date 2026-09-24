@@ -93,7 +93,7 @@ export default function LeadershipPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center space-x-2">
                     <Mail className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">maria.elena@basa.org</span>
+                    <span className="text-sm text-gray-600">info@businessassociationsa.com</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Phone className="w-4 h-4 text-gray-500" />

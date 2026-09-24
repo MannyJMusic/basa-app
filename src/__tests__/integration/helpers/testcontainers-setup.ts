@@ -424,7 +424,7 @@ export default class TestcontainersSetup {
         create: {
           id: 'default',
           organizationName: 'BASA Test',
-          contactEmail: 'test@basa.org',
+          contactEmail: 'test@example.com',
           phoneNumber: '+1234567890',
           website: 'https://basa-test.org',
           address: '123 Test St, Test City, CA 12345',
