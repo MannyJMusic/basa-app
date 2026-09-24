@@ -89,10 +89,15 @@ test.describe('Event registration', () => {
 
   test('a guest asks for the member rate: the card is held, not charged, until an admin decides', async ({ page, request, baseURL }) => {
     const email = `e2e-verify-${Date.now()}@example.com`
+    // A hydration mismatch (invalid nesting such as a div inside a p) surfaces only
+    // as a page error, so the page is asserted to load without one.
+    const pageErrors: string[] = []
+    page.on('pageerror', e => pageErrors.push(e.message))
 
     await page.goto(`/events/${FIXTURE_EVENT.slug}/register`)
     // Guests see the member rate but cannot pick it without asking to be verified.
     await expect(page.getByText('Members only')).toBeVisible()
+    expect(pageErrors).toEqual([])
     const addMember = page.getByRole('button', { name: `Add one ${FIXTURE_EVENT.memberTier}` })
     await expect(addMember).toBeDisabled()
     await page.getByRole('checkbox', { name: /verify me for the member rate/ }).click()
