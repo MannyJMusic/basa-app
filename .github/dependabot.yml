@@ -45,3 +45,13 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+
+  # docker-compose.prod.yml pins postgres and node by digest.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: dev
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

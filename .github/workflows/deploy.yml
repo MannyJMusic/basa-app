@@ -79,11 +79,13 @@ jobs:
           NEXT_PUBLIC_APP_URL: https://app.businessassociationsa.com
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
-  # The production image, built exactly as the host builds it. Without this a
-  # Dockerfile or .dockerignore change was first tested by the production deploy,
-  # which is how release #168 failed (e2e/ dockerignored). No .env.production
-  # here, so NEXT_PUBLIC_* are empty and no source maps upload; the point is
-  # that the image builds, not what it is configured with.
+  # The production image, built exactly as the host builds it (compose, same
+  # file, same --env-file). Without this a Dockerfile or .dockerignore change was
+  # first tested by the production deploy, which is how release #168 failed
+  # (e2e/ dockerignored). The env file here is a canary: its NEXT_PUBLIC_APP_URL
+  # must reach the bundle (build args are wired), and nothing else from it may
+  # reach the image (the file stays out of the build context). No Sentry token,
+  # so no source maps upload.
   docker-build:
     name: Docker image builds
     runs-on: ubuntu-latest
@@ -92,7 +94,32 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Build production image
-        run: DOCKER_BUILDKIT=1 docker build --target production -t basa-app:ci .
+        run: |
+          set -euo pipefail
+          # Compose requires POSTGRES_PASSWORD to interpolate the file; nothing
+          # connects with it here. Generated so no password literal sits in the repo.
+          {
+            echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)"
+            echo "NEXT_PUBLIC_APP_URL=https://build-arg-canary.invalid"
+            echo "CANARY_SECRET=env-file-canary-must-not-reach-the-image"
+          } > .env.production
+          docker compose --env-file .env.production -f docker-compose.prod.yml build --progress=plain basa-app
+
+      - name: Image carries the build args and no env file
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint sh basa-app:current -c '
+            fail=0
+            if find /app -path /app/node_modules -prune -o -name ".env*" -print | grep .; then
+              echo "::error::an env file is in the image"; fail=1
+            fi
+            if grep -rqF env-file-canary-must-not-reach-the-image /app/.next; then
+              echo "::error::a value from .env.production was compiled into .next"; fail=1
+            fi
+            if ! grep -rqF build-arg-canary.invalid /app/.next; then
+              echo "::error::NEXT_PUBLIC_APP_URL did not reach the build"; fail=1
+            fi
+            exit $fail'
 
   # The money path in a real browser against a real build (#65): a guest buys a
   # ticket, a visitor joins as a member, a declined card confirms nothing. Runs on
