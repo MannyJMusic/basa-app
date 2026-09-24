@@ -16,6 +16,10 @@ updates:
         patterns: ["@sentry/*"]
       prisma:
         patterns: ["prisma", "@prisma/*"]
+      # Everything else arrives as one PR instead of one per package.
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
     # Majors are deliberate upgrades, not background PRs; security updates for
     # them still arrive through Dependabot security updates.
     ignore:
