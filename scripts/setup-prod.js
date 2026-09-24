@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Runs on every production container start, before `next start`.
+ * Runs on every production container start, before `next start`: applies
+ * pending migrations and refuses to start if they fail.
  *
  * This used to call `prisma db push --accept-data-loss`, which force-syncs the
  * database to match schema.prisma and silently drops any column or table that no
@@ -29,18 +30,12 @@ try {
 }
 
 /**
- * Seeding is idempotent: it creates the admin accounts, chapters and default
- * settings only when absent, and skips demo data entirely under NODE_ENV=production.
- * A failure here is not fatal - the app runs fine without seed data - but it must be
- * visible rather than swallowed.
+ * Seeding no longer runs here. It used to run on every start, which meant the
+ * admin passwords had to sit in the app container's environment forever, and a
+ * missing Settings row was silently recreated with placeholder values. The seed
+ * is idempotent and only needed for a fresh database; run it deliberately:
+ *   docker compose --env-file .env.production -f docker-compose.prod.yml \
+ *     --profile tools run --rm seed
  */
-try {
-  console.log('Seeding baseline data...')
-  execSync('pnpm run db:seed', { stdio: 'inherit' })
-  console.log('Seed complete.')
-} catch (error) {
-  console.warn('Seeding failed; continuing to start. Investigate before relying on admin accounts.')
-  console.warn(error.message)
-}
 
 console.log('Production environment ready.')

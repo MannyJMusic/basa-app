@@ -1,14 +1,40 @@
+# Container hardening (2026-09-22 audit, M-B3). Every service: no privilege
+# escalation, bounded json-file logs (they were unbounded on a disk that hit 99%),
+# and CPU / memory / process caps sized for the 2-CPU, 8 GB host so a runaway
+# container cannot take the box (and WordPress, which shares it) down with it.
+# Not done yet: read_only root filesystems (needs a test deploy with tmpfs mounts).
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+# Pulled images are pinned by digest so a restart never silently picks up
+# something new; Dependabot (docker-compose ecosystem) proposes digest bumps.
+
 services:
   # PostgreSQL Database (Production)
   postgres:
-    image: postgres:15-alpine
+    <<: *hardening
+    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
     container_name: basa-postgres-prod
-    env_file:
-      - .env.production
+    # Only its own settings. It used to get the whole .env.production through
+    # env_file, so Stripe, NextAuth, Mailgun and Anthropic secrets were readable
+    # in `docker inspect basa-postgres-prod`.
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-basa_prod}
       POSTGRES_USER: ${POSTGRES_USER:-basa_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    # The entrypoint starts as root, fixes ownership of the data directory, then
+    # drops to the postgres user; these are the capabilities that needs.
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
     ports:
       # Localhost only: the app reaches Postgres over the Docker network, and
       # migrations/backups run via docker exec. Nothing needs this published.
@@ -26,13 +52,29 @@ services:
 
   # BASA Application (Production)
   basa-app:
+    <<: *hardening
     build:
       context: .
       dockerfile: Dockerfile
+      # .env.production is not in the build context (see .dockerignore). What the
+      # build needs comes from here, interpolated from the same --env-file.
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
+        SENTRY_ORG: ${SENTRY_ORG:-}
+        SENTRY_PROJECT: ${SENTRY_PROJECT:-}
+      secrets:
+        - sentry_auth_token
     # Explicit tag rather than the project-derived `basa-app-basa-app`, so the
     # deploy script can retag a known-good image back into place to roll back.
     image: basa-app:current
     container_name: basa-app-prod
+    # Runs as the unprivileged nextjs user on port 3000; needs no capabilities.
+    cap_drop: [ALL]
+    mem_limit: 1536m
+    cpus: 1.5
+    pids_limit: 512
     ports:
       # Localhost only: nginx reverse-proxies to this. Publishing on 0.0.0.0 put the
       # app straight on the internet, bypassing nginx's TLS, logging and rate limits.
@@ -46,8 +88,16 @@ services:
       # Covered by the Hostinger VPS snapshots along with the rest of the box.
       - ./uploads:/app/public/uploads
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-basa_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-basa_prod}
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-basa_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-basa_prod}
+      # In .env.production but not for the running app: the Sentry token is for
+      # the image build, the admin passwords for the one-off seed, and the app
+      # reaches Postgres through DATABASE_URL. env_file entries cannot be removed,
+      # only overridden, so they are blanked here.
+      SENTRY_AUTH_TOKEN: ""
+      ADMIN1_PASSWORD: ""
+      ADMIN2_PASSWORD: ""
+      POSTGRES_PASSWORD: ""
     networks:
       - basa-network
     depends_on:
@@ -61,19 +111,45 @@ services:
       retries: 3
       start_period: 40s
 
+  # One-off seed (admin accounts, chapters, default settings; idempotent, and it
+  # skips demo data in production). It used to run on every app start, which kept
+  # the admin passwords in the app container's environment. Only for a fresh
+  # database:
+  #   docker compose --env-file .env.production -f docker-compose.prod.yml \
+  #     --profile tools run --rm seed
+  seed:
+    <<: *hardening
+    profiles: ["tools"]
+    image: basa-app:current
+    cap_drop: [ALL]
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-basa_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-basa_prod}
+    command: ["pnpm", "run", "db:seed"]
+    networks:
+      - basa-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   # Prisma Studio (Production - Admin Only)
   prisma-studio:
+    <<: *hardening
     # Opt-in only. A database browser has no business running continuously in
     # production; start it deliberately when needed:
     #   docker compose --env-file .env.production -f docker-compose.prod.yml \
     #     --profile tools up -d prisma-studio
     profiles: ["tools"]
-    image: node:22-alpine
+    image: node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
     container_name: basa-prisma-studio-prod
     working_dir: /app
     command: ["sh", "-c", "npm install -g pnpm@9.12.2 && npm pkg delete scripts.postinstall && NODE_ENV=development pnpm install --frozen-lockfile && pnpm exec prisma generate && pnpm exec prisma studio --port 5555 --hostname 0.0.0.0"]
-    env_file:
-      - .env.production
+    # Only the database URL, not the whole .env.production.
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-basa_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-basa_prod}
     volumes:
       - ./prisma:/app/prisma:delegated
       - ./package.json:/app/package.json:delegated
@@ -90,9 +166,16 @@ services:
       - postgres
     restart: unless-stopped
 
+# The Sentry source-map upload token, handed to the image build as a BuildKit
+# secret rather than a build arg (args are recorded in the image history).
+# Read from SENTRY_AUTH_TOKEN in the --env-file; empty means no upload.
+secrets:
+  sentry_auth_token:
+    environment: SENTRY_AUTH_TOKEN
+
 volumes:
   postgres_data:
 
 networks:
   basa-network:
-    driver: bridge 
+    driver: bridge
