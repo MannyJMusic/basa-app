@@ -53,10 +53,10 @@ async function main() {
     await prisma.settings.create({
       data: {
         organizationName: 'BASA - Business Association of San Antonio',
-        contactEmail: 'admin@basa.org',
-        phoneNumber: '(210) 555-0123',
-        website: 'https://basa.org',
-        address: '123 Business District, San Antonio, TX 78205',
+        contactEmail: 'info@businessassociationsa.com',
+        phoneNumber: '(210) 549-7190',
+        website: 'https://businessassociationsa.com',
+        address: '9002 Wurbach Rd, San Antonio, TX 78240',
         description: 'BASA is the premier business association in San Antonio, connecting entrepreneurs and business leaders for growth and success.',
         maintenanceMode: false,
         autoApproveMembers: false,
@@ -69,7 +69,7 @@ async function main() {
         notifyPayments: true,
         notifyEventRegistrations: true,
         notifySystemAlerts: true,
-        adminEmails: 'admin@basa.org\nmanager@basa.org',
+        adminEmails: 'info@businessassociationsa.com',
         stripeTestMode: true,
         primaryColor: '#1e40af',
         secondaryColor: '#059669',
