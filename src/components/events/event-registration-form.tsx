@@ -267,12 +267,14 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
             return (
               <div key={tier.id} className="flex items-center justify-between gap-4 border-b pb-4 last:border-0 last:pb-0">
                 <div className="min-w-0">
-                  <p className="font-medium">
+                  {/* A div, not a p: Badge renders a div, and a div inside a p is
+                      invalid HTML the browser restructures, which breaks hydration. */}
+                  <div className="font-medium">
                     {tier.name}
                     {!viewerIsMember && tier.audience === 'MEMBER' && (
                       <Badge variant="secondary" className="ml-2 align-middle bg-amber-100 text-amber-900">Members only</Badge>
                     )}
-                  </p>
+                  </div>
                   {tier.description && (
                     <p className="text-sm text-gray-600">{tier.description}</p>
                   )}
