@@ -111,6 +111,12 @@ There is **no self-registration** (owner decision 2026-09-22, #166). Accounts ar
 
 `src/lib/feature-flags.ts`, read from the server environment at request time and passed to client components as props. `MEMBERSHIP_SALES_ENABLED` (off unless exactly `true`) controls whether memberships can be bought or renewed online: off means the join and payment pages show how to reach the office, tier listings show no prices or buy buttons, the dashboard shows no upgrade offers, renewal emails point at the office, and `POST /api/payments/membership` answers 403. Event tickets are unaffected. The e2e suite runs with it on so the join wizard stays tested.
 
+## Member and non-member ticket tiers
+
+Member and non-member prices are separate `TicketTier` rows (imported from MEC), told apart by `TicketTier.audience` (`ALL`, `MEMBER`, `NON_MEMBER`; backfilled from tier names in `20260925000000_member_rate_requests`). `priceSelection()` in `src/lib/ticket-tiers.ts` enforces it, with member status taken from the session only: a signed-in active member cannot buy a `NON_MEMBER` tier (the register page hides them), and a guest cannot buy a `MEMBER` tier except through a member-rate request.
+
+A member-rate request ("I'm a member without a login, verify me") is allowed only on a `MEMBER` tier whose `nonMemberTierId` points at an active non-member tier of the same event (set automatically for events with one of each; otherwise in the admin tier editor). The PaymentIntent uses `capture_method: 'manual'`: the card is authorized for the order at non-member prices, and `EventRegistrationItem.memberUnitPrice` records what verification would charge. Stripe's `requires_capture` (webhook `payment_intent.amount_capturable_updated`, or the stale-hold sweep) confirms the seat, sends the ticket email with the hold explained, and emails every active admin a link to `/admin/member-rate-requests/:id`. Approve captures the member total; deny captures the full hold and moves the item to the paired non-member tier. With no decision within `DECISION_DAYS` (6; card authorizations lapse at 7) the release-stale-holds cron captures the full hold (`EXPIRED`). Decisions are claimed with a conditional update, so a double click or two admins capture once. Logic: `src/lib/member-rate-requests.ts`. When the Stripe webhook moves to the app at cutover, subscribe it to `payment_intent.amount_capturable_updated` too; until then the sweep picks authorizations up after 30 minutes.
+
 ## Architecture
 
 ### Directory Structure

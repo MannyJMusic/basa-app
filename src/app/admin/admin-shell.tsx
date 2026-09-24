@@ -4,7 +4,7 @@ import { AdminOnly } from "@/components/auth/role-guard"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { LogOut, BarChart2, Users, FileText, Calendar, DollarSign, UserPlus, Settings } from "lucide-react"
+import { LogOut, BarChart2, Users, FileText, Calendar, DollarSign, UserPlus, Settings, BadgeCheck } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
 import { UserCircleIcon } from "@heroicons/react/24/outline"
 
@@ -49,6 +49,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </Link>
             <Link href="/admin/payments" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-blue-50 text-blue-900 font-medium">
               <DollarSign className="w-5 h-5" /> Payments
+            </Link>
+            <Link href="/admin/member-rate-requests" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-blue-50 text-blue-900 font-medium">
+              <BadgeCheck className="w-5 h-5" /> Member rate requests
             </Link>
             <Link href="/admin/content" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-blue-50 text-blue-900 font-medium">
               <FileText className="w-5 h-5" /> Content

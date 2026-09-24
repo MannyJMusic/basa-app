@@ -16,6 +16,11 @@ interface StripeFormProps {
   onError: (error: string) => void
   loading?: boolean
   type?: string
+  /**
+   * Set when the card is only being authorized (a member-rate request): the button
+   * says "Place hold" rather than "Pay", and this text says what happens next.
+   */
+  holdNotice?: string
 }
 
 export function StripeForm({
@@ -25,7 +30,8 @@ export function StripeForm({
   onSuccess,
   onError,
   loading = false,
-  type
+  type,
+  holdNotice
 }: StripeFormProps) {
   const stripe = useStripe()
   const elements = useElements()
@@ -53,7 +59,8 @@ export function StripeForm({
     if (error) {
       setMessage(error.message || 'Payment failed')
       onError(error.message || 'Payment failed')
-    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+    } else if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture')) {
+      // requires_capture: a hold was placed (manual capture), which is success here.
       setMessage('Payment successful!')
       onSuccess(paymentIntent.id)
       if (type) {
@@ -88,6 +95,9 @@ export function StripeForm({
             {formatAmount(amount)}
           </div>
           <p className="text-gray-600">{description}</p>
+          {holdNotice && (
+            <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-left text-sm text-gray-800">{holdNotice}</p>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -117,7 +127,7 @@ export function StripeForm({
             ) : (
               <>
                 <CreditCard className="w-4 h-4 mr-2" />
-                Pay {formatAmount(amount)}
+                {holdNotice ? 'Place hold of' : 'Pay'} {formatAmount(amount)}
               </>
             )}
           </Button>

@@ -58,6 +58,7 @@ model User {
   sessionsInvalidBefore   DateTime?
   accounts                Account[]
   auditLogs               AuditLog[]
+  memberRateDecisions     MemberRateRequest[]
   blogPosts               BlogPost[]
   member                  Member?
   membershipInvitations   MembershipInvitation[]
@@ -343,35 +344,65 @@ model Organizer {
 }
 
 model EventRegistration {
-  id              String                  @id @default(cuid())
-  eventId         String
-  memberId        String?
-  name            String
-  email           String
-  company         String?
-  phone           String?
-  ticketCount     Int                     @default(1)
-  totalAmount     Decimal                 @db.Decimal(10, 2)
-  status          RegistrationStatus      @default(PENDING)
-  paymentIntentId String?                 @unique
+  id                String                  @id @default(cuid())
+  eventId           String
+  memberId          String?
+  name              String
+  email             String
+  company           String?
+  phone             String?
+  ticketCount       Int                     @default(1)
+  totalAmount       Decimal                 @db.Decimal(10, 2)
+  status            RegistrationStatus      @default(PENDING)
+  paymentIntentId   String?                 @unique
   /// Random token that identifies this registration on its ticket page and in its
   /// QR code. Unguessable; the only credential a guest has for their ticket.
-  ticketToken     String?                 @unique
+  ticketToken       String?                 @unique
   /// Set when the door marks the registration as arrived (QR scan or manual).
-  checkedInAt     DateTime?
-  checkedInBy     String?
+  checkedInAt       DateTime?
+  checkedInBy       String?
   /// Per-ticket attendee details, as [{ name, email? }]. The columns above are the
   /// buyer; this is who is actually coming. Collected by the registration form and
   /// previously discarded.
-  attendees       Json?
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  event           Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  member          Member?                 @relation(fields: [memberId], references: [id])
-  items           EventRegistrationItem[]
+  attendees         Json?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  event             Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member            Member?                 @relation(fields: [memberId], references: [id])
+  items             EventRegistrationItem[]
+  memberRateRequest MemberRateRequest?
 
   @@index([eventId])
   @@index([memberId])
+  @@index([status])
+}
+
+/// A guest who says they are a member buys the member tier with the card authorized
+/// (not charged) at the non-member price. An admin approves (capture the member
+/// total) or denies (capture the full hold); undecided by deadlineAt, the sweep
+/// captures the full hold, before the card authorization lapses.
+model MemberRateRequest {
+  id             String                  @id @default(cuid())
+  registrationId String                  @unique
+  status         MemberRateRequestStatus @default(AWAITING_PAYMENT)
+  /// What the card is authorized for: the order at non-member prices, in cents.
+  heldCents      Int
+  /// What is captured if the buyer is verified, in cents.
+  memberCents    Int
+  /// Set once Stripe reports the card authorized; admins are emailed then, not at
+  /// checkout, so abandoned checkouts never reach them.
+  authorizedAt   DateTime?
+  deadlineAt     DateTime?
+  decidedAt      DateTime?
+  decidedById    String?
+  decisionNote   String?
+  /// What was actually captured, in cents, once decided.
+  chargedCents   Int?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  registration   EventRegistration       @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  decidedBy      User?                   @relation(fields: [decidedById], references: [id], onDelete: SetNull)
+
   @@index([status])
 }
 
@@ -379,23 +410,32 @@ model EventRegistration {
 /// event (member, non-member, table, sponsor levels), which a single price on
 /// Event cannot represent. `wpId` lets the #57 importer upsert MEC ticket ids.
 model TicketTier {
-  id           String                  @id @default(cuid())
-  eventId      String
-  name         String
-  description  String?
-  price        Decimal                 @db.Decimal(10, 2)
-  memberPrice  Decimal?                @db.Decimal(10, 2)
+  id              String                  @id @default(cuid())
+  eventId         String
+  name            String
+  description     String?
+  price           Decimal                 @db.Decimal(10, 2)
+  memberPrice     Decimal?                @db.Decimal(10, 2)
   /// null means unlimited, still bounded by the event's own capacity
-  quantity     Int?
-  salesStartAt DateTime?
-  salesEndAt   DateTime?
-  sortOrder    Int                     @default(0)
-  isActive     Boolean                 @default(true)
-  wpId         Int?
-  createdAt    DateTime                @default(now())
-  updatedAt    DateTime                @updatedAt
-  event        Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  items        EventRegistrationItem[]
+  quantity        Int?
+  salesStartAt    DateTime?
+  salesEndAt      DateTime?
+  sortOrder       Int                     @default(0)
+  isActive        Boolean                 @default(true)
+  /// Who may buy this tier. MEMBER tiers need an active membership (or an approved
+  /// member-rate request); NON_MEMBER tiers are hidden from signed-in members.
+  audience        TierAudience            @default(ALL)
+  /// On a MEMBER tier: the non-member tier whose price a member-rate request is
+  /// held at until an admin verifies the buyer. Without one, guests cannot request
+  /// this tier's rate.
+  nonMemberTierId String?
+  nonMemberTier   TicketTier?             @relation("MemberTierPairing", fields: [nonMemberTierId], references: [id], onDelete: SetNull)
+  memberTiers     TicketTier[]            @relation("MemberTierPairing")
+  wpId            Int?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  event           Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items           EventRegistrationItem[]
 
   /// One row per MEC ticket per event, so the importer can upsert. MEC numbers its
   /// tickets from 1 within each event, so wpId is only unique alongside eventId.
@@ -407,14 +447,17 @@ model TicketTier {
 /// One line of a registration: how many of which tier, at the price charged.
 /// unitPrice is a snapshot - changing a tier's price must not rewrite history.
 model EventRegistrationItem {
-  id             String            @id @default(cuid())
-  registrationId String
-  ticketTierId   String
-  quantity       Int
-  unitPrice      Decimal           @db.Decimal(10, 2)
-  createdAt      DateTime          @default(now())
-  registration   EventRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  ticketTier     TicketTier        @relation(fields: [ticketTierId], references: [id])
+  id              String            @id @default(cuid())
+  registrationId  String
+  ticketTierId    String
+  quantity        Int
+  unitPrice       Decimal           @db.Decimal(10, 2)
+  /// Member-rate request only: the price per ticket if the buyer is verified.
+  /// unitPrice is what the card is held for until then.
+  memberUnitPrice Decimal?          @db.Decimal(10, 2)
+  createdAt       DateTime          @default(now())
+  registration    EventRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  ticketTier      TicketTier        @relation(fields: [ticketTierId], references: [id])
 
   @@index([registrationId])
   @@index([ticketTierId])
@@ -614,6 +657,25 @@ enum EventStatus {
   PUBLISHED
   CANCELLED
   COMPLETED
+}
+
+enum TierAudience {
+  ALL
+  MEMBER
+  NON_MEMBER
+}
+
+enum MemberRateRequestStatus {
+  /// Checkout started; the card is not authorized yet.
+  AWAITING_PAYMENT
+  /// Authorized and waiting for an admin.
+  PENDING
+  APPROVED
+  DENIED
+  /// No decision before the deadline; charged the non-member rate.
+  EXPIRED
+  /// The checkout was abandoned or the hold released; nothing charged.
+  CANCELLED
 }
 
 enum RegistrationStatus {

@@ -2629,7 +2629,18 @@ import { formatEventWhen, formatEventWhere, ticketAttendees, ticketUrl } from '@
  * ticket link, the QR code (as a hosted PNG - mail clients drop inline SVG and
  * data: URIs), what was bought, and the event as an .ics attachment.
  */
-export async function sendEventTicketEmail(t: Ticket): Promise<void> {
+export interface PendingMemberRate {
+  heldCents: number
+  memberCents: number
+  deadlineAt: Date
+}
+
+const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`
+const decisionDate = (d: Date) =>
+  new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/Chicago' }).format(d)
+
+export async function sendEventTicketEmail(t: Ticket, options: { pendingMemberRate?: PendingMemberRate } = {}): Promise<void> {
+  const pending = options.pendingMemberRate
   const siteUrl = getSiteUrl()
   const when = formatEventWhen(t.event.startDate, t.event.endDate)
   const where = formatEventWhere(t.event)
@@ -2655,8 +2666,9 @@ export async function sendEventTicketEmail(t: Ticket): Promise<void> {
               </table>
               <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 6px;font-size:15px;border-top:1px solid #e5e7eb;padding-top:8px;">
                 ${lines}
-                <tr><td style="padding:6px 0;color:#111827;font-weight:700;border-top:1px solid #e5e7eb;">Total</td><td style="padding:6px 0;text-align:right;color:#111827;font-weight:700;border-top:1px solid #e5e7eb;">$${Number(t.totalAmount).toFixed(2)}</td></tr>
+                <tr><td style="padding:6px 0;color:#111827;font-weight:700;border-top:1px solid #e5e7eb;">${pending ? 'Card hold' : 'Total'}</td><td style="padding:6px 0;text-align:right;color:#111827;font-weight:700;border-top:1px solid #e5e7eb;">$${Number(t.totalAmount).toFixed(2)}</td></tr>
               </table>
+              ${pending ? `<p style="margin:0 0 14px;padding:12px 14px;background:#fff7e6;border:1px solid #f5d38a;border-radius:6px;font-size:14px;line-height:1.6;color:#374151;"><strong>Member rate pending.</strong> Your card has a hold of ${dollars(pending.heldCents)}, not a charge. We are verifying your BASA membership: once we do, you will be charged only ${dollars(pending.memberCents)} and the rest of the hold is released. If we cannot verify your membership by ${decisionDate(pending.deadlineAt)}, you will be charged the non-member rate of ${dollars(pending.heldCents)}. Your ticket is valid either way.</p>` : ''}
               ${attendees.length ? `<p style="margin:0 0 14px;font-size:14px;color:#374151;"><strong>Attendees:</strong> ${attendees.map(a => escapeHtml(a.name)).join(', ')}</p>` : ''}
               <p style="margin:18px 0 6px;font-size:15px;line-height:1.6;color:#374151;">Show this code at the door, or print the ticket from the link below:</p>
               <p style="margin:0 0 14px;text-align:center;"><a href="${link}"><img src="${link}/qr.png" width="180" height="180" alt="Your ticket QR code" style="display:inline-block;border:1px solid #e5e7eb;border-radius:8px;"></a></p>
@@ -2677,4 +2689,87 @@ export async function sendEventTicketEmail(t: Ticket): Promise<void> {
   await sendEmail(t.email, `Your ticket: ${t.event.title}`, html, {
     attachments: [{ filename: icsFilename(t.event.slug), data: Buffer.from(ics, 'utf8'), contentType: 'text/calendar; charset=utf-8; method=PUBLISH' }],
   })
+}
+
+// ---------------------------------------------------------------------------
+// Member-rate verification
+// ---------------------------------------------------------------------------
+
+export interface MemberRateRequestEmail {
+  requestId: string
+  buyerName: string
+  buyerEmail: string
+  company: string | null
+  phone: string | null
+  eventTitle: string
+  tickets: number
+  heldCents: number
+  memberCents: number
+  deadlineAt: Date
+}
+
+/** To every active admin, when a guest's card is authorized for a member-rate request. */
+export async function sendMemberRateRequestAdminEmail(to: string[], r: MemberRateRequestEmail): Promise<void> {
+  const siteUrl = getSiteUrl()
+  const url = `${siteUrl}/admin/member-rate-requests/${r.requestId}`
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:4px 0;color:#6b7280;width:130px;vertical-align:top;">${label}</td><td style="padding:4px 0;color:#111827;">${value}</td></tr>`
+  const html = renderNoticeEmail({
+    title: `Verify a member: ${r.buyerName}`,
+    preheader: `${r.buyerName} asked for the member rate for ${r.eventTitle}`,
+    heading: 'Is this person a BASA member?',
+    accent: '#F5B400',
+    siteUrl,
+    logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
+    ctaLabel: 'Review and approve or deny',
+    ctaUrl: url,
+    bodyHtml: `
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Someone bought tickets at the member rate without signing in as a member. Their card is on hold for the non-member price until one of you decides.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 14px;font-size:15px;">
+                ${row('Name', `<strong>${escapeHtml(r.buyerName)}</strong>`)}
+                ${row('Email', escapeHtml(r.buyerEmail))}
+                ${r.company ? row('Company', escapeHtml(r.company)) : ''}
+                ${r.phone ? row('Phone', escapeHtml(r.phone)) : ''}
+                ${row('Event', escapeHtml(r.eventTitle))}
+                ${row('Tickets', String(r.tickets))}
+                ${row('If approved', `charged <strong>${dollars(r.memberCents)}</strong> (member rate)`)}
+                ${row('If denied', `charged <strong>${dollars(r.heldCents)}</strong> (non-member rate)`)}
+              </table>
+              <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#374151;">If nobody decides by <strong>${decisionDate(r.deadlineAt)}</strong>, they are charged the non-member rate automatically, before the card hold expires. You will need to sign in.</p>`,
+  })
+  // One message per admin: sendEmail takes a single recipient, and each admin
+  // should be able to reply without copying the other.
+  for (const address of to) {
+    await sendEmail(address, `Verify a member: ${r.buyerName} (${r.eventTitle})`, html)
+  }
+}
+
+/** To the buyer, once an admin decides or the deadline passes. */
+export async function sendMemberRateDecisionEmail(
+  to: string,
+  d: { buyerName: string; eventTitle: string; outcome: 'APPROVED' | 'DENIED' | 'EXPIRED'; chargedCents: number; ticketLink: string | null }
+): Promise<void> {
+  const siteUrl = getSiteUrl()
+  const first = escapeHtml(d.buyerName.split(' ')[0] || d.buyerName)
+  const approved = d.outcome === 'APPROVED'
+  const body = approved
+    ? `We verified your BASA membership. You have been charged the member rate of <strong>${dollars(d.chargedCents)}</strong>, and the rest of the hold on your card has been released.`
+    : d.outcome === 'DENIED'
+      ? `We were not able to verify a BASA membership for you, so you have been charged the non-member rate of <strong>${dollars(d.chargedCents)}</strong>. If you think this is a mistake, reply to this email or call (210) 549-7190.`
+      : `We were not able to verify your membership in time, so you have been charged the non-member rate of <strong>${dollars(d.chargedCents)}</strong>. If you are a member, reply to this email or call (210) 549-7190 and we will sort it out.`
+  const html = renderNoticeEmail({
+    title: approved ? 'Member rate confirmed' : 'About your member rate request',
+    preheader: approved ? `Charged ${dollars(d.chargedCents)} for ${d.eventTitle}` : `Charged the non-member rate for ${d.eventTitle}`,
+    heading: approved ? 'Your member rate is confirmed' : 'About your member rate request',
+    accent: approved ? '#10b981' : '#17A2B8',
+    siteUrl,
+    logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
+    ctaLabel: 'View your ticket',
+    ctaUrl: d.ticketLink ?? `${siteUrl}/events`,
+    bodyHtml: `
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${first},</p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">${body}</p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Your ticket for <strong>${escapeHtml(d.eventTitle)}</strong> is unchanged.</p>`,
+  })
+  await sendEmail(to, approved ? `Member rate confirmed: ${d.eventTitle}` : `Your ticket for ${d.eventTitle}`, html)
 }

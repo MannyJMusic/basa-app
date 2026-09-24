@@ -33,7 +33,7 @@ export default async function globalSetup(): Promise<void> {
   start.setHours(17, 30, 0, 0)
   const end = new Date(start.getTime() + 2 * 60 * 60 * 1000)
 
-  await prisma.event.create({
+  const created = await prisma.event.create({
     data: {
       title: FIXTURE_EVENT.title,
       slug: FIXTURE_EVENT.slug,
@@ -51,13 +51,15 @@ export default async function globalSetup(): Promise<void> {
       status: 'PUBLISHED',
       price: FIXTURE_EVENT.guestPrice,
       memberPrice: FIXTURE_EVENT.memberPrice,
-      ticketTiers: {
-        create: [
-          { name: FIXTURE_EVENT.memberTier, price: FIXTURE_EVENT.memberPrice, sortOrder: 0, isActive: true },
-          { name: FIXTURE_EVENT.guestTier, price: FIXTURE_EVENT.guestPrice, sortOrder: 1, isActive: true },
-        ],
-      },
     },
+  })
+  // Imported events look like this: a non-member tier, and a member tier paired with
+  // it so a guest can ask to be verified (held at the non-member price meanwhile).
+  const guestTier = await prisma.ticketTier.create({
+    data: { eventId: created.id, name: FIXTURE_EVENT.guestTier, price: FIXTURE_EVENT.guestPrice, sortOrder: 1, isActive: true, audience: 'NON_MEMBER' },
+  })
+  await prisma.ticketTier.create({
+    data: { eventId: created.id, name: FIXTURE_EVENT.memberTier, price: FIXTURE_EVENT.memberPrice, sortOrder: 0, isActive: true, audience: 'MEMBER', nonMemberTierId: guestTier.id },
   })
   await prisma.$disconnect()
   console.log(`e2e: fixture event /events/${FIXTURE_EVENT.slug} created`)

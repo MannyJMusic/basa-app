@@ -12,6 +12,7 @@ import {
 } from '@/lib/basa-emails'
 import { tierFromSlug } from '@/lib/membership-tiers'
 import { renewalDateForPayment } from '@/lib/membership-lifecycle'
+import { activateMemberRateRequest, cancelMemberRateRequest } from '@/lib/member-rate-requests'
 
 /**
  * Stripe webhook event handlers for /api/webhooks/stripe, which dedupes events
@@ -300,8 +301,9 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
 /**
  * Promote an event registration from PENDING to CONFIRMED once Stripe says the money
- * actually arrived. This is the only place a registration becomes CONFIRMED - the
- * payment route deliberately writes PENDING, because it runs before the card is charged.
+ * actually arrived - or, for a member-rate request, that the card is authorized for
+ * it. This is the only place a registration becomes CONFIRMED - the payment route
+ * deliberately writes PENDING, because it runs before the card is charged.
  */
 export async function confirmEventRegistration(paymentIntent: any) {
   // Looked up by PaymentIntent, which is unique on EventRegistration. Stripe
@@ -354,6 +356,17 @@ export async function confirmEventRegistration(paymentIntent: any) {
     eventId: registration.eventId,
   })
 
+  // A member-rate request sends its own version of the ticket email (the card is on
+  // hold, not charged) and asks the admins to verify the buyer.
+  const memberRate = await prisma.memberRateRequest.findUnique({
+    where: { registrationId: registration.id },
+    select: { id: true },
+  })
+  if (memberRate) {
+    await activateMemberRateRequest(registration.id)
+    return
+  }
+
   // The buyer's confirmation, with the ticket link and QR code (#159). A failed
   // send must never fail the webhook: the registration is confirmed regardless,
   // and the ticket page exists whether or not the email lands.
@@ -389,6 +402,7 @@ async function releaseEventRegistration(paymentIntent: any, reason: string) {
     where: { id: registration.id },
     data: { status: 'CANCELLED' },
   })
+  await cancelMemberRateRequest(registration.id)
 
   logger.info('Event registration released', { registrationId: registration.id, reason })
 }
@@ -497,6 +511,14 @@ export async function handleWebhookEvent(event: any) {
     switch (event.type) {
       case 'payment_intent.succeeded':
         await handlePaymentIntentSucceeded(event.data.object)
+        break
+
+      // A member-rate request: the card is authorized (manual capture) and the charge
+      // waits for an admin, but the seat is the buyer's now.
+      case 'payment_intent.amount_capturable_updated':
+        if (event.data.object?.metadata?.type === 'event') {
+          await confirmEventRegistration(event.data.object)
+        }
         break
 
       case 'payment_intent.payment_failed':

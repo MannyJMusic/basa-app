@@ -8,6 +8,7 @@ import { ArrowLeft, Calendar, Clock, MapPin } from 'lucide-react'
 import { prisma } from '@/lib/db'
 import { soldCounts } from '@/lib/ticket-tiers'
 import { EventRegistrationForm } from '@/components/events/event-registration-form'
+import { auth } from '@/lib/auth'
 
 // This page previously loaded neither mock nor real data: it fetched
 // `/api/events?search=<slug>` client-side and filtered the results, then priced
@@ -47,6 +48,15 @@ export default async function EventRegistrationPage({ params }: { params: Promis
   const event = await getEvent(slug)
   if (!event) notFound()
 
+  // Same rule as the payment route: member status comes from the session. Signed-in
+  // members never see non-member tiers; everyone else sees member tiers marked as
+  // such, with sign-in or "verify me" as the way to that rate.
+  const session = await auth()
+  const member = session?.user?.id
+    ? await prisma.member.findUnique({ where: { userId: session.user.id }, select: { membershipStatus: true } })
+    : null
+  const viewerIsMember = member?.membershipStatus === 'ACTIVE'
+
   const sold = await soldCounts(event.id)
   const eventPlacesLeft = event.capacity === null ? null : Math.max(0, event.capacity - sold.total)
   const isPast = event.endDate < new Date()
@@ -57,14 +67,24 @@ export default async function EventRegistrationPage({ params }: { params: Promis
 
   // Decimal and Date do not survive the server/client boundary, so the tiers are
   // flattened to primitives here rather than passed as Prisma objects.
-  const tiers = event.ticketTiers.map(t => ({
-    id: t.id,
-    name: t.name,
-    description: t.description,
-    price: Number(t.price),
-    memberPrice: t.memberPrice === null ? null : Number(t.memberPrice),
-    remaining: t.quantity === null ? null : Math.max(0, t.quantity - (sold.perTier.get(t.id) ?? 0)),
-  }))
+  const tiers = event.ticketTiers
+    .filter(t => !(viewerIsMember && t.audience === 'NON_MEMBER'))
+    .map(t => {
+      const pair = t.audience === 'MEMBER' && t.nonMemberTierId
+        ? event.ticketTiers.find(p => p.id === t.nonMemberTierId)
+        : undefined
+      return {
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        price: Number(t.price),
+        memberPrice: t.memberPrice === null ? null : Number(t.memberPrice),
+        remaining: t.quantity === null ? null : Math.max(0, t.quantity - (sold.perTier.get(t.id) ?? 0)),
+        audience: t.audience,
+        // A guest's member-rate request is held at this price until verified.
+        heldPrice: pair ? Number(pair.price) : null,
+      }
+    })
 
   const closed = isPast || eventPlacesLeft === 0 || tiers.length === 0
 
@@ -122,6 +142,8 @@ export default async function EventRegistrationPage({ params }: { params: Promis
               eventTitle={event.title}
               tiers={tiers}
               eventPlacesLeft={eventPlacesLeft}
+              viewerIsMember={viewerIsMember}
+              signInHref={`/auth/sign-in?callbackUrl=${encodeURIComponent(`/events/${event.slug}/register`)}`}
             />
           )}
         </div>

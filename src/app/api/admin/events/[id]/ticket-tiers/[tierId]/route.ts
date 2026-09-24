@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAdmin, isResponse } from '@/lib/api-auth'
-import { tierInput } from '@/lib/ticket-tier-admin'
+import { tierInput, resolvePairing } from '@/lib/ticket-tier-admin'
 
 /** Edit or remove one ticket tier (#160). Admin only. */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string; tierId: string }> }) {
@@ -21,6 +21,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: 'Member price cannot be higher than the regular price' }, { status: 400 })
   }
 
+  // Audience and pairing are settled together: a tier that stops being MEMBER loses
+  // its pairing, and a tier that stops being NON_MEMBER is unpaired from member tiers.
+  const audience = d.audience ?? existing.audience
+  const touchesPairing = d.audience !== undefined || d.nonMemberTierId !== undefined
+  const pairing = touchesPairing
+    ? await resolvePairing(id, tierId, audience, d.nonMemberTierId === undefined ? existing.nonMemberTierId : d.nonMemberTierId)
+    : null
+  if (pairing && 'error' in pairing) return NextResponse.json({ error: pairing.error }, { status: 400 })
+  if (d.audience !== undefined && d.audience !== 'NON_MEMBER' && existing.audience === 'NON_MEMBER') {
+    await prisma.ticketTier.updateMany({ where: { nonMemberTierId: tierId }, data: { nonMemberTierId: null } })
+  }
+
   const tier = await prisma.ticketTier.update({
     where: { id: tierId },
     data: {
@@ -33,6 +45,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       ...(d.salesEndAt !== undefined && { salesEndAt: d.salesEndAt ? new Date(d.salesEndAt) : null }),
       ...(d.sortOrder !== undefined && { sortOrder: d.sortOrder }),
       ...(d.isActive !== undefined && { isActive: d.isActive }),
+      ...(d.audience !== undefined && { audience: d.audience }),
+      ...(pairing && 'value' in pairing && { nonMemberTierId: pairing.value }),
     },
   })
   return NextResponse.json(tier)

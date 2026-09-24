@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
  * before Stripe returns to the browser but the lookup can race a slow database.
  */
 export function EventTicketPanel({ paymentId }: { paymentId: string }) {
-  const [state, setState] = useState<{ token: string; eventTitle: string } | 'loading' | 'missing'>('loading')
+  const [state, setState] = useState<{ token: string; eventTitle: string; memberRate: { status: string; heldCents: number; memberCents: number } | null } | 'loading' | 'missing'>('loading')
 
   useEffect(() => {
     let cancelled = false
@@ -22,7 +22,7 @@ export function EventTicketPanel({ paymentId }: { paymentId: string }) {
         const res = await fetch(`/api/tickets/by-payment?paymentId=${encodeURIComponent(paymentId)}`, { cache: 'no-store' })
         if (res.ok) {
           const json = await res.json()
-          if (!cancelled) setState({ token: json.token, eventTitle: json.event?.title ?? 'your event' })
+          if (!cancelled) setState({ token: json.token, eventTitle: json.event?.title ?? 'your event', memberRate: json.memberRate ?? null })
           return
         }
       } catch {
@@ -54,6 +54,13 @@ export function EventTicketPanel({ paymentId }: { paymentId: string }) {
             Your ticket has a QR code to show at the door. Print it, save it as a PDF, or take a screenshot.
             A copy is also on its way by email.
           </p>
+          {state.memberRate && ['AWAITING_PAYMENT', 'PENDING'].includes(state.memberRate.status) && (
+            <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-gray-800">
+              <strong>Member rate pending.</strong> Your card has a hold of ${(state.memberRate.heldCents / 100).toFixed(2)}, not a charge.
+              Once we verify your membership you will be charged ${(state.memberRate.memberCents / 100).toFixed(2)}; if we can&apos;t,
+              you will be charged ${(state.memberRate.heldCents / 100).toFixed(2)}. We&apos;ll email you either way.
+            </p>
+          )}
           <div className="mt-4 flex flex-wrap gap-3">
             <Button asChild>
               <Link href={`/tickets/${state.token}`}>
