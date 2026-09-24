@@ -1,6 +1,7 @@
 "use client"
 
 import { signIn } from "next-auth/react"
+import { safeCallbackPath } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { FcGoogle } from "react-icons/fc"
@@ -17,9 +18,11 @@ export default function SocialAuth({ mode = "signin" }: SocialAuthProps) {
     setLoading(provider)
     try {
       // Use redirect: true to let NextAuth handle the redirect automatically
-      await signIn(provider, { 
-        callbackUrl: "/dashboard",
-        redirect: true 
+      // Back to where they came from (e.g. an event checkout), else the dashboard.
+      const from = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("callbackUrl")
+      await signIn(provider, {
+        callbackUrl: safeCallbackPath(from) ?? "/dashboard",
+        redirect: true,
       })
     } catch (error) {
       console.error("Social login error:", error)

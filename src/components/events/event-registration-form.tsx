@@ -10,7 +10,10 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { StripeForm } from '@/components/payments/stripe-form'
-import { AlertCircle, Minus, Plus } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { AlertCircle, BadgeCheck, Minus, Plus } from 'lucide-react'
+import Link from 'next/link'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -22,6 +25,9 @@ export interface RegistrationTier {
   memberPrice: number | null
   /** null means unlimited, still bounded by the event's own capacity */
   remaining: number | null
+  audience: 'ALL' | 'MEMBER' | 'NON_MEMBER'
+  /** MEMBER tiers: the non-member price a guest's "verify me" request is held at. */
+  heldPrice: number | null
 }
 
 interface Props {
@@ -29,6 +35,9 @@ interface Props {
   eventTitle: string
   tiers: RegistrationTier[]
   eventPlacesLeft: number | null
+  /** Signed in with an active membership. The page already left out non-member tiers. */
+  viewerIsMember: boolean
+  signInHref: string
 }
 
 interface Attendee {
@@ -38,17 +47,27 @@ interface Attendee {
 
 const money = (n: number) => `$${n.toFixed(2).replace(/\.00$/, '')}`
 
-export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesLeft }: Props) {
+export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesLeft, viewerIsMember, signInHref }: Props) {
+  // A guest may pick a member tier only by asking to be verified, and only where the
+  // tier has a non-member price to hold the card at. The server enforces the same.
+  const [verifyMe, setVerifyMe] = useState(false)
+  const memberTiers = tiers.filter(t => t.audience === 'MEMBER')
+  const guestSeesMemberTiers = !viewerIsMember && memberTiers.length > 0
+  const canRequest = memberTiers.some(t => t.heldPrice !== null && t.heldPrice > t.price)
+  const buyable = (t: RegistrationTier) =>
+    viewerIsMember || t.audience !== 'MEMBER' || (verifyMe && t.heldPrice !== null)
+
   // Quantity per tier. A single-tier event still goes through the same path; it just
   // renders one row. Every event has at least a General Admission tier from the #54
   // migration, so there is no "no tiers" case to special-case here.
   const [quantities, setQuantities] = useState<Record<string, number>>(() =>
-    tiers.length === 1 ? { [tiers[0].id]: 1 } : {}
+    tiers.length === 1 && (viewerIsMember || tiers[0].audience !== 'MEMBER') ? { [tiers[0].id]: 1 } : {}
   )
   const [buyer, setBuyer] = useState({ name: '', email: '', company: '', phone: '' })
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [serverTotalCents, setServerTotalCents] = useState<number | null>(null)
+  const [serverMemberCents, setServerMemberCents] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -60,15 +79,33 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
   // Indicative only. The server re-prices from the tier table when it creates the
   // PaymentIntent, and member pricing is applied there from the session rather than
   // from anything this component can assert.
+  // For a verification request the card is held at the non-member price and the
+  // member price is what is charged if verified.
+  const held = (t: RegistrationTier) => (!viewerIsMember && t.audience === 'MEMBER' && t.heldPrice !== null ? t.heldPrice : t.price)
   const indicativeTotal = useMemo(
     () =>
-      tiers.reduce((sum, t) => sum + (quantities[t.id] ?? 0) * t.price, 0),
+      tiers.reduce((sum, t) => sum + (quantities[t.id] ?? 0) * held(t), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tiers, quantities, viewerIsMember]
+  )
+  const indicativeMemberTotal = useMemo(
+    () => tiers.reduce((sum, t) => sum + (quantities[t.id] ?? 0) * t.price, 0),
     [tiers, quantities]
   )
+  const requestingMemberRate = !viewerIsMember && verifyMe &&
+    tiers.some(t => t.audience === 'MEMBER' && (quantities[t.id] ?? 0) > 0)
+
+  const toggleVerifyMe = (on: boolean) => {
+    setVerifyMe(on)
+    if (!on) {
+      // Member tiers are not buyable without the request; drop them from the order.
+      setQuantities(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => tiers.find(t => t.id === id)?.audience !== 'MEMBER')))
+    }
+  }
 
   const setQty = (tierId: string, next: number) => {
     const tier = tiers.find(t => t.id === tierId)
-    if (!tier) return
+    if (!tier || !buyable(tier)) return
 
     const otherTickets = Object.entries(quantities)
       .filter(([id]) => id !== tierId)
@@ -133,6 +170,7 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
             .slice(0, totalTickets)
             .filter(a => a.name.trim())
             .map(a => ({ name: a.name.trim(), email: a.email.trim() || undefined })),
+          ...(requestingMemberRate ? { memberRateRequest: true } : {}),
         }),
       })
 
@@ -144,6 +182,7 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
 
       setClientSecret(data.clientSecret)
       setServerTotalCents(data.totalCents)
+      setServerMemberCents(data.memberRateRequest?.memberTotalCents ?? null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start checkout')
     } finally {
@@ -158,6 +197,9 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
           clientSecret={clientSecret}
           amount={serverTotalCents} // StripeForm takes cents; this was passed dollars and showed "Pay $0.45" for a $45 ticket
           description={`${totalTickets} ticket${totalTickets === 1 ? '' : 's'} — ${eventTitle}`}
+          holdNotice={serverMemberCents !== null
+            ? `This places a hold on your card; it is not a charge yet. Once we verify your BASA membership you will be charged only ${money(serverMemberCents / 100)}, and the rest of the hold is released. If we cannot verify your membership, you will be charged the non-member rate of ${money(serverTotalCents / 100)}.`
+            : undefined}
           type="event"
           onSuccess={() => {
             /* StripeForm redirects to /payment/success itself. */
@@ -181,18 +223,56 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
         <CardHeader>
           <CardTitle>Choose tickets</CardTitle>
           <CardDescription>
-            Member pricing is applied automatically at checkout if you are signed in with an
-            active membership.
+            {viewerIsMember
+              ? "You're signed in as a BASA member, so you get the member rate."
+              : guestSeesMemberTiers
+                ? 'Member rates are for BASA members who are signed in.'
+                : 'Choose how many tickets you need.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {guestSeesMemberTiers && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3 text-sm text-gray-800">
+              <p>
+                <BadgeCheck className="inline w-4 h-4 mr-1 text-amber-700 align-text-bottom" />
+                To pay the member rate, <Link href={signInHref} className="font-medium text-blue-800 underline">sign in as a member</Link>.
+              </p>
+              {canRequest && (
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <Checkbox
+                    id="verify-me"
+                    checked={verifyMe}
+                    onCheckedChange={v => toggleVerifyMe(v === true)}
+                    className="mt-0.5"
+                    aria-label="I'm a BASA member without a login: verify me for the member rate"
+                  />
+                  <span>
+                    <strong>I&apos;m a BASA member but don&apos;t have a login.</strong> Verify me and give me the member rate.
+                    {verifyMe && (
+                      <span className="block mt-2 text-gray-700">
+                        Your card will be <strong>held, not charged</strong>, for the non-member rate. Once we verify your
+                        membership you are charged only the member rate and the rest of the hold is released.{' '}
+                        <strong>If we cannot verify your membership, you will be charged the non-member rate.</strong>{' '}
+                        Your ticket is confirmed either way.
+                      </span>
+                    )}
+                  </span>
+                </label>
+              )}
+            </div>
+          )}
           {tiers.map(tier => {
             const qty = quantities[tier.id] ?? 0
             const soldOut = tier.remaining === 0
             return (
               <div key={tier.id} className="flex items-center justify-between gap-4 border-b pb-4 last:border-0 last:pb-0">
                 <div className="min-w-0">
-                  <p className="font-medium">{tier.name}</p>
+                  <p className="font-medium">
+                    {tier.name}
+                    {!viewerIsMember && tier.audience === 'MEMBER' && (
+                      <Badge variant="secondary" className="ml-2 align-middle bg-amber-100 text-amber-900">Members only</Badge>
+                    )}
+                  </p>
                   {tier.description && (
                     <p className="text-sm text-gray-600">{tier.description}</p>
                   )}
@@ -202,6 +282,18 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
                       <span className="text-gray-500"> · {money(tier.memberPrice)} members</span>
                     )}
                   </p>
+                  {!buyable(tier) && (
+                    <p className="text-xs text-amber-800 mt-1">
+                      {tier.heldPrice !== null && tier.heldPrice > tier.price
+                        ? 'Sign in as a member, or tick "verify me" above, to buy at this rate.'
+                        : 'Sign in as a member to buy at this rate.'}
+                    </p>
+                  )}
+                  {buyable(tier) && !viewerIsMember && tier.audience === 'MEMBER' && tier.heldPrice !== null && tier.heldPrice > tier.price && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Card held at {money(tier.heldPrice)} until we verify you; charged {money(tier.price)} if verified.
+                    </p>
+                  )}
                   {tier.remaining !== null && (
                     <p className="text-xs text-gray-500 mt-1">
                       {soldOut ? 'Sold out' : `${tier.remaining} remaining`}
@@ -221,7 +313,7 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
                   <Button
                     type="button" variant="outline" size="icon"
                     onClick={() => setQty(tier.id, qty + 1)}
-                    disabled={soldOut}
+                    disabled={soldOut || !buyable(tier)}
                     aria-label={`Add one ${tier.name}`}
                   >
                     <Plus className="w-4 h-4" />
@@ -236,8 +328,13 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
               <Separator />
               <div className="flex justify-between font-medium">
                 <span>{totalTickets} ticket{totalTickets === 1 ? '' : 's'}</span>
-                <span>{money(indicativeTotal)}</span>
+                <span>{requestingMemberRate ? `Card hold ${money(indicativeTotal)}` : money(indicativeTotal)}</span>
               </div>
+              {requestingMemberRate && indicativeMemberTotal < indicativeTotal && (
+                <p className="text-sm text-gray-700 text-right">
+                  {money(indicativeMemberTotal)} if we verify your membership, {money(indicativeTotal)} if we can&apos;t
+                </p>
+              )}
             </>
           )}
         </CardContent>

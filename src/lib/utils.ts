@@ -152,3 +152,13 @@ export function generateVerificationToken(length = 48) {
   }
   return token
 } 
+
+/**
+ * A post-sign-in destination taken from ?callbackUrl=. Only a same-site path is
+ * accepted ("/events/x/register"), never "//host" or "https://host", so the
+ * parameter cannot be used to bounce someone off-site after they sign in.
+ */
+export function safeCallbackPath(value: string | null | undefined): string | null {
+  if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) return null
+  return value
+}

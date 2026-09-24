@@ -10,8 +10,10 @@ export interface PricedLine {
   ticketTierId: string
   name: string
   quantity: number
-  /** Price actually charged per ticket, member or standard. Snapshotted onto the item. */
+  /** Price charged per ticket (or, for a member-rate request, held). Snapshotted onto the item. */
   unitPrice: Prisma.Decimal
+  /** Member-rate request only: the price per ticket if the buyer is verified. */
+  memberUnitPrice?: Prisma.Decimal
 }
 
 export interface PricedOrder {
@@ -20,7 +22,20 @@ export interface PricedOrder {
   total: Prisma.Decimal
   /** Stripe wants an integer minor unit; never derive this from a float. */
   totalCents: number
+  /**
+   * Set when a guest asked for the member rate on a member tier: the card is
+   * authorized for `totalCents` (non-member prices) and only `memberTotalCents`
+   * is captured if an admin verifies them.
+   */
+  memberRateRequest?: { memberTotal: Prisma.Decimal; memberTotalCents: number }
 }
+
+export interface BuyerPricing {
+  /** A guest who says they are a member and wants that verified. Ignored for members. */
+  memberRateRequest?: boolean
+}
+
+const toCents = (d: Prisma.Decimal) => d.mul(100).toDecimalPlaces(0).toNumber()
 
 export class TicketAvailabilityError extends Error {
   constructor(message: string) {
@@ -71,7 +86,8 @@ export async function priceSelection(
   eventId: string,
   selections: TierSelection[],
   isMember: boolean,
-  now: Date = new Date()
+  now: Date = new Date(),
+  pricing: BuyerPricing = {}
 ): Promise<PricedOrder> {
   if (!selections.length) {
     throw new TicketAvailabilityError("No tickets selected")
@@ -90,6 +106,8 @@ export async function priceSelection(
   const lines: PricedLine[] = []
   let totalTickets = 0
   let total = new Prisma.Decimal(0)
+  let memberTotal = new Prisma.Decimal(0)
+  let needsVerification = false
 
   for (const sel of selections) {
     const tier = event.ticketTiers.find(t => t.id === sel.ticketTierId)
@@ -113,11 +131,38 @@ export async function priceSelection(
       }
     }
 
-    // Members pay memberPrice where the tier sets one; otherwise everyone pays price.
-    const unitPrice = isMember && tier.memberPrice !== null ? tier.memberPrice : tier.price
-    lines.push({ ticketTierId: tier.id, name: tier.name, quantity: sel.quantity, unitPrice })
+    // Who may buy the tier. Member status comes from the session, never the request.
+    // A member never pays the non-member rate; a guest pays the member rate only
+    // once an admin verifies them, so until then the card is held at the paired
+    // non-member tier's price.
+    let unitPrice: Prisma.Decimal
+    let memberUnitPrice: Prisma.Decimal | undefined
+    if (tier.audience === 'NON_MEMBER' && isMember) {
+      throw new TicketAvailabilityError(`${tier.name} is for non-members; members buy the member rate`)
+    }
+    if (tier.audience === 'MEMBER' && !isMember) {
+      const pair = tier.nonMemberTierId
+        ? event.ticketTiers.find(t => t.id === tier.nonMemberTierId && t.isActive)
+        : undefined
+      if (!pricing.memberRateRequest || !pair) {
+        throw new TicketAvailabilityError(
+          pair
+            ? `${tier.name} is for members. Sign in as a member, or ask us to verify your membership.`
+            : `${tier.name} is for members. Sign in as a member to buy it.`
+        )
+      }
+      unitPrice = pair.price
+      memberUnitPrice = tier.price
+      if (tier.price.lessThan(pair.price)) needsVerification = true
+    } else {
+      // Members pay memberPrice where the tier sets one; otherwise everyone pays price.
+      unitPrice = isMember && tier.memberPrice !== null ? tier.memberPrice : tier.price
+    }
+
+    lines.push({ ticketTierId: tier.id, name: tier.name, quantity: sel.quantity, unitPrice, memberUnitPrice })
     totalTickets += sel.quantity
     total = total.add(unitPrice.mul(sel.quantity))
+    memberTotal = memberTotal.add((memberUnitPrice ?? unitPrice).mul(sel.quantity))
   }
 
   // The event's own capacity caps the sum of all tiers, however generous the tiers are.
@@ -134,7 +179,9 @@ export async function priceSelection(
     lines,
     totalTickets,
     total,
-    totalCents: total.mul(100).toDecimalPlaces(0).toNumber(),
+    totalCents: toCents(total),
+    // No request when the member rate is not actually cheaper: nothing to verify.
+    ...(needsVerification ? { memberRateRequest: { memberTotal, memberTotalCents: toCents(memberTotal) } } : {}),
   }
 }
 

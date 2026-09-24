@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/nextjs'
 import { prisma } from '@/lib/db'
 import { getStripe } from '@/lib/stripe'
 import { confirmEventRegistration } from '@/lib/stripe-webhook-handlers'
+import { cancelMemberRateRequest } from '@/lib/member-rate-requests'
 
 const { logger } = Sentry
 
@@ -59,10 +60,12 @@ export async function releaseStaleHolds(now: Date = new Date(), olderThanMinutes
 
       const intent = await stripe.paymentIntents.retrieve(reg.paymentIntentId)
 
-      if (intent.status === 'succeeded') {
+      // requires_capture is a member-rate request whose card is authorized: the
+      // seat is the buyer's, and the charge waits for an admin's decision.
+      if (intent.status === 'succeeded' || intent.status === 'requires_capture') {
         await confirmEventRegistration(intent)
         result.confirmed++
-        logger.warn('Stale hold was actually paid; confirmed by the sweep (webhook missed?)', { registrationId: reg.id })
+        logger.warn('Stale hold was actually paid or authorized; confirmed by the sweep (webhook missed?)', { registrationId: reg.id, status: intent.status })
         continue
       }
       if (intent.status === 'processing') {
@@ -92,5 +95,8 @@ async function release(id: string, reason: string): Promise<void> {
     where: { id, status: 'PENDING' },
     data: { status: 'CANCELLED' },
   })
-  if (updated.count === 1) logger.info('Stale registration hold released', { registrationId: id, reason })
+  if (updated.count === 1) {
+    await cancelMemberRateRequest(id)
+    logger.info('Stale registration hold released', { registrationId: id, reason })
+  }
 }

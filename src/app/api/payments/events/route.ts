@@ -52,6 +52,12 @@ const bodySchema = z.object({
     )
     .max(20)
     .optional(),
+  /**
+   * A guest saying "I'm a member, verify me". Lets them pick a member tier; the card
+   * is then only authorized, at the non-member price, until an admin decides.
+   * Ignored for signed-in members, who pay the member rate outright.
+   */
+  memberRateRequest: z.boolean().optional(),
 })
 
 /**
@@ -68,6 +74,9 @@ function checkoutResponse(
     clientSecret,
     totalCents: order.totalCents,
     totalTickets: order.totalTickets,
+    // Present when the card is only being authorized: the client says "hold",
+    // not "pay", and shows what the buyer is charged if verified.
+    memberRateRequest: order.memberRateRequest ? { memberTotalCents: order.memberRateRequest.memberTotalCents } : null,
     lines: order.lines.map(l => ({
       ticketTierId: l.ticketTierId,
       name: l.name,
@@ -119,7 +128,10 @@ export async function POST(request: NextRequest) {
       // Prices and availability are settled before any card is touched: charging
       // first and discovering a shortfall afterwards means taking money for a
       // ticket that does not exist.
-      const order = await priceSelection(body.eventId, body.items, isMember)
+      const order = await priceSelection(body.eventId, body.items, isMember, new Date(), {
+        memberRateRequest: !isMember && body.memberRateRequest === true,
+      })
+      const verification = order.memberRateRequest
 
       const attendees = body.attendees?.slice(0, order.totalTickets) ?? []
 
@@ -127,6 +139,7 @@ export async function POST(request: NextRequest) {
       span.setAttribute('tickets.count', order.totalTickets)
       span.setAttribute('order.total_cents', order.totalCents)
       span.setAttribute('buyer.is_member', isMember)
+      span.setAttribute('buyer.member_rate_request', Boolean(verification))
 
       // Created unconfirmed. The card is confirmed in the browser by Stripe
       // Elements, so card details never reach this server. The old code passed
@@ -142,6 +155,7 @@ export async function POST(request: NextRequest) {
           body.buyer.email.toLowerCase(),
           order.lines.map(l => [l.ticketTierId, l.quantity]),
           order.totalCents,
+          verification?.memberTotalCents ?? null,
           session?.user?.id ?? null,
           Math.floor(Date.now() / 60_000),
         ]))
@@ -149,6 +163,9 @@ export async function POST(request: NextRequest) {
       const paymentIntent = await stripe.paymentIntents.create({
         amount: order.totalCents,
         currency: 'usd',
+        // Member-rate request: authorize only. The admin's decision captures either
+        // the member total or the whole hold (src/lib/member-rate-requests.ts).
+        ...(verification ? { capture_method: 'manual' as const } : {}),
         automatic_payment_methods: { enabled: true },
         receipt_email: body.buyer.email,
         metadata: {
@@ -156,6 +173,7 @@ export async function POST(request: NextRequest) {
           eventId: body.eventId,
           tickets: order.totalTickets.toString(),
           buyerEmail: body.buyer.email,
+          ...(verification ? { memberRateRequest: 'true', memberTotalCents: String(verification.memberTotalCents) } : {}),
           ...(session?.user?.id ? { userId: session.user.id } : {}),
         },
       }, { idempotencyKey })
@@ -205,8 +223,19 @@ export async function POST(request: NextRequest) {
             ticketTierId: l.ticketTierId,
             quantity: l.quantity,
             unitPrice: l.unitPrice,
+            memberUnitPrice: verification ? l.memberUnitPrice ?? null : null,
           })),
         })
+
+        if (verification) {
+          await tx.memberRateRequest.create({
+            data: {
+              registrationId: created.id,
+              heldCents: order.totalCents,
+              memberCents: verification.memberTotalCents,
+            },
+          })
+        }
 
         return created
       })

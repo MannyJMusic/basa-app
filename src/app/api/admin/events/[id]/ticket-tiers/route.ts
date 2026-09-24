@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAdmin, isResponse } from '@/lib/api-auth'
-import { tierInput, listTiersForAdmin } from '@/lib/ticket-tier-admin'
+import { tierInput, listTiersForAdmin, resolvePairing } from '@/lib/ticket-tier-admin'
 
 /**
  * Admin view of an event's ticket tiers (#160): every tier including inactive ones,
@@ -31,6 +31,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Member price cannot be higher than the regular price' }, { status: 400 })
   }
 
+  const audience = d.audience ?? 'ALL'
+  const pairing = await resolvePairing(id, null, audience, d.nonMemberTierId)
+  if ('error' in pairing) return NextResponse.json({ error: pairing.error }, { status: 400 })
+
   const last = await prisma.ticketTier.findFirst({ where: { eventId: id }, orderBy: { sortOrder: 'desc' }, select: { sortOrder: true } })
   const tier = await prisma.ticketTier.create({
     data: {
@@ -44,6 +48,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       salesEndAt: d.salesEndAt ? new Date(d.salesEndAt) : null,
       sortOrder: d.sortOrder ?? (last ? last.sortOrder + 1 : 0),
       isActive: d.isActive ?? true,
+      audience,
+      nonMemberTierId: pairing.value,
     },
   })
   return NextResponse.json(tier, { status: 201 })
