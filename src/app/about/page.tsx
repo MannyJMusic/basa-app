@@ -532,19 +532,13 @@ export default function AboutPage() {
             </p>
           </motion.div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
             {[
               {
                 name: "Jennifer Bonomo",
                 title: "Founder",
                 tagline: "Visionary leader and BASA's original connector",
                 image: "/images/profile/Jen-Bio.jpg"
-              },
-              {
-                name: "Ernie Mores",
-                title: "Business Director",
-                tagline: "Driving business growth and partnerships",
-                image: "/images/profile/ernie-bio.jpg"
               },
               {
                 name: "Manny Moreno",
