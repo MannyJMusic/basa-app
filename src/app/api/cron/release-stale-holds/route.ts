@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { hasBearerSecret } from '@/lib/api-auth'
 import * as Sentry from '@sentry/nextjs'
 import { releaseStaleHolds, STALE_HOLD_MINUTES } from '@/lib/stale-holds'
+import { expireMemberRateRequests } from '@/lib/member-rate-requests'
 
 const { logger } = Sentry
 
@@ -11,6 +12,8 @@ const { logger } = Sentry
  * Every 15 minutes from the host's cron (see /etc/cron.d/basa): release seats held
  * by checkouts abandoned more than STALE_HOLD_MINUTES ago, after asking Stripe
  * whether the payment actually completed. Same auth shape as membership-expiry.
+ * It also charges the non-member rate on member-rate requests nobody decided
+ * within DECISION_DAYS, before the card authorization lapses.
  */
 export async function POST(request: NextRequest) {
   const secret = process.env.CRON_SECRET
@@ -25,12 +28,15 @@ export async function POST(request: NextRequest) {
   return Sentry.startSpan({ op: 'cron.stale_holds', name: 'Release abandoned registration holds' }, async span => {
     try {
       const result = await releaseStaleHolds()
+      const memberRate = await expireMemberRateRequests()
+      span.setAttribute('member_rate.expired', memberRate.expired)
+      if (memberRate.failed > 0) logger.error(logger.fmt`${memberRate.failed} member-rate requests could not be charged at their deadline`)
       span.setAttribute('holds.examined', result.examined)
       span.setAttribute('holds.released', result.released)
       span.setAttribute('holds.confirmed', result.confirmed)
       span.setAttribute('holds.failed', result.failed)
       if (result.failed > 0) logger.error(logger.fmt`${result.failed} stale holds could not be resolved`)
-      return NextResponse.json({ ok: true, olderThanMinutes: STALE_HOLD_MINUTES, ...result })
+      return NextResponse.json({ ok: true, olderThanMinutes: STALE_HOLD_MINUTES, ...result, memberRateExpired: memberRate.expired, memberRateFailed: memberRate.failed })
     } catch (error) {
       Sentry.captureException(error)
       return NextResponse.json({ error: 'Stale hold sweep failed' }, { status: 500 })

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { db, FIXTURE_EVENT } from './helpers/db'
-import { CARDS, deliverWebhook, fillStripeCard } from './helpers/stripe'
+import { CARDS, deliverWebhook, fillStripeCard, stripeTestClient } from './helpers/stripe'
 
 /**
  * The ticket money path (#65): a guest with no account buys one non-member
@@ -69,7 +69,7 @@ test.describe('Event registration', () => {
     const email = `e2e-declined-${Date.now()}@example.com`
 
     await page.goto(`/events/${FIXTURE_EVENT.slug}/register`)
-    await page.getByRole('button', { name: `Add one ${FIXTURE_EVENT.memberTier}` }).click()
+    await page.getByRole('button', { name: `Add one ${FIXTURE_EVENT.guestTier}` }).click()
     await page.locator('#buyer-name').fill('E2E Declined')
     await page.locator('#buyer-email').fill(email)
     await page.getByRole('button', { name: 'Continue to payment' }).click()
@@ -85,5 +85,55 @@ test.describe('Event registration', () => {
     expect(reg).not.toBeNull()
     expect(reg!.status).toBe('PENDING')
     expect(await db().eventRegistration.count({ where: { email, status: 'CONFIRMED' } })).toBe(0)
+  })
+
+  test('a guest asks for the member rate: the card is held, not charged, until an admin decides', async ({ page, request, baseURL }) => {
+    const email = `e2e-verify-${Date.now()}@example.com`
+
+    await page.goto(`/events/${FIXTURE_EVENT.slug}/register`)
+    // Guests see the member rate but cannot pick it without asking to be verified.
+    await expect(page.getByText('Members only')).toBeVisible()
+    const addMember = page.getByRole('button', { name: `Add one ${FIXTURE_EVENT.memberTier}` })
+    await expect(addMember).toBeDisabled()
+    await page.getByRole('checkbox', { name: /verify me for the member rate/ }).click()
+    await expect(page.getByText(/If we cannot verify your membership, you will be charged the non-member rate/)).toBeVisible()
+    await addMember.click()
+    await page.locator('#buyer-name').fill('E2E Maybe Member')
+    await page.locator('#buyer-email').fill(email)
+    await page.getByRole('button', { name: 'Continue to payment' }).click()
+
+    // The card is held at the non-member price.
+    const hold = page.getByRole('button', { name: `Place hold of $${FIXTURE_EVENT.guestPrice}.00` })
+    await fillStripeCard(page, CARDS.ok)
+    await expect(hold).toBeEnabled()
+    await hold.click()
+
+    await page.waitForURL(/\/payment\/success\?type=event&paymentId=pi_/, { timeout: 60_000 })
+    const paymentIntentId = new URL(page.url()).searchParams.get('paymentId')!
+    const intent = await stripeTestClient().paymentIntents.retrieve(paymentIntentId)
+    expect(intent.status).toBe('requires_capture')
+    expect(intent.amount).toBe(FIXTURE_EVENT.guestPrice * 100)
+    expect(intent.amount_received).toBe(0)
+
+    const reg = await db().eventRegistration.findFirst({ where: { paymentIntentId }, include: { memberRateRequest: true } })
+    expect(reg!.status).toBe('PENDING')
+    expect(reg!.memberRateRequest).toMatchObject({
+      status: 'AWAITING_PAYMENT', heldCents: FIXTURE_EVENT.guestPrice * 100, memberCents: FIXTURE_EVENT.memberPrice * 100,
+    })
+
+    // Stripe reports the authorization: the seat is confirmed, the request waits for an admin.
+    const delivered = await deliverWebhook(request, baseURL!, paymentIntentId, 'payment_intent.amount_capturable_updated')
+    expect(delivered.status, delivered.body).toBe(200)
+    const after = await db().eventRegistration.findUnique({ where: { id: reg!.id }, include: { memberRateRequest: true } })
+    expect(after!.status).toBe('CONFIRMED')
+    expect(after!.memberRateRequest!.status).toBe('PENDING')
+    expect(after!.memberRateRequest!.deadlineAt).not.toBeNull()
+
+    // The success page says it is a hold.
+    await page.reload()
+    await expect(page.getByText(/Member rate pending/)).toBeVisible({ timeout: 15_000 })
+
+    // Clean up the authorization in Stripe test mode.
+    await stripeTestClient().paymentIntents.cancel(paymentIntentId)
   })
 })

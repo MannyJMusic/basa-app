@@ -16,11 +16,14 @@ export async function GET(request: NextRequest) {
   }
   const reg = await prisma.eventRegistration.findUnique({
     where: { paymentIntentId: paymentId },
-    select: { ticketToken: true, status: true, event: { select: { slug: true, title: true } } },
+    select: {
+      ticketToken: true, status: true, event: { select: { slug: true, title: true } },
+      memberRateRequest: { select: { status: true, heldCents: true, memberCents: true } },
+    },
   })
   if (!reg?.ticketToken) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(
-    { token: reg.ticketToken, status: reg.status, event: reg.event },
+    { token: reg.ticketToken, status: reg.status, event: reg.event, memberRate: reg.memberRateRequest },
     { headers: { 'cache-control': 'no-store' } },
   )
 }

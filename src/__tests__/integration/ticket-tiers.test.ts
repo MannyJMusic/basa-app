@@ -179,4 +179,84 @@ describe('Ticket tier pricing and availability', () => {
       await expect(priceSelection(one.id, [], false)).rejects.toThrow(/No tickets selected/);
     })
   );
+
+  describe('member and non-member tiers', () => {
+    // The shape of 128 imported events: one member tier paired with one non-member tier.
+    async function paired(prisma: any) {
+      const event = await makeEvent(prisma, null);
+      const non = await prisma.ticketTier.create({ data: { eventId: event.id, name: 'Future Member', price: 35, audience: 'NON_MEMBER' } });
+      const mem = await prisma.ticketTier.create({ data: { eventId: event.id, name: 'Member Rate', price: 25, audience: 'MEMBER', nonMemberTierId: non.id } });
+      const all = await prisma.ticketTier.create({ data: { eventId: event.id, name: 'Sponsor', price: 100 } });
+      return { event, non, mem, all };
+    }
+
+    it(
+      'refuses a member tier to a guest who did not ask to be verified',
+      withEmptyTestDatabase(async ({ database }: any) => {
+        const { event, mem } = await paired(database.prisma);
+        await expect(priceSelection(event.id, [{ ticketTierId: mem.id, quantity: 1 }], false))
+          .rejects.toThrow(/for members.*verify your membership/);
+      })
+    );
+
+    it(
+      'holds a verification request at the paired non-member price',
+      withEmptyTestDatabase(async ({ database }: any) => {
+        const { event, mem, all } = await paired(database.prisma);
+        const order = await priceSelection(
+          event.id,
+          [{ ticketTierId: mem.id, quantity: 2 }, { ticketTierId: all.id, quantity: 1 }],
+          false, new Date(), { memberRateRequest: true }
+        );
+        expect(order.totalCents).toBe(2 * 3500 + 10000);
+        expect(order.memberRateRequest?.memberTotalCents).toBe(2 * 2500 + 10000);
+        const line = order.lines.find(l => l.ticketTierId === mem.id)!;
+        expect(line.unitPrice.toString()).toBe('35');
+        expect(line.memberUnitPrice?.toString()).toBe('25');
+        expect(order.lines.find(l => l.ticketTierId === all.id)!.memberUnitPrice).toBeUndefined();
+      })
+    );
+
+    it(
+      'refuses a request on a member tier with no non-member pairing',
+      withEmptyTestDatabase(async ({ database }: any) => {
+        const { event, mem } = await paired(database.prisma);
+        await database.prisma.ticketTier.update({ where: { id: mem.id }, data: { nonMemberTierId: null } });
+        await expect(priceSelection(event.id, [{ ticketTierId: mem.id, quantity: 1 }], false, new Date(), { memberRateRequest: true }))
+          .rejects.toThrow(/Sign in as a member to buy it/);
+      })
+    );
+
+    it(
+      'refuses a request when the paired non-member tier is off sale',
+      withEmptyTestDatabase(async ({ database }: any) => {
+        const { event, mem, non } = await paired(database.prisma);
+        await database.prisma.ticketTier.update({ where: { id: non.id }, data: { isActive: false } });
+        await expect(priceSelection(event.id, [{ ticketTierId: mem.id, quantity: 1 }], false, new Date(), { memberRateRequest: true }))
+          .rejects.toThrow(/for members/);
+      })
+    );
+
+    it(
+      'never sells the non-member rate to a signed-in member',
+      withEmptyTestDatabase(async ({ database }: any) => {
+        const { event, non, mem } = await paired(database.prisma);
+        await expect(priceSelection(event.id, [{ ticketTierId: non.id, quantity: 1 }], true))
+          .rejects.toThrow(/for non-members/);
+        const order = await priceSelection(event.id, [{ ticketTierId: mem.id, quantity: 1 }], true, new Date(), { memberRateRequest: true });
+        expect(order.totalCents).toBe(2500);
+        expect(order.memberRateRequest).toBeUndefined();
+      })
+    );
+
+    it(
+      'ignores the request flag when no member tier is in the order',
+      withEmptyTestDatabase(async ({ database }: any) => {
+        const { event, non } = await paired(database.prisma);
+        const order = await priceSelection(event.id, [{ ticketTierId: non.id, quantity: 1 }], false, new Date(), { memberRateRequest: true });
+        expect(order.totalCents).toBe(3500);
+        expect(order.memberRateRequest).toBeUndefined();
+      })
+    );
+  });
 });

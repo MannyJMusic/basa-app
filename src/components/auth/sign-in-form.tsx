@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Alert } from "@/components/ui/alert"
-import { getRedirectUrl } from "@/lib/utils"
+import { getRedirectUrl, safeCallbackPath } from "@/lib/utils"
 import { UserRole } from "@/lib/types"
 
 interface SignInFormProps {
@@ -67,7 +67,8 @@ export default function SignInForm({ prefillEmail }: SignInFormProps) {
         // Wait for session to update and get the user's role
         const session = await getSession()
         const role = (session?.user?.role as UserRole) || "GUEST"
-        const redirectUrl = getRedirectUrl(role)
+        // Back to where they came from (e.g. an event checkout), else their dashboard.
+        const redirectUrl = safeCallbackPath(searchParams.get("callbackUrl")) ?? getRedirectUrl(role)
         router.push(redirectUrl)
       }
     })

@@ -36,7 +36,7 @@ export async function deliverWebhook(
   request: APIRequestContext,
   baseURL: string,
   paymentIntentId: string,
-  type: 'payment_intent.succeeded' | 'payment_intent.payment_failed' | 'payment_intent.canceled' = 'payment_intent.succeeded',
+  type: 'payment_intent.succeeded' | 'payment_intent.payment_failed' | 'payment_intent.canceled' | 'payment_intent.amount_capturable_updated' = 'payment_intent.succeeded',
 ): Promise<{ status: number; body: string }> {
   const { secretKey, webhookSecret } = assertStripeTestMode()
   const stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' })
