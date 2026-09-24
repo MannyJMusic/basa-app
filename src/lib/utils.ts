@@ -1,21 +1,13 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import bcrypt from "bcryptjs"
 import { ROLE_PERMISSIONS, type UserRole, type Permission } from "./types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Password utilities
-export async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 12
-  return bcrypt.hash(password, saltRounds)
-}
-
-export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword)
-}
+// Imported by every UI component (for cn), so it must stay browser-safe: no
+// Node-only packages here. Password hashing lives in @/lib/password.
 
 // Role-based access control utilities
 export function hasPermission(userRole: UserRole, action: string, resource: string): boolean {

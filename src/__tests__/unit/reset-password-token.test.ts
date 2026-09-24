@@ -24,8 +24,7 @@ jest.mock('@/lib/db', () => ({
   },
 }))
 
-jest.mock('@/lib/utils', () => ({
-  ...jest.requireActual('@/lib/utils'),
+jest.mock('@/lib/password', () => ({
   hashPassword: jest.fn(async (p: string) => `hashed:${p}`),
 }))
 
