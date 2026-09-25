@@ -52,10 +52,26 @@ export default async function EventRegistrationPage({ params }: { params: Promis
   // members never see non-member tiers; everyone else sees member tiers marked as
   // such, with sign-in or "verify me" as the way to that rate.
   const session = await auth()
-  const member = session?.user?.id
-    ? await prisma.member.findUnique({ where: { userId: session.user.id }, select: { membershipStatus: true } })
+  const account = session?.user?.id
+    ? await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          firstName: true, lastName: true, name: true, email: true,
+          member: { select: { membershipStatus: true, businessName: true, businessPhone: true } },
+        },
+      })
     : null
-  const viewerIsMember = member?.membershipStatus === 'ACTIVE'
+  const viewerIsMember = account?.member?.membershipStatus === 'ACTIVE'
+  // Signed in: the buyer details start from the account, still editable (someone
+  // may be buying for a colleague). The server never trusts these for pricing.
+  const prefill = account
+    ? {
+        name: [account.firstName, account.lastName].filter(Boolean).join(' ') || account.name || '',
+        email: account.email ?? '',
+        company: account.member?.businessName ?? '',
+        phone: account.member?.businessPhone ?? '',
+      }
+    : undefined
 
   const sold = await soldCounts(event.id)
   const eventPlacesLeft = event.capacity === null ? null : Math.max(0, event.capacity - sold.total)
@@ -143,6 +159,7 @@ export default async function EventRegistrationPage({ params }: { params: Promis
               tiers={tiers}
               eventPlacesLeft={eventPlacesLeft}
               viewerIsMember={viewerIsMember}
+              prefill={prefill}
               signInHref={`/auth/sign-in?callbackUrl=${encodeURIComponent(`/events/${event.slug}/register`)}`}
             />
           )}

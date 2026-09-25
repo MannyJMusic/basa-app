@@ -38,6 +38,8 @@ interface Props {
   /** Signed in with an active membership. The page already left out non-member tiers. */
   viewerIsMember: boolean
   signInHref: string
+  /** Signed-in buyer's details from their account; the fields stay editable. */
+  prefill?: { name: string; email: string; company: string; phone: string }
 }
 
 interface Attendee {
@@ -47,7 +49,7 @@ interface Attendee {
 
 const money = (n: number) => `$${n.toFixed(2).replace(/\.00$/, '')}`
 
-export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesLeft, viewerIsMember, signInHref }: Props) {
+export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesLeft, viewerIsMember, signInHref, prefill }: Props) {
   // A guest may pick a member tier only by asking to be verified, and only where the
   // tier has a non-member price to hold the card at. The server enforces the same.
   const [verifyMe, setVerifyMe] = useState(false)
@@ -63,7 +65,7 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
   const [quantities, setQuantities] = useState<Record<string, number>>(() =>
     tiers.length === 1 && (viewerIsMember || tiers[0].audience !== 'MEMBER') ? { [tiers[0].id]: 1 } : {}
   )
-  const [buyer, setBuyer] = useState({ name: '', email: '', company: '', phone: '' })
+  const [buyer, setBuyer] = useState(prefill ?? { name: '', email: '', company: '', phone: '' })
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [serverTotalCents, setServerTotalCents] = useState<number | null>(null)
@@ -343,7 +345,12 @@ export function EventRegistrationForm({ eventId, eventTitle, tiers, eventPlacesL
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Your details</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Your details</CardTitle>
+          {prefill && (
+            <CardDescription>Filled in from your account. Change anything that should be different for this booking.</CardDescription>
+          )}
+        </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="buyer-name">Name *</Label>
