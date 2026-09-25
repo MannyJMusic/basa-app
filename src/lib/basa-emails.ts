@@ -2773,3 +2773,44 @@ export async function sendMemberRateDecisionEmail(
   })
   await sendEmail(to, approved ? `Member rate confirmed: ${d.eventTitle}` : `Your ticket for ${d.eventTitle}`, html)
 }
+
+// ---------------------------------------------------------------------------
+// Member account invitation
+// ---------------------------------------------------------------------------
+
+/** How long an invitation link works. A claim link from "Forgot password" lasts an hour. */
+export const INVITATION_LINK_DAYS = 7
+
+/**
+ * Sent by an admin to an active member whose account has never had a password
+ * (imported from WordPress, or created by staff). Same token mechanics as an
+ * account claim, but a week to act on it, and wording for someone who did not ask.
+ */
+export function generateMemberInvitationEmailHtml(firstName: string, email: string, setupUrl: string): string {
+  const siteUrl = getSiteUrl()
+  const first = escapeHtml(firstName || 'there')
+  return renderNoticeEmail({
+    title: 'Your BASA member account is ready',
+    preheader: 'Set a password to register for events at the member rate.',
+    heading: 'Your BASA member account is ready',
+    accent: '#17A2B8',
+    siteUrl,
+    logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
+    ctaLabel: 'Set my password',
+    ctaUrl: setupUrl,
+    bodyHtml: `
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${first},</p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">BASA has moved to a new website at <a href="${siteUrl}" style="color:#17A2B8;">${siteUrl.replace(/^https?:\/\//, '')}</a>, and as a BASA member you have an account there.</p>
+              <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#374151;">Once you set a password and sign in, you can:</p>
+              <ul style="margin:0 0 14px;padding-left:20px;font-size:15px;line-height:1.7;color:#374151;">
+                <li>register for BASA events at the <strong>member rate</strong>, with no extra steps</li>
+                <li>see your tickets and your membership in one place</li>
+              </ul>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Your sign-in email is <strong>${escapeHtml(email)}</strong>. The button below lets you choose a password; it works for ${INVITATION_LINK_DAYS} days. After that, use <em>Forgot password</em> on the sign-in page to get a new link.</p>
+              <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#6b7280;">Not expecting this, or think it reached the wrong person? Reply to this email or call (210) 549-7190.</p>`,
+  })
+}
+
+export async function sendMemberInvitationEmail(email: string, firstName: string, setupUrl: string): Promise<void> {
+  await sendEmail(email, 'Your BASA member account is ready', generateMemberInvitationEmailHtml(firstName, email, setupUrl))
+}
