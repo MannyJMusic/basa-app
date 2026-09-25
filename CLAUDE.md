@@ -203,7 +203,7 @@ Project `basa-v3` in org `basa-0f` (slugs, not display names). No DSN is hard-co
 
 - Wrap expected failures with `Sentry.captureException(error)` inside `try/catch`.
 - Wrap meaningful actions (button handlers, API calls, expensive functions) in `Sentry.startSpan({ op, name }, span => ...)` with descriptive `op`/`name` (e.g. `ui.click`, `http.client`) and `span.setAttribute` for useful context. Child spans may nest inside a parent.
-- For structured logs use `const { logger } = Sentry` and `logger.fmt` template literals; logging requires `_experiments: { enableLogs: true }` in init. `Sentry.consoleLoggingIntegration` can forward `console.*` calls instead of instrumenting each one.
+- For structured logs use `const { logger } = Sentry` and `logger.fmt` template literals; logging requires `enableLogs: true` in init (top level since Sentry 10; the old `_experiments` form is deprecated). `Sentry.consoleLoggingIntegration` can forward `console.*` calls instead of instrumenting each one.
 
 ## Branching
 

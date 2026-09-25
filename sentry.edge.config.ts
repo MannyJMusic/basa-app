@@ -6,7 +6,7 @@
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
-  _experiments: { enableLogs: true },
+  enableLogs: true,
   integrations: [Sentry.consoleLoggingIntegration({ levels: ['warn', 'error'] })],
   dsn: process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN,
 

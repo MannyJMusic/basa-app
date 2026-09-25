@@ -5,7 +5,7 @@
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
-  _experiments: { enableLogs: true },
+  enableLogs: true,
   // Inlined at build time. The production image is built on the host from a
   // checkout that includes .env.production, so this is set there; CI builds
   // leave it empty and the browser SDK simply stays disabled.
