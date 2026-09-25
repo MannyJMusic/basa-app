@@ -1,16 +1,18 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+'use client'
+
+import { Suspense } from 'react'
+import { TokenResult } from '../token-result'
+
+const success = () => 'Your email address is verified and your account is active. You can sign in now.'
 
 export default function VerifyEmailPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-background">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader>
-          <CardTitle>Email Verified</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Your email has been verified. You can now sign in to your account.</p>
-        </CardContent>
-      </Card>
-    </div>
+    <Suspense>
+      <TokenResult
+        endpoint="/api/auth/verify"
+        titles={{ working: 'Verifying your email…', done: 'Email verified', failed: 'We could not verify this link' }}
+        success={success}
+      />
+    </Suspense>
   )
-} 
+}

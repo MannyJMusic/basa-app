@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireSession, isResponse } from "@/lib/api-auth"
+import { requestEmailChange, EmailChangeError } from "@/lib/email-change"
+import { withoutSecrets } from "@/lib/user-safe"
 
 // Validation schema for profile updates
 const profileUpdateSchema = z.object({
@@ -163,7 +165,10 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    return NextResponse.json(user)
+    // Never the credentials: the profile used to return the whole row, which would
+    // also hand the signed-in user the email-change token and so let them confirm a
+    // change without the new inbox.
+    return NextResponse.json(withoutSecrets(user))
   } catch (error) {
     console.error("Error fetching profile:", error)
     return NextResponse.json(
@@ -181,16 +186,17 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const validatedData = profileUpdateSchema.parse(body)
 
-    // Check if email is being changed and if it's already taken
-    if (validatedData.email && validatedData.email !== session.user.email) {
-      const emailExists = await prisma.user.findUnique({
-        where: { email: validatedData.email },
-      })
-      if (emailExists) {
-        return NextResponse.json(
-          { error: "Email already exists" },
-          { status: 400 }
-        )
+    // A new email address is never written here (2026-09-22 audit, M-A8): it
+    // becomes pending, and changes only when the link sent to it is used.
+    let emailChangePending: string | null = null
+    if (validatedData.email && validatedData.email.trim().toLowerCase() !== (session.user.email ?? "").toLowerCase()) {
+      try {
+        emailChangePending = await requestEmailChange(session.user.id, validatedData.email)
+      } catch (error) {
+        if (error instanceof EmailChangeError) {
+          return NextResponse.json({ error: error.message }, { status: error.status })
+        }
+        throw error
       }
     }
 
@@ -200,7 +206,6 @@ export async function PUT(request: NextRequest) {
       const userUpdateData: any = {}
       if (validatedData.firstName !== undefined) userUpdateData.firstName = validatedData.firstName
       if (validatedData.lastName !== undefined) userUpdateData.lastName = validatedData.lastName
-      if (validatedData.email !== undefined) userUpdateData.email = validatedData.email
 
       let updatedUser: any = session.user
       if (Object.keys(userUpdateData).length > 0) {
@@ -268,7 +273,7 @@ export async function PUT(request: NextRequest) {
       return { user: updatedUser, member: updatedMember }
     })
 
-    return NextResponse.json(result)
+    return NextResponse.json({ ...result, user: withoutSecrets(result.user), emailChangePending })
   } catch (error) {
     console.error("Error updating profile:", error)
     if (error instanceof z.ZodError) {

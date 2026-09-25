@@ -53,6 +53,12 @@ model User {
   accountStatus           AccountStatus          @default(PENDING_VERIFICATION)
   verificationToken       String?                @unique
   verificationTokenExpiry DateTime?
+  /// A requested email change, applied only once the link sent to the new address
+  /// is used (2026-09-22 audit, M-A8). Separate from verificationToken so a pending
+  /// activation link and a pending change never overwrite each other.
+  pendingEmail            String?
+  emailChangeToken        String?                @unique
+  emailChangeTokenExpiry  DateTime?
   /// Session JWTs issued before this moment are refused (see the `jwt` callback
   /// in src/lib/auth.ts). Set on password reset; null means no cut-off.
   sessionsInvalidBefore   DateTime?

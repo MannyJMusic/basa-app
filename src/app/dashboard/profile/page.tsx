@@ -59,10 +59,15 @@ export default function DashboardProfilePage() {
     
     const result = await updateProfile(formData)
     if (result) {
+      const pending = (result as { emailChangePending?: string | null }).emailChangePending
       toast({
         title: "Profile updated",
-        description: "Your profile has been successfully updated.",
+        description: pending
+          ? `We sent a link to ${pending}. Your email changes when you click it (within 24 hours); until then, keep signing in with your current address.`
+          : "Your profile has been successfully updated.",
       })
+      // The field goes back to the current address: the new one is only pending.
+      if (pending) setFormData(prev => { const { email: _email, ...rest } = prev; return rest })
       setHasUnsavedChanges(false)
     }
   }
