@@ -70,7 +70,13 @@ export default async function MemberRateRequestPage({ params }: { params: Promis
             <strong>{dollars(r.heldCents)}</strong>. With no decision by <strong>{when(r.deadlineAt)}</strong> the non-member
             rate is charged automatically. The buyer is emailed either way.
           </p>
-          <DecisionButtons requestId={r.id} memberCents={r.memberCents} heldCents={r.heldCents} />
+          <DecisionButtons
+            requestId={r.id}
+            memberCents={r.memberCents}
+            heldCents={r.heldCents}
+            buyerName={reg.name}
+            alreadyMember={onFile?.member?.membershipStatus === 'ACTIVE'}
+          />
         </div>
       ) : (
         <div className="rounded-lg border bg-white p-4 text-sm text-gray-800 space-y-1">

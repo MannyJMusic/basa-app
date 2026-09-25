@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
+import type { MembershipTier } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { stripe } from '@/lib/stripe'
 import { loadTicket, ticketUrl } from '@/lib/tickets'
@@ -201,8 +202,96 @@ async function settle(requestId: string, outcome: Outcome, by: { userId?: string
   return { outcome, chargedCents: chargeCents }
 }
 
-export function decideMemberRateRequest(requestId: string, decision: MemberRateDecision, adminUserId: string, note?: string) {
-  return settle(requestId, decision === 'approve' ? 'APPROVED' : 'DENIED', { userId: adminUserId, note })
+export interface MarkMemberOptions {
+  tier?: MembershipTier | null
+  /** Defaults to a year from now. */
+  renewalDate?: Date
+}
+
+export type MarkMemberOutcome =
+  | { status: 'activated' | 'created' | 'already_active'; userId: string; memberId: string }
+  | { status: 'failed'; reason: string }
+
+/**
+ * Approve and remember: the verified buyer becomes an active member, so next time
+ * they sign in they get the member rate without asking. Keyed on the buyer's email.
+ * An existing account and membership are updated; with no account, one is created
+ * in the unclaimed state (no password, INACTIVE) that the invitations page and
+ * "Forgot password" both handle. An already-active membership is left as it is.
+ * The registration is linked to the membership either way.
+ */
+export async function makeBuyerAMember(requestId: string, adminUserId: string, opts: MarkMemberOptions = {}): Promise<MarkMemberOutcome> {
+  const request = await prisma.memberRateRequest.findUnique({
+    where: { id: requestId },
+    select: { registration: { select: { id: true, name: true, email: true, company: true, phone: true } } },
+  })
+  if (!request) return { status: 'failed', reason: 'Request not found' }
+  const reg = request.registration
+  const email = reg.email.trim().toLowerCase()
+  const renewalDate = opts.renewalDate ?? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+
+  return prisma.$transaction(async tx => {
+    let user = await tx.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } }, include: { member: true } })
+    let status: 'activated' | 'created' | 'already_active' = 'activated'
+    if (!user) {
+      const [firstName, ...rest] = reg.name.trim().split(/\s+/)
+      user = await tx.user.create({
+        data: { email, firstName: firstName || null, lastName: rest.join(' ') || null, name: reg.name.trim() || null, role: 'GUEST', isActive: false, accountStatus: 'INACTIVE' },
+        include: { member: true },
+      })
+      status = 'created'
+    }
+
+    let memberId: string
+    if (user.member?.membershipStatus === 'ACTIVE') {
+      memberId = user.member.id
+      status = 'already_active'
+    } else if (user.member) {
+      memberId = (await tx.member.update({
+        where: { id: user.member.id },
+        data: { membershipStatus: 'ACTIVE', renewalDate, ...(opts.tier ? { membershipTier: opts.tier } : {}) },
+      })).id
+    } else {
+      memberId = (await tx.member.create({
+        data: {
+          userId: user.id, membershipStatus: 'ACTIVE', renewalDate, membershipTier: opts.tier ?? null,
+          businessName: reg.company, businessPhone: reg.phone, showInDirectory: false, newsletterSubscribed: false,
+        },
+      })).id
+    }
+
+    await tx.eventRegistration.update({ where: { id: reg.id }, data: { memberId } })
+    if (status !== 'already_active') {
+      await tx.auditLog.create({
+        data: {
+          userId: adminUserId, action: 'MEMBERSHIP_ACTIVATED_MANUALLY', entityType: 'MEMBER', entityId: memberId,
+          newValues: { email, membershipStatus: 'ACTIVE', renewalDate: renewalDate.toISOString(), tier: opts.tier ?? null, reason: `verified through member-rate request ${requestId}` },
+        },
+      })
+    }
+    return { status, userId: user.id, memberId }
+  })
+}
+
+export async function decideMemberRateRequest(
+  requestId: string,
+  decision: MemberRateDecision,
+  adminUserId: string,
+  note?: string,
+  markMember?: MarkMemberOptions | null
+) {
+  const settled = await settle(requestId, decision === 'approve' ? 'APPROVED' : 'DENIED', { userId: adminUserId, note })
+  if (decision !== 'approve' || !markMember) return { ...settled, membership: null }
+  // The charge has happened; a problem recording the membership must not undo it
+  // or hide it. It is reported, and an admin can set the membership by hand.
+  let membership: MarkMemberOutcome
+  try {
+    membership = await makeBuyerAMember(requestId, adminUserId, markMember)
+  } catch (error) {
+    Sentry.captureException(error, { extra: { requestId } })
+    membership = { status: 'failed', reason: 'The membership could not be recorded' }
+  }
+  return { ...settled, membership }
 }
 
 /**
