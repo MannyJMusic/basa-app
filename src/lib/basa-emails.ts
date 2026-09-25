@@ -2814,3 +2814,50 @@ export function generateMemberInvitationEmailHtml(firstName: string, email: stri
 export async function sendMemberInvitationEmail(email: string, firstName: string, setupUrl: string): Promise<void> {
   await sendEmail(email, 'Your BASA member account is ready', generateMemberInvitationEmailHtml(firstName, email, setupUrl))
 }
+
+// ---------------------------------------------------------------------------
+// Email change (2026-09-22 audit, M-A8)
+// ---------------------------------------------------------------------------
+
+export const EMAIL_CHANGE_LINK_HOURS = 24
+
+/** To the NEW address: the change happens only when this link is used. */
+export async function sendEmailChangeConfirmationEmail(newEmail: string, firstName: string, confirmUrl: string): Promise<void> {
+  const siteUrl = getSiteUrl()
+  const html = renderNoticeEmail({
+    title: 'Confirm your new email address',
+    preheader: 'Confirm this address for your BASA account.',
+    heading: 'Confirm your new email address',
+    accent: '#17A2B8',
+    siteUrl,
+    logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
+    ctaLabel: 'Confirm this email address',
+    ctaUrl: confirmUrl,
+    bodyHtml: `
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${escapeHtml(firstName || 'there')},</p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Someone asked to change the email address on a BASA account to <strong>${escapeHtml(newEmail)}</strong>. If that was you, confirm it with the button below. The link works for ${EMAIL_CHANGE_LINK_HOURS} hours. After confirming, you sign in with this address.</p>
+              <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#6b7280;">If you did not ask for this, ignore this email: nothing changes unless the link is used.</p>`,
+  })
+  await sendEmail(newEmail, 'Confirm your new email address for BASA', html)
+}
+
+/** To the CURRENT address: a heads-up, so a change nobody asked for is noticed. */
+export async function sendEmailChangeNoticeEmail(currentEmail: string, firstName: string, newEmail: string): Promise<void> {
+  const siteUrl = getSiteUrl()
+  const html = renderNoticeEmail({
+    title: 'Email change requested on your BASA account',
+    preheader: `A change to ${newEmail} is waiting for confirmation.`,
+    heading: 'An email change was requested',
+    accent: '#F5B400',
+    siteUrl,
+    logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
+    ctaLabel: 'Sign in to your account',
+    ctaUrl: `${siteUrl}/auth/sign-in`,
+    bodyHtml: `
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${escapeHtml(firstName || 'there')},</p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Someone signed in to your BASA account asked to change its email address to <strong>${escapeHtml(newEmail)}</strong>. It changes only when a link sent to that address is used.</p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">If this was not you, reply to this email or call (210) 549-7190, and change your password.</p>`,
+  })
+  await sendEmail(currentEmail, 'Email change requested on your BASA account', html)
+}
+
