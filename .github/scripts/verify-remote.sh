@@ -7,7 +7,7 @@
 # nginx pointing at the wrong upstream, Varnish serving a stale error.
 set -euo pipefail
 
-PUBLIC_URL=https://app.businessassociationsa.com
+PUBLIC_URL=https://businessassociationsa.com
 
 docker compose --env-file /opt/basa-app/.env.production \
   -f /opt/basa-app/docker-compose.prod.yml ps
@@ -15,7 +15,9 @@ docker compose --env-file /opt/basa-app/.env.production \
 # The old version ended in `|| echo "Health check endpoint not responding"`,
 # which turned a dead site into a success line in the deploy log.
 echo "Checking $PUBLIC_URL/api/health ..."
-if ! curl -fsS --max-time 15 "$PUBLIC_URL/api/health"; then
+# -L: after the WordPress cutover (#71) app. 301s to the apex, and a bare 301 would
+# "pass" without testing anything. Following it checks whichever host serves the app.
+if ! curl -fsSL --max-time 15 "$PUBLIC_URL/api/health"; then
   echo ""
   echo "ERROR: the public health endpoint did not respond successfully."
   exit 1
