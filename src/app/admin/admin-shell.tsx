@@ -41,6 +41,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Link href="/admin/members" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-blue-50 text-blue-900 font-medium">
               <Users className="w-5 h-5" /> Members
             </Link>
+            <Link href="/admin/members/invitations" className="flex items-center gap-2 px-3 py-2 pl-10 rounded-md hover:bg-blue-50 text-blue-900 text-sm">
+              Account invitations
+            </Link>
             <Link href="/admin/events" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-blue-50 text-blue-900 font-medium">
               <Calendar className="w-5 h-5" /> Events
             </Link>
