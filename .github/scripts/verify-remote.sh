@@ -7,7 +7,7 @@
 # nginx pointing at the wrong upstream, Varnish serving a stale error.
 set -euo pipefail
 
-PUBLIC_URL=https://app.businessassociationsa.com
+PUBLIC_URL=https://businessassociationsa.com
 
 docker compose --env-file /opt/basa-app/.env.production \
   -f /opt/basa-app/docker-compose.prod.yml ps
