@@ -145,7 +145,7 @@ API routes are in `src/app/api/`. Key domains:
 - `/api/dev/` - Development tools (email preview, database inspection)
 
 ### Route Protection
-There is **no request middleware**. A `middleware.ts` sat in the repo root until 2026-09-14, but this project uses `src/`, so Next never compiled it and it never ran; it could not have anyway, because `src/lib/auth.ts` pulls in Prisma and bcrypt, which cannot execute at the edge. Protection lives in two places instead:
+`src/middleware.ts` (#138) runs on the **Node.js runtime** (not the edge: the auth module needs Prisma, and an edge build could inline `NEXTAUTH_SECRET` at build time, when the Docker build lacks it) for `/admin`, `/dashboard`, `/dev` and `/blog/write` only: anonymous requests go to sign-in with a `callbackUrl`, non-admins in `/admin` or `/dev` go to `/dashboard`. It deliberately does not cover the rest of the site, so unmapped old WordPress URLs still 404 honestly. Beyond it, protection lives in two places:
 
 - **Page routes:** the server layouts. `src/app/dashboard/layout.tsx` redirects anonymous visitors to sign-in; `src/app/admin/layout.tsx` additionally requires `role === "ADMIN"` (the client-side `AdminShell` under it is chrome, not a guard); `src/app/dev/layout.tsx` gates the dev tools. A new protected section needs its own layout check.
 - **API routes:** every handler under `src/app/api/` must call `requireSession()` / `requireAdmin()` from `src/lib/api-auth.ts` itself. Nothing upstream protects them.
