@@ -29,6 +29,7 @@ import { wallClockToUtc, to24Hour, wallClockPartsInEventZone } from './lib/timez
 import { MigrationReport, parseArgs } from './lib/report'
 import { newestDumpPath } from './lib/dump-path'
 import { Media, loadMedia, storedImage, isPdf, fileNameFor, serialiseManifest } from './lib/media'
+import { audienceFromName, autoPairing } from '../../src/lib/tier-audience'
 
 const prisma = new PrismaClient()
 
@@ -814,7 +815,9 @@ async function syncTickets(
     const found = byWpId.get(ticket.wpId)
     if (!found) {
       report.tally('ticket tiers', 'created')
-      if (opts.commit) await prisma.ticketTier.create({ data: { ...desired, eventId, wpId: ticket.wpId } })
+      // Audience is set once, at creation: an admin may change it afterwards, and a
+      // re-import must not undo that (updates below leave it alone).
+      if (opts.commit) await prisma.ticketTier.create({ data: { ...desired, eventId, wpId: ticket.wpId, audience: audienceFromName(ticket.name) } })
       continue
     }
     if (changedFields(found as unknown as Record<string, unknown>, desired).length) {
@@ -833,6 +836,17 @@ async function syncTickets(
     report.tally('ticket tiers', 'updated')
     if (opts.commit) await prisma.ticketTier.update({ where: { id: tier.id }, data: { isActive: false } })
     report.issue('ticket tier no longer in WordPress, deactivated', `${tier.name} (event ${eventId})`)
+  }
+
+  // Pair the member tier with its non-member counterpart when the event has exactly
+  // one of each and nothing is paired yet, so guests can ask to be verified.
+  if (opts.commit) {
+    const now = await prisma.ticketTier.findMany({ where: { eventId, isActive: true }, select: { id: true, audience: true, nonMemberTierId: true } })
+    const pair = autoPairing(now)
+    if (pair && !now.some(t => t.nonMemberTierId)) {
+      await prisma.ticketTier.update({ where: { id: pair.memberTierId }, data: { nonMemberTierId: pair.nonMemberTierId } })
+      report.tally('tier pairings', 'created')
+    }
   }
 }
 

@@ -32,11 +32,19 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --no-
 for i in $(seq 1 30); do [ "$(docker inspect -f '{{.State.Health.Status}}' basa-app-prod 2>/dev/null)" = healthy ] && break; sleep 3; done
 echo "app container: $(docker inspect -f '{{.State.Health.Status}}' basa-app-prod)"
 
-echo "== Stripe webhook back to app. =="
-K=$(grep "^STRIPE_RESTRICTED_KEY=" "$ENV" | cut -d= -f2- | tr -d '"')
-curl -sS -u "$K:" -X POST "https://api.stripe.com/v1/webhook_endpoints/$STRIPE_ENDPOINT" -d url="https://app.businessassociationsa.com/api/webhooks/stripe" \
-  | python3 -c 'import sys,json; d=json.load(sys.stdin); print("stripe endpoint", d.get("id"), d.get("url"), d.get("error",{}).get("message",""))'
-unset K
+echo "== cron file =="
+[ -f "$D/cron.d-basa.pre-cutover" ] && cp -a "$D/cron.d-basa.pre-cutover" /etc/cron.d/basa && echo "restored /etc/cron.d/basa"
+
+echo "== Stripe webhook endpoint: the URL it had before =="
+# Only the URL is restored; the added amount_capturable_updated event is harmless
+# either way and is what the app wants.
+if [ -f "$D/stripe-endpoint.pre-cutover.json" ]; then
+  url=$(python3 -c 'import sys,json; print(json.load(open(sys.argv[1]))["url"])' "$D/stripe-endpoint.pre-cutover.json")
+  K=$(grep "^STRIPE_SECRET_KEY=" "$ENV" | cut -d= -f2- | tr -d '"')
+  curl -sS -u "$K:" -X POST "https://api.stripe.com/v1/webhook_endpoints/$STRIPE_ENDPOINT" -d url="$url" \
+    | python3 -c 'import sys,json; d=json.load(sys.stdin); print("stripe endpoint", d.get("id"), d.get("url"), d.get("error",{}).get("message",""))'
+  unset K
+fi
 
 echo "== WordPress options =="
 wp option update home        "$(cat "$D/wp-home.pre-cutover")"

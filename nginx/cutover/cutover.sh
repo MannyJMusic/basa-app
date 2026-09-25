@@ -6,8 +6,8 @@
 # Runs on the production host as root. Every step prints what it did, everything
 # it changes is saved first, and rollback.sh in the same directory undoes it.
 #
-#   /root/cutover-2026-09-20/cutover.sh            # do it (about 15 minutes; the rebuild is most of it)
-#   /root/cutover-2026-09-20/cutover.sh --check    # only run the post-cutover checks
+#   /root/cutover/cutover.sh            # do it (about 25 minutes; the rebuild is most of it)
+#   /root/cutover/cutover.sh --check    # only run the post-cutover checks
 #
 # Before running: the final import has been done from the last dump, the rules in
 # this directory were regenerated from that same dump with --same-host, and the
@@ -25,6 +25,11 @@ WP_INTERNAL=https://srv1152916.hstgr.cloud
 APEX=https://businessassociationsa.com
 APP_OLD=https://app.businessassociationsa.com
 STRIPE_ENDPOINT=we_1UG1R3Kf87fwbbM1r6EG3Xqx
+CRON=/etc/cron.d/basa
+# Webhook events the app handles (src/lib/stripe-webhook-handlers.ts). The endpoint
+# was created before member-rate holds existed and lacks amount_capturable_updated.
+STRIPE_EVENTS=(payment_intent.succeeded payment_intent.payment_failed payment_intent.canceled payment_intent.amount_capturable_updated customer.subscription.created customer.subscription.updated customer.subscription.deleted invoice.payment_succeeded invoice.payment_failed)
+stripe_key() { grep "^STRIPE_SECRET_KEY=" "$ENV" | cut -d= -f2- | tr -d '"'; }
 
 wp() { sudo -u user -- wp --path="$WP_ROOT" --skip-plugins --skip-themes "$@"; }
 c() { curl -sS -o /dev/null -w '%{http_code}' --resolve "${1#https://}:443:127.0.0.1" "$1$2"; }
@@ -61,6 +66,21 @@ check() {
   code=$(curl -sS -o /dev/null -w '%{http_code}' -k --resolve "srv1152916.hstgr.cloud:443:127.0.0.1" "$WP_INTERNAL/")
   row "$WP_INTERNAL/ (WordPress, internal name)" "$code"; [ "$code" = 200 ] || fail=1
 
+  # the hardening came along (CSP, rate-limited image optimizer guard)
+  csp=$(curl -sSI --resolve businessassociationsa.com:443:127.0.0.1 "$APEX/" | grep -ci "^content-security-policy:" || true)
+  row "$APEX/ has the enforced CSP" "$csp"; [ "$csp" = 1 ] || fail=1
+  code=$(c $APEX "/_next/image?url=https://example.com/x.png&w=64&q=75"); row "$APEX/_next/image foreign url (guard)" "$code"; [ "$code" = 403 ] || fail=1
+
+  # the host's cron jobs reach the app on the apex (401 = reached it, no token sent)
+  code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST --resolve businessassociationsa.com:443:127.0.0.1 "$APEX/api/cron/release-stale-holds")
+  row "POST $APEX/api/cron/release-stale-holds (no token)" "$code"; [ "$code" = 401 ] || fail=1
+  if grep -q "app\.businessassociationsa\.com" "$CRON"; then row "$CRON still calls app." "yes"; fail=1; else row "$CRON calls the apex" "yes"; fi
+
+  # Stripe delivers member-rate authorizations to the app
+  ev=$(curl -sS -u "$(stripe_key):" "https://api.stripe.com/v1/webhook_endpoints/$STRIPE_ENDPOINT" \
+    | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("url"), "amount_capturable_updated" if "payment_intent.amount_capturable_updated" in d.get("enabled_events",[]) else "MISSING")')
+  row "Stripe endpoint" "$ev"; [ "$ev" = "$APEX/api/webhooks/stripe amount_capturable_updated" ] || fail=1
+
   echo
   if [ $fail = 0 ]; then echo "All checks passed."; else echo "SOME CHECKS FAILED - read the lines above; rollback.sh restores the previous state." >&2; return 1; fi
 }
@@ -71,10 +91,12 @@ echo "== 1. Preserve what is about to change =="
 cp -a "$WP_VHOST"  "$D/srv1152916.hstgr.cloud.conf.pre-cutover"
 cp -a "$APP_VHOST" "$D/app.businessassociationsa.com.conf.pre-cutover"
 cp -a "$ENV"       "$D/.env.production.pre-cutover"; chmod 600 "$D/.env.production.pre-cutover"
+cp -a "$CRON"      "$D/cron.d-basa.pre-cutover"
+curl -sS -u "$(stripe_key):" "https://api.stripe.com/v1/webhook_endpoints/$STRIPE_ENDPOINT" > "$D/stripe-endpoint.pre-cutover.json"; chmod 600 "$D/stripe-endpoint.pre-cutover.json"
 wp option get home        > "$D/wp-home.pre-cutover"
 wp option get siteurl     > "$D/wp-siteurl.pre-cutover"
 wp option get blog_public > "$D/wp-blog_public.pre-cutover"
-echo "saved both vhosts, .env.production and WordPress home/siteurl/blog_public to $D"
+echo "saved both vhosts, .env.production, the cron file, the Stripe endpoint and WordPress home/siteurl/blog_public to $D"
 
 echo "== 2. Take the public names off the WordPress vhost =="
 sed -i 's/ businessassociationsa\.com www\.businessassociationsa\.com member\.businessassociationsa\.com;/;/g' "$WP_VHOST"
@@ -95,18 +117,28 @@ grep -E "^(NEXTAUTH_URL|NEXT_PUBLIC_APP_URL)=" "$ENV"
 
 echo "== 5. Rebuild and redeploy (NEXT_PUBLIC_APP_URL is baked into the client bundle) =="
 # The ordinary deploy script: git reset to origin/main, build, up, health check,
-# rollback to the previous image if unhealthy. Takes ~8 minutes.
+# rollback to the previous image if unhealthy. Takes ~20 minutes on this host.
+# Build args (NEXT_PUBLIC_APP_URL among them) come from .env.production via compose.
 ( cd "$APP_DIR" && bash .github/scripts/deploy-remote.sh )
 
 echo "== 6. app. becomes a redirect =="
 install -m 644 "$D/app.businessassociationsa.com.conf" "$APP_VHOST"
 nginx -t && systemctl reload nginx
 
-echo "== 7. Stripe webhook endpoint follows the app =="
-K=$(grep "^STRIPE_RESTRICTED_KEY=" "$ENV" | cut -d= -f2- | tr -d '"')
-curl -sS -u "$K:" -X POST "https://api.stripe.com/v1/webhook_endpoints/$STRIPE_ENDPOINT" -d url="$APEX/api/webhooks/stripe" \
-  | python3 -c 'import sys,json; d=json.load(sys.stdin); print("stripe endpoint", d.get("id"), d.get("status"), d.get("url"), d.get("error",{}).get("message",""))'
-unset K
+echo "== 7. Stripe webhook endpoint: apex URL and the full event list =="
+# The endpoint already points at the apex (it was set up ahead of the cutover); this
+# makes that explicit and adds payment_intent.amount_capturable_updated, without
+# which member-rate holds are only confirmed by the 15-minute stale-hold sweep.
+args=(-d url="$APEX/api/webhooks/stripe")
+for e in "${STRIPE_EVENTS[@]}"; do args+=(-d "enabled_events[]=$e"); done
+curl -sS -u "$(stripe_key):" -X POST "https://api.stripe.com/v1/webhook_endpoints/$STRIPE_ENDPOINT" "${args[@]}" \
+  | python3 -c 'import sys,json; d=json.load(sys.stdin); print("stripe endpoint", d.get("id"), d.get("status"), d.get("url"), len(d.get("enabled_events",[])), "events", d.get("error",{}).get("message",""))'
+
+echo "== 7b. The host's cron jobs call the apex =="
+# app. becomes a 301, and curl -X POST does not follow it: without this, stale-hold
+# release, member-rate expiry and membership expiry would silently stop.
+sed -i 's#https://app\.businessassociationsa\.com/#https://businessassociationsa.com/#g' "$CRON"
+grep -c "businessassociationsa.com/api/cron" "$CRON" | xargs -I{} echo "{} cron entries now call the apex"
 
 echo "== 8. WordPress: internal name only, hidden from search =="
 # Without this WordPress redirects every visitor to its `home`, i.e. straight to
