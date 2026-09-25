@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Undo cutover.sh: WordPress answers on the public names again and basa-app is back
 # on app.businessassociationsa.com. Takes a minute; no rebuild, because the deploy
-# kept the pre-cutover image tagged basa-app:rollback.
+# kept the pre-cutover image tagged basa-app:pre-cutover. That tag was pinned by hand
+# right after the cutover: every deploy moves basa-app:rollback on, so after the first
+# post-cutover deploy it no longer holds the image with app. compiled in.
 set -euo pipefail
 D="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR=/opt/basa-app
@@ -22,11 +24,11 @@ nginx -t && systemctl reload nginx
 echo "== app: previous env and previous image =="
 cp -a "$D/.env.production.pre-cutover" "$ENV"; chmod 600 "$ENV"
 cd "$APP_DIR"
-if docker image inspect basa-app:rollback >/dev/null 2>&1; then
-  docker tag basa-app:rollback basa-app:current
+if docker image inspect basa-app:pre-cutover >/dev/null 2>&1; then
+  docker tag basa-app:pre-cutover basa-app:current
   echo "restored the pre-cutover image (app. baked into the client bundle)"
 else
-  echo "WARNING: no basa-app:rollback image; the running build has the apex baked into its client bundle. Redeploy from main to rebuild." >&2
+  echo "WARNING: no basa-app:pre-cutover image; the running build has the apex baked into its client bundle. Redeploy from main to rebuild." >&2
 fi
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --no-deps basa-app
 for i in $(seq 1 30); do [ "$(docker inspect -f '{{.State.Health.Status}}' basa-app-prod 2>/dev/null)" = healthy ] && break; sleep 3; done
