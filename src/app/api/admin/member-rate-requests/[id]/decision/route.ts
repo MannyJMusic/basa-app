@@ -3,10 +3,16 @@ import { z } from 'zod'
 import * as Sentry from '@sentry/nextjs'
 import { requireAdmin, isResponse } from '@/lib/api-auth'
 import { decideMemberRateRequest, MemberRateRequestError } from '@/lib/member-rate-requests'
+import { MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
 
 const bodySchema = z.object({
   decision: z.enum(['approve', 'deny']),
   note: z.string().trim().max(500).optional(),
+  /** Approve only: also make the buyer an active member. */
+  markMember: z.object({
+    tier: z.enum(MEMBERSHIP_TIER_VALUES).nullable().optional(),
+    renewalDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  }).strict().nullable().optional(),
 }).strict()
 
 /**
@@ -27,7 +33,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   return Sentry.startSpan({ op: 'http.server', name: 'POST /api/admin/member-rate-requests/:id/decision' }, async span => {
     span.setAttribute('decision', parsed.data.decision)
     try {
-      const result = await decideMemberRateRequest(id, parsed.data.decision, session.user.id, parsed.data.note)
+      const mm = parsed.data.markMember
+      const result = await decideMemberRateRequest(id, parsed.data.decision, session.user.id, parsed.data.note, mm ? {
+        tier: mm.tier ?? null,
+        renewalDate: mm.renewalDate ? new Date(`${mm.renewalDate}T12:00:00Z`) : undefined,
+      } : null)
       return NextResponse.json(result)
     } catch (error) {
       if (error instanceof MemberRateRequestError) {
