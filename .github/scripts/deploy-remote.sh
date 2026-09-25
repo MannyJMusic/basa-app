@@ -93,33 +93,102 @@ if ! $COMPOSE build --progress=plain basa-app; then
   rollback "image build failed"
 fi
 
-# Deliberately NOT `down` first. `down` stops Postgres too, so every deploy took
-# the database offline and guaranteed an outage. `up -d` recreates only the
-# services whose config or image actually changed.
-echo "Starting new containers..."
-if ! $COMPOSE up -d --remove-orphans; then
-  rollback "compose up failed"
-fi
+# Zero-downtime switch (#94). Recreating the app container in place left nothing
+# listening on :3000 for ~10 s, and every request in that window was a 502. So:
+#   1. start a standby container from the new image on :3001 and wait for it;
+#   2. point nginx's `basa_app` upstream at it (graceful reload: in-flight
+#      requests finish on the old workers);
+#   3. recreate the main container on :3000 and wait for it;
+#   4. point nginx back at :3000 and remove the standby.
+# If the standby never becomes healthy, nothing was switched: the old container
+# is still serving, so the deploy stops without visitors noticing.
+#
+# Deliberately NOT `down`: it stops Postgres too. `up -d` recreates only what changed.
+UPSTREAM=/etc/nginx/sites-enabled/00-basa-upstream.conf
+STANDBY=basa-app-standby
+STANDBY_PORT=3001
 
-# The old version of this loop ran ten attempts and then fell through to
-# "Deployment Complete" whether or not any of them succeeded, so a completely
-# broken deploy reported success. A deploy that never becomes healthy is a
-# failed deploy.
-echo "Waiting for the app to become healthy..."
-HEALTHY=0
-for i in $(seq 1 24); do
-  if curl -fsS -o /dev/null "$HEALTH_URL"; then
-    echo "Health check passed on attempt $i."
-    HEALTHY=1
-    break
+write_upstream() {
+  printf '# Managed by deploy-remote.sh (#94); at rest this is 3000.\nupstream basa_app {\n  server 127.0.0.1:%s;\n}\n' "$1" > "$UPSTREAM.tmp"
+  mv "$UPSTREAM.tmp" "$UPSTREAM"
+}
+point_nginx() {
+  write_upstream "$1"
+  if ! nginx -t -q 2>/dev/null; then
+    # Never leave an unapplied edit behind for the next reload to pick up.
+    write_upstream 3000
+    echo "nginx rejected the config; upstream file restored to :3000"
+    return 1
   fi
-  echo "  not healthy yet (attempt $i/24)"
-  sleep 5
-done
+  systemctl reload nginx
+  echo "nginx now proxies to 127.0.0.1:$1"
+}
 
-if [ "$HEALTHY" -ne 1 ]; then
-  rollback "app never became healthy at $HEALTH_URL"
+wait_healthy() { # url, attempts
+  for i in $(seq 1 "$2"); do
+    if curl -fsS -o /dev/null "$1"; then echo "  healthy after attempt $i"; return 0; fi
+    sleep 5
+  done
+  return 1
+}
+
+# The main container failed after nginx was switched to the standby. The standby
+# (new build, healthy) keeps serving while :3000 is put back on the previous build;
+# nginx returns to :3000 only once that is healthy, so the site never points at a
+# dead port. If the previous build will not come up either, the standby stays.
+recover_main() {
+  echo "=== DEPLOY FAILED: $1 ==="
+  if [ -z "${PREVIOUS_IMAGE:-}" ]; then
+    echo "No rollback point. The standby keeps serving the new build; the site needs attention."
+    exit 1
+  fi
+  docker tag "$ROLLBACK_TAG" "$APP_IMAGE"
+  $COMPOSE up -d --force-recreate --no-deps basa-app || true
+  if wait_healthy "$HEALTH_URL" 12; then
+    point_nginx 3000
+    docker rm -f "$STANDBY" >/dev/null 2>&1 || true
+    echo "Rolled back: the previous build is serving on :3000 again."
+  else
+    echo "The previous build did not come up either. nginx stays on the standby (new build, healthy) on :$STANDBY_PORT; the site needs attention."
+  fi
+  exit 1
+}
+
+# A standby left over from an interrupted deploy would hold the port.
+docker rm -f "$STANDBY" >/dev/null 2>&1 || true
+
+echo "Starting a standby from the new image on :$STANDBY_PORT..."
+if ! $COMPOSE run -d --no-deps --name "$STANDBY" --publish "127.0.0.1:$STANDBY_PORT:3000" basa-app >/dev/null; then
+  docker tag "$ROLLBACK_TAG" "$APP_IMAGE" 2>/dev/null || true
+  echo "=== DEPLOY FAILED: could not start the standby. Nothing was switched; the previous build is still serving. ==="
+  exit 1
 fi
+if ! wait_healthy "http://127.0.0.1:$STANDBY_PORT/api/health" 24; then
+  echo "Standby logs:"; docker logs --tail 40 "$STANDBY" 2>&1 || true
+  docker rm -f "$STANDBY" >/dev/null 2>&1 || true
+  # Put the tag back so compose describes the container that is actually running.
+  docker tag "$ROLLBACK_TAG" "$APP_IMAGE" 2>/dev/null || true
+  echo "=== DEPLOY FAILED: the new build never became healthy. Nothing was switched; the previous build is still serving. ==="
+  exit 1
+fi
+
+point_nginx "$STANDBY_PORT"
+sleep 2
+
+echo "Recreating the main container..."
+if ! $COMPOSE up -d --remove-orphans; then
+  recover_main "compose up failed"
+fi
+
+echo "Waiting for the main container to become healthy..."
+if ! wait_healthy "$HEALTH_URL" 24; then
+  recover_main "app never became healthy at $HEALTH_URL"
+fi
+
+point_nginx 3000
+sleep 2
+docker rm -f "$STANDBY" >/dev/null
+echo "Standby removed."
 
 # Migrations run from scripts/setup-prod.js on container start, which exits
 # non-zero and refuses to serve traffic if they fail - so by the time the health
