@@ -2,6 +2,9 @@ import type { APIRequestContext, Page } from '@playwright/test'
 import Stripe from 'stripe'
 import { assertStripeTestMode } from './env'
 
+// Same pin as src/lib/stripe.ts (STRIPE_API_VERSION); see the note there.
+const API_VERSION = '2023-10-16' as unknown as Stripe.LatestApiVersion
+
 /** Stripe's documented test cards. */
 export const CARDS = {
   ok: '4242424242424242',
@@ -39,7 +42,7 @@ export async function deliverWebhook(
   type: 'payment_intent.succeeded' | 'payment_intent.payment_failed' | 'payment_intent.canceled' | 'payment_intent.amount_capturable_updated' = 'payment_intent.succeeded',
 ): Promise<{ status: number; body: string }> {
   const { secretKey, webhookSecret } = assertStripeTestMode()
-  const stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' })
+  const stripe = new Stripe(secretKey, { apiVersion: API_VERSION })
   const intent = await stripe.paymentIntents.retrieve(paymentIntentId)
 
   const payload = JSON.stringify({
@@ -65,5 +68,5 @@ export async function deliverWebhook(
 /** A Stripe client on the test key, for reading back what the browser created. */
 export function stripeTestClient(): Stripe {
   const { secretKey } = assertStripeTestMode()
-  return new Stripe(secretKey, { apiVersion: '2023-10-16' })
+  return new Stripe(secretKey, { apiVersion: API_VERSION })
 }

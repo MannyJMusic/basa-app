@@ -1,6 +1,16 @@
 import Stripe from 'stripe'
 import { MEMBERSHIP_TIERS, MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
 
+/**
+ * The Stripe API version every request is pinned to. It is independent of the SDK
+ * version: the SDK (stripe@22) is typed for its own newest API version, but sends
+ * whichever version is set here, and this is the one the app, its webhook handling
+ * and its tests were written against. Moving it is a deliberate change of its own
+ * (request and webhook object shapes change), not a side effect of an SDK bump.
+ * The cast is only because the SDK's type admits just its newest version.
+ */
+export const STRIPE_API_VERSION = '2023-10-16' as unknown as Stripe.LatestApiVersion
+
 // Lazy initialization to avoid build-time errors when env vars are not set
 let _stripe: Stripe | null = null
 
@@ -11,7 +21,7 @@ export function getStripe(): Stripe {
       throw new Error('Missing Stripe API key. Please set STRIPE_RESTRICTED_KEY or STRIPE_SECRET_KEY environment variable.')
     }
     _stripe = new Stripe(stripeKey, {
-      apiVersion: '2023-10-16',
+      apiVersion: STRIPE_API_VERSION,
     })
   }
   return _stripe
