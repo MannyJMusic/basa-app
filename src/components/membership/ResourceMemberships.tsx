@@ -9,7 +9,7 @@ const resources = [
     tier: "CLASS_RESOURCE_MEMBER" as const,
     priceNote: "Annual Rate",
     border: "border-blue-500",
-    bg: "bg-blue-800",
+    bg: "bg-blue-800/90",
     cta: "Join Class Resource",
     ctaColor: "bg-blue-600 hover:bg-blue-700",
     benefits: [
@@ -27,7 +27,7 @@ const resources = [
     tier: "NAG_RESOURCE_MEMBER" as const,
     priceNote: "Best Value",
     border: "border-red-500",
-    bg: "bg-red-700 scale-105 shadow-xl z-10",
+    bg: "bg-red-700/90 md:scale-105 shadow-xl z-10",
     cta: "Join NAG (Networking & Giving)",
     ctaColor: "bg-red-600 hover:bg-red-700",
     badge: "Best Value",
@@ -40,7 +40,7 @@ const resources = [
     tier: "TRAINING_RESOURCE_MEMBER" as const,
     priceNote: "Annual Rate",
     border: "border-yellow-500",
-    bg: "bg-yellow-700",
+    bg: "bg-yellow-700/90",
     cta: "Join Training Resource",
     ctaColor: "bg-yellow-500 hover:bg-yellow-600 text-gray-900",
     benefits: [
@@ -75,7 +75,7 @@ const ResourceMemberships = () => {
         {resources.map((res, idx) => (
           <div
             key={res.name}
-            className={`relative border-t-4 ${res.border} ${res.bg} bg-opacity-90 rounded-xl shadow-lg p-8 flex flex-col items-center transition-transform hover:scale-105 min-h-[480px]`}
+            className={`relative border-t-4 ${res.border} ${res.bg} rounded-xl shadow-lg p-8 flex flex-col items-center transition-transform hover:scale-105 min-h-[480px]`}
             style={idx === 1 ? { zIndex: 10 } : {}}
           >
             {/* Badge for NAG */}

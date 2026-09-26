@@ -188,7 +188,7 @@ export default function EventsPage() {
               {/* Info icon with tooltip */}
               <div className="relative group ml-2">
                 <Info className="w-4 h-4 text-gray-400 cursor-pointer group-hover:text-basa-gold group-focus:text-basa-gold" tabIndex={0} />
-                <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white text-basa-navy text-sm rounded shadow-lg p-3 z-20 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-200">
+                <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white text-basa-navy text-sm rounded shadow-lg p-3 z-20 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-200">
                   Toggle between list and grid views. Use the calendar icon to see events in a calendar format.
                 </div>
               </div>

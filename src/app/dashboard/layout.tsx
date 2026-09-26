@@ -19,7 +19,7 @@ export default async function DashboardLayout({
   if (session.user.accountStatus === "PENDING_VERIFICATION") {
     return (
       <div className="flex min-h-screen bg-gray-50 dark:bg-background">
-        <aside className="hidden w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 lg:block">
+        <aside className="hidden w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 lg:block shrink-0">
           <div className="p-6">
             <div className="flex items-center">
               <Image
@@ -36,7 +36,7 @@ export default async function DashboardLayout({
           </div>
           <DashboardNav />
         </aside>
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col">
           <DashboardHeader user={{
             id: session.user.id,
             email: session.user.email || '',
@@ -46,7 +46,7 @@ export default async function DashboardLayout({
             isActive: session.user.isActive || false,
             image: session.user.image || undefined
           }} />
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-4 sm:p-6">
             <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded mb-6">
               <strong>Email Verification Required:</strong> Please check your email and click the verification link to activate your account. You cannot access member content until your account is verified.
             </div>
@@ -61,7 +61,7 @@ export default async function DashboardLayout({
   if (session.user.role === "GUEST") {
     return (
       <div className="flex min-h-screen bg-gray-50 dark:bg-background">
-        <aside className="hidden w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 lg:block">
+        <aside className="hidden w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 lg:block shrink-0">
           <div className="p-6">
             <div className="flex items-center">
               <Image
@@ -78,7 +78,7 @@ export default async function DashboardLayout({
           </div>
           <DashboardNav />
         </aside>
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col">
           <DashboardHeader user={{
             id: session.user.id,
             email: session.user.email || '',
@@ -88,7 +88,7 @@ export default async function DashboardLayout({
             isActive: session.user.isActive || false,
             image: session.user.image || undefined
           }} />
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-4 sm:p-6">
             <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded mb-6">
               <strong>Welcome!</strong> You have limited access. Complete your profile and explore our free resources. To unlock full member benefits, <a href="/membership/join" className="underline font-semibold">join as a member</a>.
             </div>
@@ -102,7 +102,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-background">
       {/* Sidebar */}
-      <aside className="hidden w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 lg:block">
+      <aside className="hidden w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 lg:block shrink-0">
         <div className="p-6">
           <div className="flex items-center">
             <Image
@@ -121,7 +121,7 @@ export default async function DashboardLayout({
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col">
         <DashboardHeader user={{
           id: session.user.id,
           email: session.user.email || '',
@@ -131,7 +131,7 @@ export default async function DashboardLayout({
           isActive: session.user.isActive || false,
           image: session.user.image || undefined
         }} />
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 sm:p-6">
           {children}
         </main>
       </div>

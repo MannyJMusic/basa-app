@@ -157,23 +157,29 @@ export default function CalendarPage() {
       {/* Calendar Navigation */}
       <section className="py-6 bg-white border-b">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between max-w-4xl mx-auto">
+          <div className="flex items-center justify-between gap-2 max-w-4xl mx-auto">
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => navigateMonth('prev')}
+              aria-label={`Previous month: ${formatMonthYear(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}`}
             >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              {formatMonthYear(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+              <ChevronLeft className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">
+                {formatMonthYear(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+              </span>
             </Button>
-            <h2 className="text-2xl font-bold text-gray-900">{formatMonthYear(currentMonth)}</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 text-center">{formatMonthYear(currentMonth)}</h2>
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => navigateMonth('next')}
+              aria-label={`Next month: ${formatMonthYear(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}`}
             >
-              {formatMonthYear(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-              <ChevronRight className="w-4 h-4 ml-2" />
+              <span className="hidden sm:inline">
+                {formatMonthYear(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+              </span>
+              <ChevronRight className="w-4 h-4 sm:ml-2" />
             </Button>
           </div>
         </div>
@@ -334,8 +340,8 @@ export default function CalendarPage() {
             )}
 
             {/* View All Events CTA */}
-            <div className="text-center mt-12">
-              <Button asChild variant="outline" size="lg" className="mr-4">
+            <div className="flex flex-wrap justify-center gap-4 mt-12">
+              <Button asChild variant="outline" size="lg">
                 <Link href="/events">View All Events</Link>
               </Button>
               <Button asChild size="lg" className="bg-purple-600 hover:bg-purple-700">
