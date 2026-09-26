@@ -48,7 +48,7 @@ export default function MembershipPage() {
       {/* Current Membership Status */}
       <Card className="border-2 border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50">
         <CardContent className="p-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
                 <Crown className="w-8 h-8 text-blue-600" />
@@ -64,7 +64,7 @@ export default function MembershipPage() {
                 <p className="text-sm text-gray-500">Next renewal: March 15, 2024</p>
               </div>
             </div>
-            <div className="text-right">
+            <div className="sm:text-right">
               <p className="text-3xl font-bold text-blue-600">$299</p>
               <p className="text-sm text-gray-600">per year</p>
             </div>

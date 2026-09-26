@@ -3,9 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { NavDrawer } from "@/components/layout/nav-drawer"
 import { 
   HomeIcon, 
   UserIcon, 
@@ -14,8 +13,6 @@ import {
   DocumentTextIcon,
   CogIcon,
   BuildingOfficeIcon,
-  Bars3Icon,
-  XMarkIcon
 } from "@heroicons/react/24/outline"
 
 const navigation = [
@@ -28,10 +25,10 @@ const navigation = [
   { name: "Membership", href: "/dashboard/membership", icon: BuildingOfficeIcon, requiresMember: true },
 ]
 
-export default function DashboardNav() {
+/** `mobile` renders the phone menu button and drawer; otherwise the sidebar list. */
+export default function DashboardNav({ mobile = false }: { mobile?: boolean }) {
   const pathname = usePathname()
   const { data: session, status } = useSession()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // Debug logging
 
@@ -61,7 +58,7 @@ export default function DashboardNav() {
   const visibleNavigation = getVisibleNavigation()
 
   // Show loading state if session is loading
-  if (status === "loading") {
+  if (status === "loading" && !mobile) {
     return (
       <nav className="flex-1 px-4 pb-4">
         <div className="animate-pulse">
@@ -81,7 +78,6 @@ export default function DashboardNav() {
           <li key={item.name}>
             <Link
               href={item.href}
-              onClick={() => setIsMobileMenuOpen(false)}
               className={cn(
                 "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
                 isActive
@@ -98,59 +94,19 @@ export default function DashboardNav() {
     </ul>
   )
 
-  return (
-    <>
-      {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="bg-white shadow-md"
-        >
-          {isMobileMenuOpen ? (
-            <XMarkIcon className="h-5 w-5" />
-          ) : (
-            <Bars3Icon className="h-5 w-5" />
-          )}
-        </Button>
-      </div>
-
-      {/* Mobile menu overlay */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50" onClick={() => setIsMobileMenuOpen(false)} />
-      )}
-
-      {/* Mobile menu */}
-      <div className={cn(
-        "lg:hidden fixed left-0 top-0 z-50 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-200 ease-in-out",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <div className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Menu
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-        <nav className="px-4 pb-4">
+  if (mobile) {
+    return (
+      <NavDrawer title="Menu" triggerClassName="lg:hidden">
+        <nav className="p-4">
           <NavItems />
         </nav>
-      </div>
+      </NavDrawer>
+    )
+  }
 
-      {/* Desktop navigation */}
-      <nav className="hidden lg:block flex-1 px-4 pb-4">
-        <NavItems />
-      </nav>
-    </>
+  return (
+    <nav className="flex-1 px-4 pb-4">
+      <NavItems />
+    </nav>
   )
-} 
+}
