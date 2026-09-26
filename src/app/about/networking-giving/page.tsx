@@ -23,7 +23,7 @@ export default function NetworkingGivingPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header Section */}
-      <section className="bg-gradient-to-r from-blue-900 to-blue-700 text-white py-20">
+      <section className="bg-linear-to-r from-blue-900 to-blue-700 text-white py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <Badge variant="secondary" className="mb-6 bg-white/20 text-white border-white/30">
@@ -149,7 +149,7 @@ export default function NetworkingGivingPage() {
             
             <div className="space-y-8">
               <div className="flex items-start space-x-6">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
                   <Target className="w-8 h-8 text-blue-600" />
                 </div>
                 <div className="flex-1">
@@ -165,7 +165,7 @@ export default function NetworkingGivingPage() {
               </div>
 
               <div className="flex items-start space-x-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center shrink-0">
                   <Handshake className="w-8 h-8 text-green-600" />
                 </div>
                 <div className="flex-1">
@@ -180,7 +180,7 @@ export default function NetworkingGivingPage() {
               </div>
 
               <div className="flex items-start space-x-6">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
                   <Users className="w-8 h-8 text-purple-600" />
                 </div>
                 <div className="flex-1">
@@ -196,7 +196,7 @@ export default function NetworkingGivingPage() {
               </div>
 
               <div className="flex items-start space-x-6">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
                   <TrendingUp className="w-8 h-8 text-orange-600" />
                 </div>
                 <div className="flex-1">

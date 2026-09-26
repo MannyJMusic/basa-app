@@ -154,7 +154,7 @@ export default function MemberCalendarPage() {
 
       {/* Member Benefits Banner */}
       {isMember && (
-        <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <Card className="bg-linear-to-r from-blue-600 to-purple-600 text-white">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">

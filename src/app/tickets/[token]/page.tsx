@@ -42,7 +42,7 @@ export default async function TicketPage({ params }: { params: Promise<{ token: 
           <PrintTicketButton />
         </div>
 
-        <article className="overflow-hidden rounded-2xl border bg-white shadow-sm print:shadow-none print:border-gray-400">
+        <article className="overflow-hidden rounded-2xl border bg-white shadow-xs print:shadow-none print:border-gray-400">
           <header className="bg-[#1B365D] px-6 py-5 text-white">
             <p className="text-xs uppercase tracking-widest text-blue-200">Business Association of San Antonio</p>
             <h1 className="mt-1 text-2xl font-bold leading-tight">{t.event.title}</h1>

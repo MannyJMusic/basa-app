@@ -137,10 +137,10 @@ const TestimonialCard = ({ testimonial, index }: TestimonialCardProps) => {
       }}
       className="group"
     >
-      <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+      <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-linear-to-br from-white to-gray-50/50 backdrop-blur-xs">
         <CardContent className="p-8">
           <div className="flex items-start space-x-4 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-basa-navy to-basa-teal rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+            <div className="w-16 h-16 bg-linear-to-br from-basa-navy to-basa-teal rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
               <Quote className="w-8 h-8 text-white" />
             </div>
             <div className="flex-1">
@@ -184,12 +184,12 @@ const ImpactCard = ({ icon: Icon, title, value, suffix, description, delay = 0 }
       }}
       className="group"
     >
-      <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm overflow-hidden">
+      <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-linear-to-br from-white to-gray-50/50 backdrop-blur-xs overflow-hidden">
         <CardContent className="p-8 relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-basa-gold/10 to-basa-teal/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-linear-to-br from-basa-gold/10 to-basa-teal/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
           
           <div className="relative z-10">
-            <div className="w-16 h-16 bg-gradient-to-br from-basa-navy to-basa-teal rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+            <div className="w-16 h-16 bg-linear-to-br from-basa-navy to-basa-teal rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
               <Icon className="w-8 h-8 text-white" />
             </div>
             
@@ -263,8 +263,8 @@ const SuccessStory = ({ story, index }: SuccessStoryProps) => {
               viewport={{ once: true }}
               className="relative"
             >
-              <div className="aspect-video bg-gradient-to-br from-basa-navy to-basa-teal rounded-2xl shadow-2xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-basa-navy/80 to-basa-teal/80 flex items-center justify-center">
+              <div className="aspect-video bg-linear-to-br from-basa-navy to-basa-teal rounded-2xl shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-linear-to-br from-basa-navy/80 to-basa-teal/80 flex items-center justify-center">
                   <div className="text-center text-white">
                     <Building2 className="w-16 h-16 mx-auto mb-4 opacity-80" />
                     <p className="text-lg font-medium">{story.imageAlt}</p>
@@ -334,7 +334,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header Section - Traditional Layout */}
-      <section className="relative bg-gradient-to-r from-blue-900 to-blue-700 text-white py-16 overflow-hidden">
+      <section className="relative bg-linear-to-r from-blue-900 to-blue-700 text-white py-16 overflow-hidden">
         {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -343,7 +343,7 @@ export default function AboutPage() {
           }}
         />
         {/* Overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 to-blue-700/60"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-blue-900/60 to-blue-700/60"></div>
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
@@ -556,7 +556,7 @@ export default function AboutPage() {
                 whileHover={{ y: -8 }}
                 className="group"
               >
-                <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+                <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-linear-to-br from-white to-gray-50/50 backdrop-blur-xs">
                   <CardContent className="p-8 text-center">
                     <div className="w-20 h-20 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                       <Image 
@@ -564,7 +564,7 @@ export default function AboutPage() {
                         alt={leader.name + ' profile photo'} 
                         width={80}
                         height={80}
-                        className="w-20 h-20 rounded-full object-cover border-2 border-basa-gold shadow" 
+                        className="w-20 h-20 rounded-full object-cover border-2 border-basa-gold shadow-sm" 
                       />
                     </div>
                     <h3 className="text-xl font-bold text-basa-navy mb-2">{leader.name}</h3>
@@ -624,9 +624,9 @@ export default function AboutPage() {
               whileHover={{ y: -8 }}
               className="group"
             >
-              <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+              <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-linear-to-br from-white to-gray-50/50 backdrop-blur-xs">
                 <CardContent className="p-8 text-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-basa-navy to-basa-teal rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <div className="w-20 h-20 bg-linear-to-br from-basa-navy to-basa-teal rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                     <Shield className="w-10 h-10 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold text-basa-navy mb-4">Quality Over Quantity</h3>
@@ -646,9 +646,9 @@ export default function AboutPage() {
               whileHover={{ y: -8 }}
               className="group"
             >
-              <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+              <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-linear-to-br from-white to-gray-50/50 backdrop-blur-xs">
                 <CardContent className="p-8 text-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-basa-gold to-basa-teal rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <div className="w-20 h-20 bg-linear-to-br from-basa-gold to-basa-teal rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                     <Target className="w-10 h-10 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold text-basa-navy mb-4">Networking with Purpose</h3>
@@ -668,9 +668,9 @@ export default function AboutPage() {
               whileHover={{ y: -8 }}
               className="group"
             >
-              <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm">
+              <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-linear-to-br from-white to-gray-50/50 backdrop-blur-xs">
                 <CardContent className="p-8 text-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-basa-teal to-basa-navy rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <div className="w-20 h-20 bg-linear-to-br from-basa-teal to-basa-navy rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                     <MapPin className="w-10 h-10 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold text-basa-navy mb-4">Local Impact</h3>
@@ -732,7 +732,7 @@ export default function AboutPage() {
           }}
         />
         {/* Overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/70 to-blue-700/70"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-blue-900/70 to-blue-700/70"></div>
         <div className="container mx-auto px-4 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 50 }}

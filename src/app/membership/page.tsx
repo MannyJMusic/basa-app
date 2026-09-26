@@ -16,7 +16,7 @@ export default function MembershipPage() {
           <MembershipOfficeNotice variant="card" intent="join" />
         </section>
       )}
-      <nav className="sticky top-0 z-30 bg-white shadow-sm">
+      <nav className="sticky top-0 z-30 bg-white shadow-xs">
         {/* TODO: Add section links and quick-access buttons */}
       </nav>
       <section id="chapter-memberships">

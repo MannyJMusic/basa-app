@@ -36,7 +36,7 @@ export default async function MemberRateRequestPage({ params }: { params: Promis
   })
 
   const field = (label: string, value: React.ReactNode) => (
-    <div className="grid grid-cols-3 gap-2 py-1.5 text-sm"><dt className="text-gray-500">{label}</dt><dd className="col-span-2 text-gray-900 break-words">{value}</dd></div>
+    <div className="grid grid-cols-3 gap-2 py-1.5 text-sm"><dt className="text-gray-500">{label}</dt><dd className="col-span-2 text-gray-900 wrap-break-word">{value}</dd></div>
   )
 
   return (

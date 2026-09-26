@@ -50,7 +50,7 @@ export default function Navigation() {
       <div className="basa-container">
         <div className="flex justify-between items-center h-16 lg:h-20">
           {/* Logo */}
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <Link href="/" className="flex items-center group">
               <Image
                 src="/images/BASA-LOGO.png"
@@ -87,7 +87,7 @@ export default function Navigation() {
                       <span>{item.label}</span>
                     </span>
                     <span className={`absolute bottom-0 left-0 w-full h-0.5 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ${
-                      isScrolled ? 'bg-gradient-to-r from-navy-600 to-teal-600' : 'bg-gradient-to-r from-gold-400 to-gold-300'
+                      isScrolled ? 'bg-linear-to-r from-navy-600 to-teal-600' : 'bg-linear-to-r from-gold-400 to-gold-300'
                     }`}></span>
                   </Link>
                 )
@@ -219,7 +219,7 @@ export default function Navigation() {
                     </Link>
                     <Link
                       href="/membership/join"
-                      className="flex items-center px-3 py-3 text-navy-900 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 rounded-md text-base font-medium transition-all duration-200 transform hover:scale-105"
+                      className="flex items-center px-3 py-3 text-navy-900 bg-linear-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 rounded-md text-base font-medium transition-all duration-200 transform hover:scale-105"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       Join BASA

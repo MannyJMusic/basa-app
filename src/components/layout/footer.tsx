@@ -37,7 +37,7 @@ export default function Footer() {
   ]
 
   return (
-    <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white relative overflow-hidden">
+    <footer className="bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 text-white relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-pattern-dots opacity-5"></div>
       
@@ -71,7 +71,7 @@ export default function Footer() {
                   <span>(210) 549-7190</span>
                 </div>
                 <div className="flex items-start text-gray-300">
-                  <MapPin className="w-4 h-4 mr-3 mt-0.5 text-blue-400 flex-shrink-0" />
+                  <MapPin className="w-4 h-4 mr-3 mt-0.5 text-blue-400 shrink-0" />
                   <span>9002 Wurbach Rd<br />San Antonio, TX 78240</span>
                 </div>
               </div>
@@ -111,7 +111,7 @@ export default function Footer() {
                   <input
                     type="email"
                     placeholder="Enter your email"
-                    className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-l-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-l-lg text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-r-lg border-l-0">
                     <ArrowRight className="w-4 h-4" />

@@ -116,11 +116,11 @@ const ComparisonTable = ({ salesEnabled = true }: { salesEnabled?: boolean }) =>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
             See which membership fits your needs. Toggle to compare full or resource memberships.
           </p>
-          <div className="inline-flex rounded-lg shadow bg-gray-100 mb-4">
+          <div className="inline-flex rounded-lg shadow-sm bg-gray-100 mb-4">
             {groups.map((g, i) => (
               <button
                 key={g.type}
-                className={`px-4 py-2 font-semibold text-sm md:text-base rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 ${group === i ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-blue-100'}`}
+                className={`px-4 py-2 font-semibold text-sm md:text-base rounded-lg transition-colors focus:outline-hidden focus:ring-2 focus:ring-blue-400 ${group === i ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-blue-100'}`}
                 onClick={() => setGroup(i)}
                 aria-pressed={group === i}
               >
@@ -134,7 +134,7 @@ const ComparisonTable = ({ salesEnabled = true }: { salesEnabled?: boolean }) =>
         <div className="block md:hidden">
           <div className="flex gap-4 overflow-x-auto pb-2 px-2">
             {tiers.map((tier, idx) => (
-              <div key={tier.name} className="min-w-[260px] max-w-[320px] bg-gray-50 rounded-xl shadow-lg p-5 flex-shrink-0 border border-gray-200">
+              <div key={tier.name} className="min-w-[260px] max-w-[320px] bg-gray-50 rounded-xl shadow-lg p-5 shrink-0 border border-gray-200">
                 <div className={`text-lg font-bold mb-1 ${tier.color}`}>{tier.name}</div>
                 {salesEnabled && <div className="text-2xl font-bold mb-2">{tier.price}</div>}
                 <ul className="divide-y divide-gray-100">

@@ -129,7 +129,7 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header Section */}
-      <section className="bg-gradient-to-r from-purple-900 to-purple-700 text-white py-12">
+      <section className="bg-linear-to-r from-purple-900 to-purple-700 text-white py-12">
         <div className="container mx-auto px-4">
           <div className="flex items-center mb-6">
             <Button asChild variant="ghost" className="text-white hover:bg-white/10 mr-4">

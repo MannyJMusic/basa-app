@@ -45,11 +45,11 @@ const TestimonialCard = ({ testimonial, index }: { testimonial: Testimonial; ind
       onHoverEnd={() => setIsHovered(false)}
       className="group"
     >
-      <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50 backdrop-blur-sm card-modern">
+      <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-linear-to-br from-white to-gray-50/50 backdrop-blur-xs card-modern">
         <CardContent className="p-8">
           {/* Header */}
           <div className="flex items-start space-x-4 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-basa-navy to-basa-teal rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+            <div className="w-16 h-16 bg-linear-to-br from-basa-navy to-basa-teal rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
               {testimonial.image ? (
                 <Image 
                   src={testimonial.image} 
@@ -91,7 +91,7 @@ const TestimonialCard = ({ testimonial, index }: { testimonial: Testimonial; ind
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: isHovered ? 1 : 0 }}
-            className="absolute inset-0 bg-gradient-to-br from-basa-navy/5 to-basa-teal/5 rounded-lg pointer-events-none"
+            className="absolute inset-0 bg-linear-to-br from-basa-navy/5 to-basa-teal/5 rounded-lg pointer-events-none"
           />
         </CardContent>
       </Card>
@@ -107,7 +107,7 @@ export default function Testimonials({
   viewAllHref = "/testimonials"
 }: TestimonialsProps) {
   return (
-    <section className="py-24 bg-gradient-to-br from-gray-50 to-white">
+    <section className="py-24 bg-linear-to-br from-gray-50 to-white">
       <div className="container mx-auto px-4">
         {/* Header */}
         <motion.div

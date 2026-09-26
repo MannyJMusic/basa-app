@@ -43,7 +43,7 @@ export default function EventsListPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <section className="bg-gradient-to-r from-purple-900 to-purple-700 text-white py-12">
+      <section className="bg-linear-to-r from-purple-900 to-purple-700 text-white py-12">
         <div className="container mx-auto px-4">
           <div className="flex items-center mb-6">
             <Button asChild variant="ghost" className="text-white hover:bg-white/10 mr-4">
@@ -127,7 +127,7 @@ export default function EventsListPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {filteredEvents.map((event) => (
                   <Card key={event.id} className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg">
-                    <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
+                    <CardHeader className="bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
                       <div className="flex items-center justify-between">
                         {event.isFeatured && (
                           <Badge variant="secondary" className="bg-white/20 text-white border-white/30">

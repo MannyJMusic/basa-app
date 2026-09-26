@@ -69,7 +69,7 @@ export default function MyEventsPage() {
     <div className="space-y-6">
       {/* Member Benefits Banner */}
       {isMember && (
-        <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <Card className="bg-linear-to-r from-blue-600 to-purple-600 text-white">
           <CardContent className={isBannerCollapsed ? "p-3" : "p-6"}>
             {isBannerCollapsed ? (
               <div className="flex items-center justify-between">
@@ -203,10 +203,10 @@ export default function MyEventsPage() {
         <div className="w-80 space-y-6">
           {/* Member Benefits Banner */}
           {isGuest && (
-            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+            <Card className="bg-linear-to-r from-blue-50 to-indigo-50 border-blue-200">
               <CardContent className="p-6">
                 <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                       <Crown className="w-4 h-4 text-white" />
                     </div>

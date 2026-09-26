@@ -41,9 +41,9 @@ const MembershipFAQ = () => {
       </div>
       <div className="max-w-3xl mx-auto space-y-4">
         {faqs.map((faq, idx) => (
-          <div key={idx} className="bg-white rounded-lg shadow p-4">
+          <div key={idx} className="bg-white rounded-lg shadow-sm p-4">
             <button
-              className="w-full text-left flex justify-between items-center font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 py-2"
+              className="w-full text-left flex justify-between items-center font-semibold text-gray-800 focus:outline-hidden focus:ring-2 focus:ring-blue-400 py-2"
               aria-expanded={open === idx}
               aria-controls={`faq-panel-${idx}`}
               onClick={() => setOpen(open === idx ? null : idx)}

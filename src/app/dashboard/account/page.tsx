@@ -322,7 +322,7 @@ export default function AccountPage() {
         <h2 className="text-2xl font-bold mb-2">Welcome, Guest!</h2>
         <p className="mb-4">You have limited access. <a href="/membership/join" className="underline text-blue-600">Join as a member</a> to unlock full account features.</p>
         {/* Show only basic info */}
-        <div className="bg-gray-50 p-4 rounded shadow">
+        <div className="bg-gray-50 p-4 rounded shadow-sm">
           <p><strong>Email:</strong> {userData.email}</p>
         </div>
       </div>

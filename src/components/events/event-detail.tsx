@@ -132,19 +132,19 @@ export function EventDetail({
             <h3 className="font-semibold text-gray-900 mb-4">What's Included</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="flex items-center text-sm">
-                <CheckCircle className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                <CheckCircle className="w-4 h-4 text-green-600 mr-2 shrink-0" />
                 <span>Professional networking opportunities</span>
               </div>
               <div className="flex items-center text-sm">
-                <CheckCircle className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                <CheckCircle className="w-4 h-4 text-green-600 mr-2 shrink-0" />
                 <span>Light refreshments included</span>
               </div>
               <div className="flex items-center text-sm">
-                <CheckCircle className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                <CheckCircle className="w-4 h-4 text-green-600 mr-2 shrink-0" />
                 <span>Business card exchange</span>
               </div>
               <div className="flex items-center text-sm">
-                <CheckCircle className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                <CheckCircle className="w-4 h-4 text-green-600 mr-2 shrink-0" />
                 <span>Guest speaker presentations</span>
               </div>
             </div>
