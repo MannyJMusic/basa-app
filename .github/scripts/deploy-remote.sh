@@ -120,7 +120,23 @@ point_nginx() {
     echo "nginx rejected the config; upstream file restored to :3000"
     return 1
   fi
+  local master old
+  master=$(cat /run/nginx.pid)
+  old=$(pgrep -P "$master" -f "nginx: worker process$" | tr '\n' ' ')
   systemctl reload nginx
+  # `reload` returns once the signal is sent, but the old workers keep accepting
+  # connections - and proxying them to the old port - until the master has
+  # re-read the config and told them to stop. On a loaded host that took >2s and
+  # cost two 502s. Wait until every pre-reload worker has exited or is draining.
+  for _ in $(seq 1 60); do
+    local busy=0 p
+    for p in $old; do
+      ps -o cmd= -p "$p" 2>/dev/null | grep -q "worker process$" && busy=1
+    done
+    [ "$busy" = 0 ] && break
+    sleep 0.5
+  done
+  [ "$busy" = 0 ] || echo "warning: old nginx workers still accepting after 30s"
   echo "nginx now proxies to 127.0.0.1:$1"
 }
 
