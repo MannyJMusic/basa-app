@@ -46,7 +46,7 @@ export function BasaLoading({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="text-center space-y-8 max-w-2xl mx-auto px-6">
         {/* Logo/Brand Section */}
         <motion.div
@@ -55,7 +55,7 @@ export function BasaLoading({
           transition={{ duration: 0.6, ease: "easeOut" }}
           className="space-y-4"
         >
-          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-lg">
+          <div className="w-24 h-24 mx-auto bg-linear-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-lg">
             <Building2 className="w-12 h-12 text-white" />
           </div>
           
@@ -98,7 +98,7 @@ export function BasaLoading({
           >
             <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700 overflow-hidden">
               <motion.div
-                className="bg-gradient-to-r from-blue-600 to-blue-800 h-3 rounded-full"
+                className="bg-linear-to-r from-blue-600 to-blue-800 h-3 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 1, delay: 0.8 }}
@@ -129,7 +129,7 @@ export function BasaLoading({
                   type: "spring",
                   stiffness: 200
                 }}
-                className="flex flex-col items-center space-y-2 p-3 rounded-lg bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50"
+                className="flex flex-col items-center space-y-2 p-3 rounded-lg bg-white/50 dark:bg-gray-800/50 backdrop-blur-xs border border-gray-200/50 dark:border-gray-700/50"
               >
                 <feature.icon className="w-6 h-6 text-blue-600" />
                 <span className="text-xs text-gray-600 dark:text-gray-400 text-center font-medium">

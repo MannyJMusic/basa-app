@@ -43,7 +43,7 @@ export default function SignInPage() {
         aria-hidden="true"
       />
       {/* Overlay for readability */}
-      <div className="absolute inset-0 z-10 bg-gradient-to-br from-[#1B365D]/80 to-[#17A2B8]/60" aria-hidden="true" />
+      <div className="absolute inset-0 z-10 bg-linear-to-br from-[#1B365D]/80 to-[#17A2B8]/60" aria-hidden="true" />
       {/* Content */}
       <div className="relative z-20 flex items-center justify-center w-full">
         <Card className="w-full max-w-md shadow-lg">

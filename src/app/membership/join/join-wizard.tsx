@@ -490,10 +490,10 @@ export default function JoinWizard() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-green-50">
       
       {/* Compact Header */}
-      <section className="relative bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 text-white py-8 overflow-hidden">
+      <section className="relative bg-linear-to-r from-blue-900 via-blue-800 to-blue-700 text-white py-8 overflow-hidden">
         {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-bottom bg-no-repeat opacity-40"
@@ -502,7 +502,7 @@ export default function JoinWizard() {
           }}
         />
         {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 via-blue-800/50 to-blue-700/60" />
+        <div className="absolute inset-0 bg-linear-to-r from-blue-900/60 via-blue-800/50 to-blue-700/60" />
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="flex items-center justify-between mb-6">
@@ -653,7 +653,7 @@ export default function JoinWizard() {
                                     <div className="text-xs text-gray-600 space-y-1">
                                       {tier.benefits.slice(0, 2).map((benefit, index) => (
                                         <div key={index} className="flex items-start">
-                                          <Check className="w-3 h-3 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                                          <Check className="w-3 h-3 text-green-500 mr-2 mt-0.5 shrink-0" />
                                           <span className="leading-tight">{benefit}</span>
                                         </div>
                                       ))}
@@ -748,7 +748,7 @@ export default function JoinWizard() {
                                     <div className="text-xs text-gray-600 space-y-1">
                                       {tier.benefits.slice(0, 2).map((benefit, index) => (
                                         <div key={index} className="flex items-start">
-                                          <Check className="w-3 h-3 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                                          <Check className="w-3 h-3 text-green-500 mr-2 mt-0.5 shrink-0" />
                                           <span className="leading-tight">{benefit}</span>
                                         </div>
                                       ))}
@@ -1324,7 +1324,7 @@ export default function JoinWizard() {
               {/* Right Column - Sticky Order Summary */}
               <div className="xl:col-span-1">
                 <div className="sticky top-8 space-y-6">
-                  <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-blue-50">
+                  <Card className="border-0 shadow-xl bg-linear-to-br from-white to-blue-50">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-xl flex items-center">
                         <CreditCard className="w-5 h-5 mr-2 text-blue-600" />

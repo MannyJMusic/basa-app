@@ -69,7 +69,7 @@ const MemberTestimonials = () => {
               alt={`Headshot of ${t.name}`}
               width={80}
               height={80}
-              className="w-20 h-20 rounded-full object-cover mb-4 border-4 border-blue-100 shadow"
+              className="w-20 h-20 rounded-full object-cover mb-4 border-4 border-blue-100 shadow-sm"
               loading="lazy"
             />
             <div className="font-semibold text-lg text-gray-900 mb-1">{t.name}</div>

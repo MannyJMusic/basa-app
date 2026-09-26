@@ -401,7 +401,7 @@ export default function MembershipPaymentWizard() {
                           <div className="space-y-2">
                             {tier.features.slice(0, 3).map((feature, index) => (
                               <div key={index} className="flex items-center text-sm">
-                                <CheckCircle className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                                <CheckCircle className="w-4 h-4 text-green-600 mr-2 shrink-0" />
                                 <span className="text-gray-700">{feature}</span>
                               </div>
                             ))}
@@ -466,7 +466,7 @@ export default function MembershipPaymentWizard() {
                   {/* Security Notice */}
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <div className="flex items-start">
-                      <Shield className="w-5 h-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                      <Shield className="w-5 h-5 text-blue-600 mr-2 mt-0.5 shrink-0" />
                       <div className="text-sm text-blue-800">
                         <p className="font-semibold mb-1">Secure Payment</p>
                         <p>Your payment information is encrypted and secure. We use industry-standard SSL encryption to protect your data.</p>

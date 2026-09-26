@@ -388,7 +388,7 @@ export default function PaymentSuccessPage() {
 
   if (!type || !paymentId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-red-50 to-red-100 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
           <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="w-10 h-10 text-red-600" />
@@ -408,9 +408,9 @@ export default function PaymentSuccessPage() {
 
   return (
             <>
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
+      <div className="min-h-screen bg-linear-to-br from-green-50 via-blue-50 to-purple-50">
         {/* Banner Header */}
-        <div className="w-full bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 text-white flex items-center px-4 py-4 md:py-3 shadow-md">
+        <div className="w-full bg-linear-to-r from-green-600 via-blue-600 to-purple-600 text-white flex items-center px-4 py-4 md:py-3 shadow-md">
           <Image src="/images/BASA-LOGO.png" alt="BASA Logo" width={48} height={48} className="h-12 w-auto mr-4" />
           <div className="flex items-center">
             <CheckCircle className="w-8 h-8 text-white mr-2" />
@@ -525,7 +525,7 @@ export default function PaymentSuccessPage() {
                         {checkoutData.cart.map((item) => {
                           const tier = MEMBERSHIP_TIERS[item.tierId as keyof typeof MEMBERSHIP_TIERS]
                           return (
-                            <div key={item.tierId} className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4">
+                            <div key={item.tierId} className="bg-linear-to-r from-blue-50 to-purple-50 rounded-lg p-4">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="font-bold text-blue-900">{tier.name}</span>
                                 <span className="text-xs text-gray-600">Qty: {item.quantity}</span>
@@ -600,7 +600,7 @@ export default function PaymentSuccessPage() {
               <Card className="shadow-xl border-0 bg-blue-50 border border-blue-200">
                 <CardContent className="p-4">
                   <div className="flex items-start space-x-3">
-                    <Shield className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <Shield className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
                     <div>
                       <h4 className="font-semibold text-blue-900 mb-1">Secure & Protected</h4>
                       <p className="text-sm text-blue-800">Your payment information is encrypted and secure. We use industry-standard SSL encryption.</p>

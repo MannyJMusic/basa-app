@@ -58,7 +58,7 @@ export function MembershipOfficeNotice({ variant = 'card', intent = 'join' }: Me
   if (variant === 'page') {
     return (
       <main className="min-h-[60vh] bg-gray-50 py-16 px-4">
-        <div className="mx-auto max-w-2xl rounded-2xl border bg-white p-8 shadow-sm">
+        <div className="mx-auto max-w-2xl rounded-2xl border bg-white p-8 shadow-xs">
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
             {intent === 'renew' ? 'Renew your BASA membership' : 'Join BASA'}
           </h1>

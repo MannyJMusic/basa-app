@@ -21,7 +21,7 @@ export default function ResourcesPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header Section */}
-      <section className="bg-gradient-to-r from-green-900 to-green-700 text-white py-16">
+      <section className="bg-linear-to-r from-green-900 to-green-700 text-white py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <Badge variant="secondary" className="mb-4 bg-white/20 text-white border-white/30">

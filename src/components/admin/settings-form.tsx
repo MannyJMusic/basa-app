@@ -184,7 +184,7 @@ export function SettingsForm() {
                 <Label htmlFor="org-description">Description</Label>
                 <textarea 
                   id="org-description" 
-                  className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   value={formData.description || ''}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                 />
@@ -370,7 +370,7 @@ export function SettingsForm() {
               <div className="space-y-2">
                 <Label>Admin Email Addresses</Label>
                 <textarea 
-                  className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   placeholder="info@businessassociationsa.com&#10;events@businessassociationsa.com"
                   value={formData.adminEmails || ''}
                   onChange={(e) => handleInputChange('adminEmails', e.target.value)}
