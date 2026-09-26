@@ -26,7 +26,7 @@ export default async function MemberRateRequestsPage() {
   const done = requests.filter(r => r.status !== 'PENDING')
 
   const Row = ({ r }: { r: (typeof requests)[number] }) => (
-    <Link href={`/admin/member-rate-requests/${r.id}`} className="block rounded-lg border bg-white p-4 hover:border-blue-300 hover:shadow-sm">
+    <Link href={`/admin/member-rate-requests/${r.id}`} className="block rounded-lg border bg-white p-4 hover:border-blue-300 hover:shadow-xs">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="font-semibold text-gray-900">{r.registration.name}{r.registration.company ? <span className="font-normal text-gray-600"> · {r.registration.company}</span> : null}</p>

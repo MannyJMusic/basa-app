@@ -58,7 +58,7 @@ export function RichTextEditor({ value, onChange, placeholder, minHeight = 260, 
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: 'rich-text rich-text-editor focus:outline-none px-3 py-2',
+        class: 'rich-text rich-text-editor focus:outline-hidden px-3 py-2',
         style: `min-height: ${minHeight}px`,
         ...(id ? { id } : {}),
       },

@@ -85,7 +85,7 @@ const ChapterMemberships = () => {
             className={`border-t-4 ${tier.border} bg-white rounded-xl shadow-lg p-8 flex flex-col relative transition-transform hover:scale-105 min-h-[560px]`}
           >
             {/* Badge */}
-            <div className={`absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-semibold ${tier.badgeColor} shadow`}>{tier.badge}</div>
+            <div className={`absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-semibold ${tier.badgeColor} shadow-sm`}>{tier.badge}</div>
             {/* Pricing */}
             {MEMBERSHIP_SALES_ENABLED && <div className="text-4xl font-bold text-gray-900 mb-2 mt-2">{tier.price}</div>}
             <div className="text-gray-500 mb-4">per year</div>
@@ -100,7 +100,7 @@ const ChapterMemberships = () => {
             </ul>
             {/* CTA */}
             <div className="mt-auto pt-2 flex items-end">
-              {MEMBERSHIP_SALES_ENABLED ? (<Link href={`/membership/join?tier=${tier.name.toLowerCase().replace(/\s/g, '-')}`} className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors shadow text-center block ${tier.ctaColor} text-white focus:ring-2 focus:ring-offset-2`}>
+              {MEMBERSHIP_SALES_ENABLED ? (<Link href={`/membership/join?tier=${tier.name.toLowerCase().replace(/\s/g, '-')}`} className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors shadow-sm text-center block ${tier.ctaColor} text-white focus:ring-2 focus:ring-offset-2`}>
                 {tier.cta}
               </Link>) : (<MembershipOfficeNotice variant="inline" />)}
             </div>

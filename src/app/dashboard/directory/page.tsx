@@ -98,7 +98,7 @@ export default function DirectoryPage() {
   return (
     <div className={`relative ${isGuest ? "min-h-screen max-h-screen h-screen overflow-hidden" : "min-h-screen"}`}>
       {isGuest && <GuestOverlay />}
-      <div className={isGuest ? "filter blur-sm pointer-events-none select-none h-full" : ""}>
+      <div className={isGuest ? "filter blur-xs pointer-events-none select-none h-full" : ""}>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">

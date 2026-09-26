@@ -103,7 +103,7 @@ export default function HeroSection({
       {/* Parallax Background */}
       <motion.div 
         style={{ y }}
-        className="absolute inset-0 bg-gradient-to-br from-basa-navy via-basa-teal to-basa-gold"
+        className="absolute inset-0 bg-linear-to-br from-basa-navy via-basa-teal to-basa-gold"
       >
         <div className="absolute inset-0 bg-black/30"></div>
         <div 
@@ -127,7 +127,7 @@ export default function HeroSection({
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <Badge variant="secondary" className="mb-8 bg-white/20 text-white border-white/30 backdrop-blur-sm">
+              <Badge variant="secondary" className="mb-8 bg-white/20 text-white border-white/30 backdrop-blur-xs">
                 {badge.icon && <span className="mr-2">{badge.icon}</span>}
                 {badge.text}
               </Badge>

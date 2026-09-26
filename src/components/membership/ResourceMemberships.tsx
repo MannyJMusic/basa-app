@@ -99,7 +99,7 @@ const ResourceMemberships = () => {
               ))}
             </ul>
             {/* CTA */}
-            {MEMBERSHIP_SALES_ENABLED ? (<Link href={`/membership/join?tier=${res.name.toLowerCase().replace(/\s/g, '-')}`} className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors shadow text-center block mt-auto ${res.ctaColor} focus:ring-2 focus:ring-offset-2 focus:ring-white`}>
+            {MEMBERSHIP_SALES_ENABLED ? (<Link href={`/membership/join?tier=${res.name.toLowerCase().replace(/\s/g, '-')}`} className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors shadow-sm text-center block mt-auto ${res.ctaColor} focus:ring-2 focus:ring-offset-2 focus:ring-white`}>
               {res.cta}
             </Link>) : (<MembershipOfficeNotice variant="inline" />)}
           </div>

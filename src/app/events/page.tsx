@@ -74,7 +74,7 @@ export default function EventsPage() {
           }}
         />
         {/* Overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-900/80 to-purple-700/80"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-purple-900/80 to-purple-700/80"></div>
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <Badge variant="secondary" className="mb-4 bg-white/20 text-white border-white/30">
@@ -218,7 +218,7 @@ export default function EventsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {events.map(event => (
                 <Card key={event.id} className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
+                  <CardHeader className="bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
                     <div className="flex items-center justify-between">
                       {event.isFeatured && (
                         <Badge variant="secondary" className="bg-basa-gold text-basa-navy border-basa-gold">
@@ -284,7 +284,7 @@ export default function EventsPage() {
             <div className="flex flex-col gap-6">
               {events.map(event => (
                 <Card key={event.id} className="flex flex-col md:flex-row items-stretch border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                  <div className="flex-1 p-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg md:rounded-l-lg md:rounded-tr-none flex flex-col justify-between">
+                  <div className="flex-1 p-6 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-t-lg md:rounded-l-lg md:rounded-tr-none flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         {event.isFeatured && (

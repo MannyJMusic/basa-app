@@ -126,7 +126,7 @@ export function EventCard({
   if (variant === 'featured') {
     return (
       <Card className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-t-lg">
+        <CardHeader className="bg-linear-to-r from-purple-600 to-purple-700 text-white rounded-t-lg">
           <div className="flex items-center justify-between">
             <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
               Featured Event
