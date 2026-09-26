@@ -101,12 +101,12 @@ export default function DirectoryPage() {
       <div className={isGuest ? "filter blur-xs pointer-events-none select-none h-full" : ""}>
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Member Directory</h1>
               <p className="text-gray-600 mt-2">Connect with {totalMembers}+ business leaders across San Antonio</p>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline">
                 <Bookmark className="w-4 h-4 mr-2" />
                 Saved Searches
@@ -236,8 +236,8 @@ export default function DirectoryPage() {
 
               {/* Advanced Filters */}
               <div className="mt-4 pt-4 border-t">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-4">
                     <div className="flex items-center space-x-2">
                       <Checkbox id="recentlyActive" />
                       <Label htmlFor="recentlyActive" className="text-sm">Recently Active</Label>
@@ -262,9 +262,9 @@ export default function DirectoryPage() {
 
           {/* Member Grid */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <h2 className="text-xl font-semibold">All Members</h2>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Select value={viewMode} onValueChange={setViewMode}>
                   <SelectTrigger className="w-32">
                     <SelectValue />

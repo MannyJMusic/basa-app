@@ -103,7 +103,7 @@ export function SettingsForm() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <SettingsIcon className="w-4 h-4" />
             General
@@ -197,7 +197,7 @@ export function SettingsForm() {
               <CardTitle>System Settings</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Maintenance Mode</Label>
                   <p className="text-sm text-gray-500">Temporarily disable the website for maintenance</p>
@@ -207,7 +207,7 @@ export function SettingsForm() {
                   onCheckedChange={(checked) => handleInputChange('maintenanceMode', checked)}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Auto-approve Members</Label>
                   <p className="text-sm text-gray-500">Automatically approve new member registrations</p>
@@ -217,7 +217,7 @@ export function SettingsForm() {
                   onCheckedChange={(checked) => handleInputChange('autoApproveMembers', checked)}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Email Notifications</Label>
                   <p className="text-sm text-gray-500">Send email notifications for admin actions</p>
@@ -243,7 +243,7 @@ export function SettingsForm() {
               <CardTitle>Authentication Settings</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Two-Factor Authentication</Label>
                   <p className="text-sm text-gray-500">Require 2FA for all admin users</p>
@@ -253,7 +253,7 @@ export function SettingsForm() {
                   onCheckedChange={(checked) => handleInputChange('requireTwoFactor', checked)}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Session Timeout</Label>
                   <p className="text-sm text-gray-500">Auto-logout after inactivity</p>
@@ -269,7 +269,7 @@ export function SettingsForm() {
                   <option value={480}>8 hours</option>
                 </select>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Password Policy</Label>
                   <p className="text-sm text-gray-500">Enforce strong password requirements</p>
@@ -296,7 +296,7 @@ export function SettingsForm() {
                 />
                 <p className="text-sm text-gray-500">Leave empty to allow all IPs</p>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>API Rate Limiting</Label>
                   <p className="text-sm text-gray-500">Limit API requests per minute</p>
@@ -319,7 +319,7 @@ export function SettingsForm() {
               <CardTitle>Email Notifications</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>New Member Registrations</Label>
                   <p className="text-sm text-gray-500">Notify when new members join</p>
@@ -329,7 +329,7 @@ export function SettingsForm() {
                   onCheckedChange={(checked) => handleInputChange('notifyNewMembers', checked)}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Payment Notifications</Label>
                   <p className="text-sm text-gray-500">Notify of successful payments</p>
@@ -339,7 +339,7 @@ export function SettingsForm() {
                   onCheckedChange={(checked) => handleInputChange('notifyPayments', checked)}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Event Registrations</Label>
                   <p className="text-sm text-gray-500">Notify of new event registrations</p>
@@ -349,7 +349,7 @@ export function SettingsForm() {
                   onCheckedChange={(checked) => handleInputChange('notifyEventRegistrations', checked)}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>System Alerts</Label>
                   <p className="text-sm text-gray-500">Notify of system issues</p>
@@ -396,7 +396,7 @@ export function SettingsForm() {
                   onChange={(e) => handleInputChange('stripePublicKey', e.target.value)}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Test Mode</Label>
                   <p className="text-sm text-gray-500">Use test payment processing</p>
@@ -516,7 +516,7 @@ export function SettingsForm() {
               <CardTitle>Display Settings</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Show Member Count</Label>
                   <p className="text-sm text-gray-500">Display total member count publicly</p>
@@ -526,7 +526,7 @@ export function SettingsForm() {
                   onCheckedChange={(checked) => handleInputChange('showMemberCount', checked)}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Show Event Calendar</Label>
                   <p className="text-sm text-gray-500">Display upcoming events on homepage</p>
@@ -536,7 +536,7 @@ export function SettingsForm() {
                   onCheckedChange={(checked) => handleInputChange('showEventCalendar', checked)}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label>Show Testimonials</Label>
                   <p className="text-sm text-gray-500">Display member testimonials</p>

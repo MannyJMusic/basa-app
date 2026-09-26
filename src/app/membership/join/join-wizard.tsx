@@ -632,7 +632,7 @@ export default function JoinWizard() {
                               
                               return (
                                 <div key={tier.id} className={`border-2 ${tier.border} bg-white rounded-xl p-4 hover:shadow-lg transition-all relative ${
-                                  quantity > 0 ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
+                                  quantity > 0 ? 'ring-2 ring-blue-500/50' : ''
                                 }`}>
                                   {tier.badge && (
                                     <div className={`absolute -top-2 right-4 px-3 py-1 rounded-full text-xs font-semibold ${tier.badgeColor}`}>
@@ -725,7 +725,7 @@ export default function JoinWizard() {
                               
                               return (
                                 <div key={tier.id} className={`border-2 ${tier.border} bg-white rounded-xl p-4 hover:shadow-lg transition-all relative ${
-                                  quantity > 0 ? 'ring-2 ring-green-500 ring-opacity-50' : ''
+                                  quantity > 0 ? 'ring-2 ring-green-500/50' : ''
                                 }`}>
                                   {tier.badge && (
                                     <div className={`absolute -top-2 right-4 px-3 py-1 rounded-full text-xs font-semibold ${tier.badgeColor}`}>
