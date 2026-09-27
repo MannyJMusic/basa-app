@@ -1,107 +1,74 @@
-"use client"
-
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import Link from "next/link"
+import { redirect } from "next/navigation"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/db"
+import { EVENT_TIME_ZONE } from "@/lib/event-time"
+import {
+  countActiveMembers,
+  countUpcomingEvents,
+  getMyRegistrations,
+  getRecentDirectoryMembers,
+  getUpcomingEvents,
+} from "@/lib/member-dashboard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Users, 
-  TrendingUp, 
-  Calendar, 
-  Heart,
-  Star,
-  Quote,
-  Award,
-  Handshake,
-  Building2,
-  MapPin,
-  Target,
-  CheckCircle,
-  Globe,
-  Lightbulb,
-  Shield,
-  ArrowRight
-} from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle2 } from "lucide-react"
+import { Users, TrendingUp, Calendar, Heart, Star, Globe, ArrowRight, Ticket, History } from "lucide-react"
 import { GuestOverlay } from "@/components/ui/guest-overlay"
+import { WelcomeBanner } from "./welcome-banner"
 
-export default function DashboardPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [isNewUser, setIsNewUser] = useState(false)
-  const [showWelcome, setShowWelcome] = useState(false)
-  const isGuest = session?.user?.role === "GUEST"
+export const dynamic = "force-dynamic"
 
-  useEffect(() => {
-    if (status === "loading") return
+const eventWhen = (d: Date) =>
+  d.toLocaleString("en-US", {
+    weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: EVENT_TIME_ZONE,
+  })
 
-    if (!session?.user) {
-      router.push("/auth/sign-in")
-      return
-    }
+function daysUntil(d: Date): string {
+  const days = Math.ceil((d.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+  if (days <= 0) return "Next event today"
+  if (days === 1) return "Next event tomorrow"
+  return `Next event in ${days} days`
+}
 
-    // Check if this is the first login after email verification
-    const checkFirstLoginAfterVerification = async () => {
-      try {
-        const response = await fetch('/api/profile')
-        const userData = await response.json()
-        
-        if (userData.emailVerified && userData.accountStatus === 'ACTIVE') {
-          // Check if we've shown the welcome message before for this user
-          const hasShownWelcome = localStorage.getItem(`welcome-shown-${userData.id}`)
-          
-          if (!hasShownWelcome) {
-            setIsNewUser(true)
-            setShowWelcome(true)
-            // Mark that we've shown the welcome message for this user
-            localStorage.setItem(`welcome-shown-${userData.id}`, 'true')
-          }
-        }
-      } catch (error) {
-        console.error('Error checking user data:', error)
-      }
-    }
+const ROW_COLORS = ["bg-blue-50", "bg-green-50", "bg-amber-50"]
+const AVATAR_COLORS = ["bg-blue-100 text-blue-600", "bg-green-100 text-green-600", "bg-purple-100 text-purple-600"]
 
-    checkFirstLoginAfterVerification()
-  }, [session, status, router])
+export default async function DashboardPage() {
+  const session = await auth()
+  if (!session?.user) redirect("/auth/sign-in?callbackUrl=/dashboard")
+  const user = session.user
+  const isGuest = user.role === "GUEST"
 
-  if (status === "loading") {
-    return <div>Loading...</div>
-  }
-
-  if (!session?.user) {
-    return null
-  }
+  const [account, activeMembers, upcomingCount, nextEvents, tickets, recentMembers] = await Promise.all([
+    prisma.user.findUnique({ where: { id: user.id }, select: { emailVerified: true, accountStatus: true } }),
+    countActiveMembers(),
+    countUpcomingEvents(),
+    getUpcomingEvents(3),
+    getMyRegistrations(user.id, user.email),
+    // Guests see this page behind an overlay; do not send them member names.
+    isGuest ? Promise.resolve([]) : getRecentDirectoryMembers(3),
+  ])
+  const bookedIds = new Set(tickets.upcoming.map(r => r.event.slug))
 
   return (
-    <div className="relative min-h-screen">
-      {/* Welcome Message for New Users */}
-      {showWelcome && isNewUser && (
-        <Alert className="border-green-200 bg-green-50">
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">
-            <strong>Welcome to BASA, {session.user?.firstName || 'Member'}!</strong> 
-            Your email has been successfully verified and your account is now active. We're excited to have you join the San Antonio business community. 
-            Take a moment to explore your dashboard and complete your profile.
-          </AlertDescription>
-        </Alert>
+    <div className="relative min-h-screen space-y-6">
+      {account?.emailVerified && account.accountStatus === "ACTIVE" && (
+        <WelcomeBanner userId={user.id} firstName={user.firstName || ""} />
       )}
 
       {/* Dashboard Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back, {session.user?.firstName || 'Member'}!
+            Welcome back, {user.firstName || "Member"}!
           </h1>
           <p className="text-gray-600 mt-2">
-            Here's what's happening in your BASA community
+            Here&apos;s what&apos;s happening in your BASA community
           </p>
         </div>
         <Badge variant="secondary" className="text-sm">
-          {session.user?.role || 'MEMBER'}
+          {user.role || "MEMBER"}
         </Badge>
       </div>
 
@@ -113,10 +80,8 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">150+</div>
-            <p className="text-xs text-muted-foreground">
-              +12% from last month
-            </p>
+            <div className="text-2xl font-bold">{activeMembers}</div>
+            <p className="text-xs text-muted-foreground">Business owners in BASA</p>
           </CardContent>
         </Card>
         <Card>
@@ -125,34 +90,30 @@ export default function DashboardPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-2xl font-bold">{upcomingCount}</div>
             <p className="text-xs text-muted-foreground">
-              Next event in 3 days
+              {nextEvents[0] ? daysUntil(nextEvents[0].startDate) : "None scheduled yet"}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Your Connections</CardTitle>
-            <Handshake className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Your Tickets</CardTitle>
+            <Ticket className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">
-              +3 this week
-            </p>
+            <div className="text-2xl font-bold">{tickets.upcoming.length}</div>
+            <p className="text-xs text-muted-foreground">For upcoming events</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Resources</CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Events Booked</CardTitle>
+            <History className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45</div>
-            <p className="text-xs text-muted-foreground">
-              Available to you
-            </p>
+            <div className="text-2xl font-bold">{tickets.attendedCount}</div>
+            <p className="text-xs text-muted-foreground">Past events</p>
           </CardContent>
         </Card>
       </div>
@@ -168,32 +129,33 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                <div>
-                  <h4 className="font-medium">Tech Innovation Summit</h4>
-                  <p className="text-sm text-gray-600">March 15, 2024 • 9:00 AM</p>
+              {nextEvents.map((e, i) => (
+                <div key={e.id} className={`flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg ${ROW_COLORS[i % ROW_COLORS.length]}`}>
+                  <div className="min-w-0">
+                    <h4 className="text-base font-medium">{e.title}</h4>
+                    <p className="text-sm text-gray-600">{eventWhen(e.startDate)}</p>
+                  </div>
+                  {bookedIds.has(e.slug) ? (
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">Registered</Badge>
+                  ) : (
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/events/${e.slug}/register`}>Register</Link>
+                    </Button>
+                  )}
                 </div>
-                <Button size="sm" variant="outline">
-                  Register
-                </Button>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div>
-                  <h4 className="font-medium">Networking Mixer</h4>
-                  <p className="text-sm text-gray-600">March 22, 2024 • 6:00 PM</p>
-                </div>
-                <Button size="sm" variant="outline">
-                  Register
-                </Button>
-              </div>
+              ))}
+              {nextEvents.length === 0 && (
+                <p className="text-sm text-gray-600">No events are scheduled right now.</p>
+              )}
             </div>
-            <Button className="w-full" variant="outline">
-              View All Events
-              <ArrowRight className="ml-2 h-4 w-4" />
+            <Button asChild className="w-full" variant="outline">
+              <Link href="/events">
+                View All Events
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -203,28 +165,34 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-blue-600">JD</span>
-                </div>
-                <div>
-                  <h4 className="font-medium">John Davis</h4>
-                  <p className="text-sm text-gray-600">TechCorp Solutions</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-green-600">SM</span>
-                </div>
-                <div>
-                  <h4 className="font-medium">Sarah Martinez</h4>
-                  <p className="text-sm text-gray-600">Innovate Business</p>
-                </div>
-              </div>
+              {recentMembers.map((m, i) => {
+                const name = [m.user.firstName, m.user.lastName].filter(Boolean).join(" ") || m.businessName || "BASA member"
+                const initials = name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase()
+                return (
+                  <div key={m.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}>
+                      <span className="text-sm font-medium">{initials}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-base font-medium">{name}</h4>
+                      {m.businessName && m.businessName !== name && (
+                        <p className="text-sm text-gray-600">{m.businessName}</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              {recentMembers.length === 0 && (
+                <p className="text-sm text-gray-600">
+                  {isGuest ? "The member directory is for BASA members." : "No directory listings yet."}
+                </p>
+              )}
             </div>
-            <Button className="w-full" variant="outline">
-              Browse Directory
-              <ArrowRight className="ml-2 h-4 w-4" />
+            <Button asChild className="w-full" variant="outline">
+              <Link href="/dashboard/directory">
+                Browse Directory
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -264,14 +232,13 @@ export default function DashboardPage() {
               </div>
               <h3 className="font-semibold mb-2">Networking</h3>
               <p className="text-sm text-gray-600">
-                Connect with San Antonio's business leaders
+                Connect with San Antonio&apos;s business leaders
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
-
       {isGuest && <GuestOverlay />}
     </div>
   )
-} 
+}
