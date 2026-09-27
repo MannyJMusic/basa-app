@@ -1,46 +1,57 @@
 import Link from "next/link"
-import { MEMBERSHIP_SALES_ENABLED } from "@/lib/feature-flags"
+import { redirect } from "next/navigation"
+import type { Status } from "@prisma/client"
+import { auth } from "@/lib/auth"
+import { MEMBERSHIP_SALES_ENABLED, OFFICE_CONTACT } from "@/lib/feature-flags"
+import { formatTierPrice } from "@/lib/membership-tiers"
+import { EVENT_TIME_ZONE } from "@/lib/event-time"
+import { getMembershipSummary, getMyRegistrations, getUpcomingEvents } from "@/lib/member-dashboard"
 import { MembershipOfficeNotice } from "@/components/membership/MembershipOfficeNotice"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { 
-  Crown, 
-  Star, 
-  Users, 
-  Calendar, 
-  CreditCard, 
-  Download,
-  Award,
-  CheckCircle,
-  TrendingUp,
-  Heart,
-  Building2,
-  Globe,
-  Phone,
-  Mail,
-  Clock,
-  ArrowRight,
-  Plus,
-  Gift,
-  Shield,
-  Zap
-} from "lucide-react"
+import { ArrowRight, Calendar, Clock, Crown, History, Mail, Phone, Ticket } from "lucide-react"
 
-export default function MembershipPage() {
+export const dynamic = "force-dynamic"
+
+const STATUS_BADGE: Record<Status, { label: string; className: string }> = {
+  ACTIVE: { label: "Active", className: "bg-green-100 text-green-800" },
+  PENDING: { label: "Pending", className: "bg-gray-100 text-gray-700" },
+  EXPIRED: { label: "Expired", className: "bg-amber-100 text-amber-800" },
+  INACTIVE: { label: "Inactive", className: "bg-gray-100 text-gray-700" },
+}
+
+const monthYear = (d: Date) => d.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: EVENT_TIME_ZONE })
+const longDate = (d: Date) => d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: EVENT_TIME_ZONE })
+const eventWhen = (d: Date) =>
+  d.toLocaleString("en-US", {
+    weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: EVENT_TIME_ZONE,
+  })
+
+export default async function MembershipPage() {
+  const session = await auth()
+  if (!session?.user) redirect("/auth/sign-in?callbackUrl=/dashboard/membership")
+
+  const [summary, tickets] = await Promise.all([
+    getMembershipSummary(session.user.id),
+    getMyRegistrations(session.user.id, session.user.email),
+  ])
+  const suggestions = tickets.upcoming.length === 0 ? await getUpcomingEvents(3) : []
+  const isActive = summary?.status === "ACTIVE"
+  const years = summary ? Math.floor((Date.now() - summary.joinedAt.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">My Membership</h1>
-          <p className="text-gray-600 mt-2">Manage your BASA membership and access exclusive benefits</p>
+          <p className="text-gray-600 mt-2">Your BASA membership, tickets and history</p>
         </div>
-        <Button asChild>
-          <Link href="/membership/compare">
-            <ArrowRight className="w-4 h-4 mr-2" />
-            Compare Plans
+        <Button asChild variant="outline">
+          <Link href="/membership/benefits">
+            Member benefits
+            <ArrowRight className="w-4 h-4 ml-2" />
           </Link>
         </Button>
       </div>
@@ -48,306 +59,189 @@ export default function MembershipPage() {
       {/* Current Membership Status */}
       <Card className="border-2 border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50">
         <CardContent className="p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                <Crown className="w-8 h-8 text-blue-600" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-2 mb-2">
-                  <h2 className="text-2xl font-bold text-gray-900">Premium Membership</h2>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    Active
-                  </Badge>
+          {summary ? (
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                  <Crown className="w-8 h-8 text-blue-600" />
                 </div>
-                <p className="text-gray-600">Member since January 2022</p>
-                <p className="text-sm text-gray-500">Next renewal: March 15, 2024</p>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <h2 className="text-2xl font-bold text-gray-900">{summary.planLabel ?? "BASA Membership"}</h2>
+                    <Badge variant="secondary" className={STATUS_BADGE[summary.status].className}>
+                      {STATUS_BADGE[summary.status].label}
+                    </Badge>
+                  </div>
+                  <p className="text-gray-600">Member since {monthYear(summary.joinedAt)}</p>
+                  {summary.chapterName && <p className="text-sm text-gray-500">{summary.chapterName} chapter</p>}
+                  {summary.renewalDate && (
+                    <p className="text-sm text-gray-500">
+                      {isActive ? "Renews" : summary.status === "EXPIRED" ? "Expired" : "Ends"} {longDate(summary.renewalDate)}
+                    </p>
+                  )}
+                </div>
               </div>
+              {summary.priceCents != null && summary.priceCents > 0 && (
+                <div className="sm:text-right">
+                  <p className="text-3xl font-bold text-blue-600">{formatTierPrice(summary.priceCents)}</p>
+                  <p className="text-sm text-gray-600">per year</p>
+                </div>
+              )}
             </div>
-            <div className="sm:text-right">
-              <p className="text-3xl font-bold text-blue-600">$299</p>
-              <p className="text-sm text-gray-600">per year</p>
+          ) : (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">No membership on record</h2>
+              <p className="text-gray-600 mt-1">
+                If you are a BASA member and this looks wrong, contact the office and we will link your membership to this account.
+              </p>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
+      {!isActive && (
+        MEMBERSHIP_SALES_ENABLED ? (
+          <Card>
+            <CardContent className="p-6 flex flex-wrap items-center justify-between gap-4">
+              <p className="text-gray-700">
+                {summary ? "Your membership is not active." : "Become a member to get member ticket prices and a directory listing."}
+              </p>
+              <Button asChild>
+                <Link href="/membership/join">{summary ? "Renew membership" : "Join BASA"}</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <MembershipOfficeNotice variant="card" intent={summary ? "renew" : "join"} />
+        )
+      )}
+
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-5 h-5 text-blue-600" />
-              <div>
-                <p className="text-2xl font-bold">24</p>
-                <p className="text-sm text-gray-600">Events Attended</p>
-              </div>
+          <CardContent className="p-4 flex items-center space-x-2">
+            <Ticket className="w-5 h-5 text-blue-600" />
+            <div>
+              <p className="text-2xl font-bold">{tickets.upcoming.length}</p>
+              <p className="text-sm text-gray-600">Upcoming events booked</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="w-5 h-5 text-green-600" />
-              <div>
-                <p className="text-2xl font-bold">156</p>
-                <p className="text-sm text-gray-600">Connections Made</p>
-              </div>
+          <CardContent className="p-4 flex items-center space-x-2">
+            <Calendar className="w-5 h-5 text-green-600" />
+            <div>
+              <p className="text-2xl font-bold">{tickets.attendedCount}</p>
+              <p className="text-sm text-gray-600">Past events booked</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Star className="w-5 h-5 text-yellow-600" />
-              <div>
-                <p className="text-2xl font-bold">12</p>
-                <p className="text-sm text-gray-600">Referrals Given</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Award className="w-5 h-5 text-purple-600" />
-              <div>
-                <p className="text-2xl font-bold">3</p>
-                <p className="text-sm text-gray-600">Awards Earned</p>
-              </div>
+          <CardContent className="p-4 flex items-center space-x-2">
+            <Clock className="w-5 h-5 text-purple-600" />
+            <div>
+              <p className="text-2xl font-bold">{summary ? (years < 1 ? "<1" : years) : "–"}</p>
+              <p className="text-sm text-gray-600">{years === 1 ? "Year" : "Years"} with BASA</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Membership Benefits */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Current Benefits */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <span>Your Premium Benefits</span>
-              </CardTitle>
-              <CardDescription>
-                Exclusive features and services included with your membership
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
-                    <Users className="w-4 h-4 text-green-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Unlimited Networking</h4>
-                    <p className="text-sm text-gray-600">Access to all networking events and member directory</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
-                    <Download className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Resource Library</h4>
-                    <p className="text-sm text-gray-600">Full access to business templates and tools</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
-                    <Star className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Referral Rewards</h4>
-                    <p className="text-sm text-gray-600">Earn rewards for successful member referrals</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
-                    <Phone className="w-4 h-4 text-orange-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Priority Support</h4>
-                    <p className="text-sm text-gray-600">Direct access to BASA leadership and support</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
-                    <Globe className="w-4 h-4 text-red-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Business Directory</h4>
-                    <p className="text-sm text-gray-600">Featured listing in BASA business directory</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center shrink-0">
-                    <Award className="w-4 h-4 text-teal-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Award Nominations</h4>
-                    <p className="text-sm text-gray-600">Eligible for annual BASA awards and recognition</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Usage Analytics */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
-                <span>Membership Usage</span>
-              </CardTitle>
-              <CardDescription>
-                Track how you're utilizing your membership benefits
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Event Attendance</span>
-                  <span className="text-sm text-gray-600">24/30 events</span>
-                </div>
-                <Progress value={80} className="h-2" />
-              </div>
-              
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Resource Downloads</span>
-                  <span className="text-sm text-gray-600">45/50 downloads</span>
-                </div>
-                <Progress value={90} className="h-2" />
-              </div>
-              
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Networking Connections</span>
-                  <span className="text-sm text-gray-600">156/200 connections</span>
-                </div>
-                <Progress value={78} className="h-2" />
-              </div>
-              
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Referral Program</span>
-                  <span className="text-sm text-gray-600">12/15 referrals</span>
-                </div>
-                <Progress value={80} className="h-2" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Upcoming Events */}
+          {/* My tickets, or what is coming up */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Calendar className="w-5 h-5 text-green-600" />
-                <span>Upcoming Premium Events</span>
+                <span>{tickets.upcoming.length ? "Your upcoming events" : "Coming up"}</span>
               </CardTitle>
+              {tickets.upcoming.length === 0 && (
+                <CardDescription>You have no tickets for upcoming events yet.</CardDescription>
+              )}
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Premium Networking Mixer</h4>
-                    <p className="text-sm text-gray-600">March 15, 2024 • 6:00 PM</p>
-                    <p className="text-sm text-gray-600">The Pearl Brewery</p>
-                  </div>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    Registered
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Leadership Development Workshop</h4>
-                    <p className="text-sm text-gray-600">March 22, 2024 • 9:00 AM</p>
-                    <p className="text-sm text-gray-600">BASA Conference Center</p>
-                  </div>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    Available
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Exclusive Industry Panel</h4>
-                    <p className="text-sm text-gray-600">April 5, 2024 • 7:00 PM</p>
-                    <p className="text-sm text-gray-600">Downtown Business Club</p>
-                  </div>
-                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                    Premium Only
-                  </Badge>
-                </div>
+              <div className="space-y-3">
+                {tickets.upcoming.map(r => (
+                  <Link
+                    key={r.id}
+                    href={`/events/${r.event.slug}`}
+                    className="flex flex-wrap items-center justify-between gap-2 p-3 bg-green-50 rounded-lg hover:bg-green-100"
+                  >
+                    <div className="min-w-0">
+                      <h4 className="text-base font-medium">{r.event.title}</h4>
+                      <p className="text-sm text-gray-600">{eventWhen(r.event.startDate)} • {r.event.location}</p>
+                    </div>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      {r.ticketCount} {r.ticketCount === 1 ? "ticket" : "tickets"}
+                    </Badge>
+                  </Link>
+                ))}
+                {suggestions.map(e => (
+                  <Link
+                    key={e.id}
+                    href={`/events/${e.slug}`}
+                    className="flex flex-wrap items-center justify-between gap-2 p-3 bg-blue-50 rounded-lg hover:bg-blue-100"
+                  >
+                    <div className="min-w-0">
+                      <h4 className="text-base font-medium">{e.title}</h4>
+                      <p className="text-sm text-gray-600">{eventWhen(e.startDate)} • {e.location}</p>
+                    </div>
+                    <span className="text-sm font-medium text-blue-700">Get tickets</span>
+                  </Link>
+                ))}
+                {tickets.upcoming.length === 0 && suggestions.length === 0 && (
+                  <p className="text-sm text-gray-600">No events are scheduled right now.</p>
+                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Membership history (imported from the old site, then kept here) */}
+          {summary && summary.history.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <History className="w-5 h-5 text-blue-600" />
+                  <span>Membership history</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="divide-y">
+                  {summary.history.map(h => (
+                    <li key={h.id} className="py-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium">{h.levelName}</p>
+                        <p className="text-sm text-gray-600">
+                          {h.startedAt ? longDate(h.startedAt) : "Unknown start"}
+                          {" – "}
+                          {h.endedAt ? longDate(h.endedAt) : "no end date"}
+                        </p>
+                      </div>
+                      <span className="text-sm text-gray-700">{h.priceCents > 0 ? formatTierPrice(h.priceCents) : ""}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Billing Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CreditCard className="w-5 h-5 text-blue-600" />
-                <span>Billing Information</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Current Plan</p>
-                <p className="text-sm text-gray-600">Premium Membership</p>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Next Billing Date</p>
-                <p className="text-sm text-gray-600">March 15, 2024</p>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Amount</p>
-                <p className="text-sm text-gray-600">$299.00/year</p>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Payment Method</p>
-                <p className="text-sm text-gray-600">•••• •••• •••• 1234</p>
-              </div>
-              
-              <div className="flex space-x-2">
-                <Button variant="outline" className="flex-1">
-                  Update Payment
-                </Button>
-                <Button variant="outline">
-                  View Invoices
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Membership Actions */}
           <Card>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <Button asChild variant="outline" className="w-full justify-start">
-                <Link href="/dashboard/events">Browse Events</Link>
+                <Link href="/events">Browse Events</Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start">
                 <Link href="/dashboard/directory">Member Directory</Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start">
-                <Link href="/dashboard/resources">Access Resources</Link>
+                <Link href="/dashboard/profile">Edit Profile</Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start">
                 <Link href="/membership/compare">Compare Plans</Link>
@@ -355,125 +249,38 @@ export default function MembershipPage() {
             </CardContent>
           </Card>
 
-          {/* Referral Program */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Gift className="w-5 h-5 text-purple-600" />
-                <span>Referral Program</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center space-y-3">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
-                  <Star className="w-6 h-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="font-medium">Earn Rewards</p>
-                  <p className="text-sm text-gray-600">Refer new members and earn exclusive benefits</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Referrals This Year</span>
-                    <span className="font-medium">12</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Rewards Earned</span>
-                    <span className="font-medium">$240</span>
-                  </div>
-                </div>
-                <Button className="w-full">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Invite Friends
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Support */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Shield className="w-5 h-5 text-green-600" />
-                <span>Premium Support</span>
-              </CardTitle>
+              <CardTitle>Questions about your membership?</CardTitle>
+              <CardDescription>{OFFICE_CONTACT.name} at the BASA office can help.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center space-x-2">
+              <a href={OFFICE_CONTACT.phoneHref} className="flex items-center space-x-2 text-sm hover:underline">
                 <Phone className="w-4 h-4 text-green-600" />
-                <span className="text-sm">Direct Phone Support</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Mail className="w-4 h-4 text-green-600" />
-                <span className="text-sm">Priority Email Response</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Clock className="w-4 h-4 text-green-600" />
-                <span className="text-sm">24/7 Online Support</span>
-              </div>
-              <Button variant="outline" className="w-full">
-                Contact Support
-              </Button>
+                <span>{OFFICE_CONTACT.phone}</span>
+              </a>
+              <a href={`mailto:${OFFICE_CONTACT.email}`} className="flex items-center space-x-2 text-sm hover:underline break-all">
+                <Mail className="w-4 h-4 text-green-600 shrink-0" />
+                <span>{OFFICE_CONTACT.email}</span>
+              </a>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Upgrade Options: only while online sales are on; otherwise how to reach the office */}
-      {MEMBERSHIP_SALES_ENABLED ? (
+      {/* Changing plans: online only while sales are on; otherwise the office */}
+      {isActive && (MEMBERSHIP_SALES_ENABLED ? (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Zap className="w-5 h-5 text-yellow-600" />
-              <span>Upgrade Your Experience</span>
-            </CardTitle>
-            <CardDescription>
-              Unlock additional benefits and features with our premium tiers
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center p-4 border rounded-lg">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Crown className="w-6 h-6 text-blue-600" />
-                </div>
-                <h3 className="font-semibold mb-2">Executive Membership</h3>
-                <p className="text-sm text-gray-600 mb-3">Enhanced networking and exclusive events</p>
-                <p className="text-2xl font-bold text-blue-600 mb-3">$499/year</p>
-                <Button variant="outline" size="sm">
-                  Learn More
-                </Button>
-              </div>
-              
-              <div className="text-center p-4 border rounded-lg bg-yellow-50 border-yellow-200">
-                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Award className="w-6 h-6 text-yellow-600" />
-                </div>
-                <h3 className="font-semibold mb-2">Founder's Circle</h3>
-                <p className="text-sm text-gray-600 mb-3">VIP access and leadership opportunities</p>
-                <p className="text-2xl font-bold text-yellow-600 mb-3">$999/year</p>
-                <Button size="sm">
-                  Upgrade Now
-                </Button>
-              </div>
-              
-              <div className="text-center p-4 border rounded-lg">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Heart className="w-6 h-6 text-purple-600" />
-                </div>
-                <h3 className="font-semibold mb-2">Lifetime Membership</h3>
-                <p className="text-sm text-gray-600 mb-3">One-time payment for lifetime access</p>
-                <p className="text-2xl font-bold text-purple-600 mb-3">$2,999</p>
-                <Button variant="outline" size="sm">
-                  Learn More
-                </Button>
-              </div>
-            </div>
+          <CardContent className="p-6 flex flex-wrap items-center justify-between gap-4">
+            <p className="text-gray-700">Want a different membership level?</p>
+            <Button asChild variant="outline">
+              <Link href="/membership/compare">Compare plans</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : (
         <MembershipOfficeNotice variant="card" intent="upgrade" />
-      )}
+      ))}
     </div>
   )
-} 
+}
