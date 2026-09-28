@@ -212,7 +212,9 @@ echo "Standby removed."
 # (a no-op when nothing is pending) purely so the deploy log records the schema
 # state rather than leaving it only in container logs.
 echo "Confirming migration state..."
-if ! $COMPOSE exec -T basa-app npx prisma migrate deploy; then
+# This script is streamed to bash over stdin. Compose exec -T can still read
+# stdin, which would swallow the remaining cleanup commands.
+if ! $COMPOSE exec -T basa-app npx prisma migrate deploy </dev/null; then
   rollback "migrations failed"
 fi
 
