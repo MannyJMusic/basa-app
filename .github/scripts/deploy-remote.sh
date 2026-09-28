@@ -216,9 +216,10 @@ if ! $COMPOSE exec -T basa-app npx prisma migrate deploy; then
   rollback "migrations failed"
 fi
 
-# Only prune once the new build is known good. The rollback tag keeps the previous
-# image alive through this; an untagged image would be collected here.
-echo "Cleaning up old Docker images..."
+# Only prune once the new build is known good. The rollback and pre-cutover tags
+# keep those images alive; cap unused build cache so deploys do not fill the disk.
+echo "Cleaning up old Docker images and build cache..."
 docker image prune -f
+docker builder prune -f --keep-storage 10GB
 
 echo "=== Deployment Complete ==="
