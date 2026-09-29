@@ -175,18 +175,13 @@ UPDATE settings SET
   "logoUrl" = NULL,
   "faviconUrl" = NULL;
 
--- Production IDs can appear in public member and event URLs. Replace them
--- with random IDs; every retained foreign key has ON UPDATE CASCADE.
+-- Account and member IDs can appear in profile URLs. Rekey them so the scrubbed
+-- records cannot be matched to production profiles. Event slugs are changed
+-- above; event IDs stay because recurring events reference parent events.
 UPDATE "User" SET id = gen_random_uuid()::text;
 UPDATE "Member" SET id = gen_random_uuid()::text;
 UPDATE "Venue" SET id = gen_random_uuid()::text;
 UPDATE "Organizer" SET id = gen_random_uuid()::text;
-UPDATE "Event" SET id = gen_random_uuid()::text;
-UPDATE "TicketTier" SET id = gen_random_uuid()::text;
-UPDATE "EventSpeaker" SET id = gen_random_uuid()::text;
-UPDATE "EventSponsor" SET id = gen_random_uuid()::text;
-UPDATE "Chapter" SET id = gen_random_uuid()::text;
-UPDATE settings SET id = gen_random_uuid()::text;
 
 DO $$
 BEGIN
@@ -217,9 +212,8 @@ BEGIN
     RAISE EXCEPTION 'Venue or organizer identifiers remain';
   END IF;
   IF EXISTS (SELECT 1 FROM "User" WHERE id !~ '^[0-9a-f]{8}-') OR
-    EXISTS (SELECT 1 FROM "Member" WHERE id !~ '^[0-9a-f]{8}-') OR
-    EXISTS (SELECT 1 FROM "Event" WHERE id !~ '^[0-9a-f]{8}-') THEN
-    RAISE EXCEPTION 'Production IDs remain';
+    EXISTS (SELECT 1 FROM "Member" WHERE id !~ '^[0-9a-f]{8}-') THEN
+    RAISE EXCEPTION 'Production account or member IDs remain';
   END IF;
   IF EXISTS (SELECT 1 FROM "Account") OR EXISTS (SELECT 1 FROM "Session") OR
     EXISTS (SELECT 1 FROM "AuditLog") OR EXISTS (SELECT 1 FROM "Payment") OR

@@ -52,7 +52,7 @@ docker exec -i basa-postgres-sandbox sh -c \
   < scripts/sanitize-sandbox.sql >/dev/null
 
 echo 'Creating the independent review admin...'
-compose --profile tools run --rm seed >/dev/null
+compose --profile tools run --rm seed
 
 printf '%s\n' "$expected_schema_hash" > .sandbox-sanitized
 chmod 600 .sandbox-sanitized

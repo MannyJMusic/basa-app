@@ -13,6 +13,12 @@ compose() {
 echo 'Fetching the reviewed dev branch...'
 git fetch origin dev
 git reset --hard origin/dev
+# A checkout originally created with a restrictive umask can leave files at 0600
+# and directories at 0700. Docker COPY preserves those modes, and the unprivileged
+# nextjs runtime then cannot read package.json or the application source. Only
+# tracked files are made readable; .env.sandbox remains root-only.
+git ls-files -z | xargs -0 -r chmod a+r
+find . -path './.git' -prune -o -type d -exec chmod a+rx {} +
 compose config -q
 
 # Preserve the image that is actually serving, even after an interrupted build
