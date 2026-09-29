@@ -113,7 +113,8 @@ UPDATE "Event" AS e SET
   "state" = 'TX',
   "zipCode" = NULL,
   "category" = 'Review',
-  "type" = 'Review',
+  "type" = CASE WHEN e."type" IN ('NETWORKING', 'SUMMIT', 'RIBBON_CUTTING', 'COMMUNITY')
+                THEN e."type" ELSE 'NETWORKING' END,
   "image" = NULL,
   "tags" = '{}'::text[],
   "wpId" = NULL
