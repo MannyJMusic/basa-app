@@ -102,7 +102,9 @@ services:
     env_file:
       - .env.sandbox
     environment:
-      NODE_ENV: development
+      # Create only the independent review admin. Member and event records are
+      # copied from production and scrubbed by refresh-sandbox-data.sh.
+      NODE_ENV: production
       DATABASE_URL: postgresql://basa_sandbox:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/basa_sandbox
       MAILGUN_API_KEY: ""
       STRIPE_SECRET_KEY: ""

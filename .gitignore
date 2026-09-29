@@ -50,6 +50,7 @@ next-env.d.ts
 .env.sentry-build-plugin
 .env.production
 .env.sandbox
+.sandbox-sanitized
 .env.development.backup*
 .env.production.backup.20250706_020513
 .env.production.backup.20250706_021616

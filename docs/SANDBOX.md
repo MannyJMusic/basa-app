@@ -6,19 +6,18 @@ The sandbox uses `/opt/basa-sandbox`, Compose project `basa-sandbox`, image `bas
 
 Nginx requires HTTP Basic Auth for the entire site and sends `X-Robots-Tag: noindex, nofollow, noarchive`. The review account is in `/etc/nginx/basa-sandbox.htpasswd`; its generated password is stored root-only at `/root/basa-sandbox-review-password`. Review admin and demo passwords are in `/opt/basa-sandbox/.env.sandbox`, also root-only. Share credentials directly with reviewers, never in Git or issue comments.
 
-The database starts empty and is seeded once with the existing `prisma/seed.ts` using the sandbox's synthetic accounts and sample content. It never receives a production data copy. The running app forces Stripe, Mailgun, SMTP, Anthropic, Blob, Google OAuth, and membership sales off. This prevents real charges and outgoing mail; payment and email integrations must be tested in CI or in a separately configured test environment.
+The database is a sanitized production snapshot. `scripts/refresh-sandbox-data.sh` stops the app, checks the production schema fingerprint, streams a `pg_dump` directly into the isolated database, removes private tables, replaces identifying fields and IDs, verifies the result, seeds one independent review admin, and only then restarts the app. A failure leaves the app stopped. New production columns require a sanitizer review before another refresh. The running app forces Stripe, Mailgun, SMTP, Anthropic, Blob, Google OAuth, and membership sales off. This prevents real charges and outgoing mail; payment and email integrations must be tested in CI or in a separately configured test environment.
 
 ## First-time host setup
 
 1. Clone the `dev` branch to `/opt/basa-sandbox` and create a mode `0600` `.env.sandbox` from `.env.sandbox.example` with independent random values. Create `uploads/` owned by UID 1001.
 2. Create the Basic Auth password file and the HTTP challenge vhost. Issue the certificate with `certbot certonly --webroot -w /var/www/acme --cert-name basa-sandbox -d dev.businessassociationsa.com`.
 3. Install the checked-in Nginx vhost at `/etc/nginx/sites-enabled/dev.businessassociationsa.com.conf`, then run `nginx -t` and reload Nginx.
-4. Merge this workflow into `dev` or run `gh workflow run deploy.yml --ref dev`. After the app is healthy, seed once:
+4. Merge this workflow into `dev` or run `gh workflow run deploy.yml --ref dev`. After the app image is built, refresh and sanitize the data:
 
    ```sh
    cd /opt/basa-sandbox
-   docker compose --env-file .env.sandbox -f docker-compose.sandbox.yml \
-     --profile tools run --rm seed
+   bash scripts/refresh-sandbox-data.sh
    ```
 
 ## Checks

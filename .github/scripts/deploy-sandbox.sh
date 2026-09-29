@@ -25,8 +25,19 @@ fi
 echo 'Starting the isolated sandbox database...'
 compose up -d postgres
 
+# An interrupted first refresh must never leave an unsanitized database online.
+if [ ! -s .sandbox-sanitized ]; then
+  compose stop basa-app
+fi
+
 echo 'Building the sandbox image...'
 compose build --progress=plain basa-app
+
+if [ ! -s .sandbox-sanitized ]; then
+  echo 'No sanitized data marker; refreshing before the first app start...'
+  bash scripts/refresh-sandbox-data.sh
+  exit 0
+fi
 
 echo 'Starting the sandbox app...'
 if compose up -d --no-deps --force-recreate basa-app; then
