@@ -25,6 +25,8 @@ UPDATE "User" AS u SET
   "hashedPassword" = NULL,
   "role" = CASE WHEN EXISTS (SELECT 1 FROM "Member" m WHERE m."userId" = u.id)
                 THEN 'MEMBER' ELSE 'GUEST' END,
+  "isActive" = true,
+  "accountStatus" = 'ACTIVE',
   "lastLogin" = NULL,
   "resetToken" = NULL,
   "resetTokenExpiry" = NULL,
@@ -194,7 +196,8 @@ BEGIN
   END IF;
   IF EXISTS (SELECT 1 FROM "User" WHERE "hashedPassword" IS NOT NULL OR
     email NOT LIKE 'review-user-%@example.invalid' OR "resetToken" IS NOT NULL OR
-    "verificationToken" IS NOT NULL OR "pendingEmail" IS NOT NULL) THEN
+    "verificationToken" IS NOT NULL OR "pendingEmail" IS NOT NULL OR
+    NOT "isActive" OR "accountStatus" <> 'ACTIVE') THEN
     RAISE EXCEPTION 'User credentials or addresses remain';
   END IF;
   IF EXISTS (SELECT 1 FROM "Member" WHERE "businessName" NOT LIKE 'Review Business %' OR
