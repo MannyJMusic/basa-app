@@ -13,7 +13,7 @@ The database is a sanitized production snapshot. `scripts/refresh-sandbox-data.s
 1. Clone the `dev` branch to `/opt/basa-sandbox` with a normal `022` umask, and create a mode `0600` `.env.sandbox` from `.env.sandbox.example` with independent random values. Create `uploads/` owned by UID 1001.
 2. Create the Basic Auth password file and the HTTP challenge vhost. Issue the certificate with `certbot certonly --webroot -w /var/www/acme --cert-name basa-sandbox -d dev.businessassociationsa.com`.
 3. Install the checked-in Nginx vhost at `/etc/nginx/sites-enabled/dev.businessassociationsa.com.conf`, then run `nginx -t` and reload Nginx.
-4. Merge this workflow into `dev` or run `gh workflow run deploy.yml --ref dev`. After the app image is built, refresh and sanitize the data:
+4. Merge this workflow into `dev` or run `gh workflow run deploy.yml --ref dev`. The first deployment refreshes and sanitizes the data automatically when no `.sandbox-sanitized` marker exists. To refresh the data later, run:
 
    ```sh
    cd /opt/basa-sandbox
