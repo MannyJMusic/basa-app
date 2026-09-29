@@ -41,8 +41,7 @@ compose build --progress=plain basa-app
 
 if [ ! -s .sandbox-sanitized ]; then
   echo 'No sanitized data marker; refreshing before the first app start...'
-  bash scripts/refresh-sandbox-data.sh
-  exit 0
+  exec bash scripts/refresh-sandbox-data.sh
 fi
 
 echo 'Starting the sandbox app...'

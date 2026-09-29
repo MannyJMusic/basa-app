@@ -107,7 +107,18 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://basa_sandbox:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/basa_sandbox
       MAILGUN_API_KEY: ""
+      MAILGUN_DOMAIN: ""
+      SMTP_HOST: ""
+      SMTP_USER: ""
+      SMTP_PASS: ""
       STRIPE_SECRET_KEY: ""
+      STRIPE_RESTRICTED_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      ANTHROPIC_API_KEY: ""
+      BLOB_READ_WRITE_TOKEN: ""
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_CLIENT_SECRET: ""
+      SENTRY_AUTH_TOKEN: ""
     command: ["pnpm", "run", "db:seed"]
     networks:
       - sandbox

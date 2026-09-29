@@ -382,13 +382,13 @@ jobs:
       - name: Deploy sandbox
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
-            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
             "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/deploy-sandbox.sh
 
       - name: Verify sandbox
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
-            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
             "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/verify-sandbox.sh
