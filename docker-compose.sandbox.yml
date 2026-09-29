@@ -1,0 +1,122 @@
+# The review site is a separate Compose project in /opt/basa-sandbox. It never
+# shares production's database, volumes, image tag, container names, or ports.
+name: basa-sandbox
+
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  postgres:
+    <<: *hardening
+    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
+    container_name: basa-postgres-sandbox
+    environment:
+      POSTGRES_DB: basa_sandbox
+      POSTGRES_USER: basa_sandbox
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    mem_limit: 512m
+    cpus: 0.5
+    pids_limit: 128
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sandbox
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U basa_sandbox -d basa_sandbox"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  basa-app:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: https://dev.businessassociationsa.com
+        NEXT_PUBLIC_SENTRY_DSN: ""
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ""
+        SENTRY_ORG: ""
+        SENTRY_PROJECT: ""
+    image: basa-app:sandbox-current
+    container_name: basa-app-sandbox
+    cap_drop: [ALL]
+    mem_limit: 1280m
+    cpus: 1.0
+    pids_limit: 384
+    ports:
+      - "127.0.0.1:3002:3000"
+    env_file:
+      - .env.sandbox
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://basa_sandbox:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/basa_sandbox
+      NEXTAUTH_URL: https://dev.businessassociationsa.com
+      NEXT_PUBLIC_APP_URL: https://dev.businessassociationsa.com
+      MEMBERSHIP_SALES_ENABLED: "false"
+      STRIPE_SECRET_KEY: ""
+      STRIPE_RESTRICTED_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ""
+      MAILGUN_API_KEY: ""
+      MAILGUN_DOMAIN: ""
+      SMTP_HOST: ""
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      ANTHROPIC_API_KEY: ""
+      BLOB_READ_WRITE_TOKEN: ""
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_CLIENT_SECRET: ""
+      SENTRY_AUTH_TOKEN: ""
+      ADMIN1_PASSWORD: ""
+      POSTGRES_PASSWORD: ""
+    volumes:
+      - ./uploads:/app/public/uploads
+    networks:
+      - sandbox
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  seed:
+    <<: *hardening
+    profiles: ["tools"]
+    image: basa-app:sandbox-current
+    cap_drop: [ALL]
+    env_file:
+      - .env.sandbox
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://basa_sandbox:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/basa_sandbox
+      MAILGUN_API_KEY: ""
+      STRIPE_SECRET_KEY: ""
+    command: ["pnpm", "run", "db:seed"]
+    networks:
+      - sandbox
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  postgres_data:
+
+networks:
+  sandbox:
+    driver: bridge
