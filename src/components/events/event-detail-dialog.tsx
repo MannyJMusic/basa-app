@@ -561,25 +561,24 @@ export function EventDetailDialog({
                 </div>
                 </div>
 
-                <Separator />
-
-                {/* Organizer Information */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Organizer</h3>
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                      <User className="w-5 h-5 text-purple-600" />
-                    </div>
+                {/* Only outside organizers are shown; BASA's own events have none. */}
+                {event.organizer && (
+                  <>
+                    <Separator />
                     <div>
-                      <p className="font-medium">
-                        {event.organizer?.name || 'Unknown organizer'}
-                      </p>
-                      {event.organizer?.email && (
-                        <p className="text-sm text-gray-600">{event.organizer.email}</p>
-                      )}
+                      <h3 className="font-semibold text-gray-900 mb-2">Organizer</h3>
+                      <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                          <User className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{event.organizer.name}</p>
+                          {event.organizer.email && <p className="text-sm text-gray-600">{event.organizer.email}</p>}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
             )}
           </TabsContent>

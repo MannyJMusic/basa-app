@@ -178,6 +178,7 @@ export async function GET(request: NextRequest) {
           organizerId: true,
           venueId: true,
           venue: { select: { id: true, name: true, image: true } },
+          organizer: { select: { id: true, name: true, email: true } },
           tags: true,
           createdAt: true,
           updatedAt: true,
@@ -192,11 +193,10 @@ export async function GET(request: NextRequest) {
       throw dbError;
     }
 
-    // Add basic organizer info separately to avoid relation issues
+    // `organizer` is null for BASA's own events; the UI shows it only when set.
     const eventsWithOrganizer = events.map((event: any) => {
       return {
         ...event,
-        organizer: null, // Skip organizer for now to isolate the issue
         registrations: [],
         speakers: [],
         sponsors: [],
