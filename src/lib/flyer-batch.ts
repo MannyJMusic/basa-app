@@ -2,7 +2,7 @@
  * Turning a reviewed flyer draft into the body of POST /api/events (#274). Pure, so
  * the batch page and the tests share one definition of "complete enough to save".
  */
-import type { CreateEventData } from "@/hooks/use-events"
+import type { CreateEventData, UpdateEventData } from "@/hooks/use-events"
 import { slugify, type TierDraft } from "@/lib/flyer-draft"
 
 export type EventPayload = CreateEventData
@@ -64,4 +64,18 @@ export function draftToPayload(
 export function slugAttempts(slug: string, startDate: string): string[] {
   const day = startDate.slice(0, 10)
   return [slug, `${slug}-${day}`, ...[2, 3, 4].map((n) => `${slug}-${day}-${n}`)]
+}
+
+/**
+ * What a re-issued flyer changes on an event that already exists: the content and
+ * the schedule, never the slug, status, tickets or registrations.
+ */
+export function fieldsToUpdate(fields: Partial<CreateEventData>): UpdateEventData {
+  const keys = ["title", "description", "shortDescription", "startDate", "endDate", "location", "address", "city", "state", "zipCode", "image", "venueId", "category", "type"] as const
+  const out: Record<string, unknown> = {}
+  for (const k of keys) {
+    const v = fields[k]
+    if (v !== undefined && v !== null && String(v).trim() !== "") out[k] = v
+  }
+  return out as UpdateEventData
 }
