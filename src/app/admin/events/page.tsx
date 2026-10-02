@@ -808,12 +808,13 @@ export default function AdminEventsPage() {
                     <Separator className="my-4" />
 
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Building className="w-4 h-4 mr-2" />
-                        <span className="line-clamp-1">
-                          {event.organizer?.name || 'Unknown Organizer'}
-                        </span>
-                      </div>
+                      {/* BASA's own events have no organizer; show one only for outside organizers. */}
+                      {event.organizer ? (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Building className="w-4 h-4 mr-2" />
+                          <span className="line-clamp-1">{event.organizer.name}</span>
+                        </div>
+                      ) : <span />}
                       <div className="flex items-center space-x-1">
                         <Button
                           variant="outline"
