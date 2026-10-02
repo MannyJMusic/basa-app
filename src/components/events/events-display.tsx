@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
+import { EventImage } from '@/components/events/event-image'
 import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
@@ -30,6 +31,8 @@ interface Event {
   title: string
   description?: string
   shortDescription?: string
+  image?: string | null
+  venue?: { image?: string | null } | null
   slug: string
   startDate: string
   endDate: string
@@ -243,7 +246,10 @@ export function EventsDisplay({
   }
 
   const renderEventCard = (event: Event) => (
-    <Card key={event.id} className="hover:shadow-lg transition-shadow duration-300">
+    <Card key={event.id} className="hover:shadow-lg transition-shadow duration-300 overflow-hidden">
+      <Link href={`/events/${event.slug}`} aria-hidden tabIndex={-1} className="block empty:hidden">
+        <EventImage src={event.image ?? event.venue?.image} alt="" className="w-full h-48 object-cover object-top bg-gray-100" />
+      </Link>
       <CardHeader>
         <div className="flex items-start justify-between">
           <Badge variant="secondary" className="bg-blue-100 text-blue-800">
@@ -322,6 +328,7 @@ export function EventsDisplay({
         <Card key={event.id} className="hover:shadow-lg transition-shadow duration-300">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
+              <EventImage src={event.image ?? event.venue?.image} alt="" className="hidden sm:block h-28 w-28 mr-5 shrink-0 rounded-md object-cover object-top bg-gray-100" />
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
                   <Badge variant="secondary" className="bg-blue-100 text-blue-800">

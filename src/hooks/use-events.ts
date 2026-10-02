@@ -38,6 +38,7 @@ export interface Event {
     id: string
     name: string
     city?: string
+    image?: string | null
   }
   registrations: Array<{
     id: string
@@ -82,6 +83,11 @@ export interface CreateEventData {
   isFeatured: boolean
   image?: string
   organizerId?: string
+  venueId?: string | null
+  /** Reuse a venue matching `location`, or create one from the address (#274). */
+  autoVenue?: boolean
+  /** Ticket types created with the event (#274). */
+  ticketTiers?: Array<{ name: string; price: number; audience: 'ALL' | 'MEMBER' | 'NON_MEMBER'; description?: string }>
   tags: string[]
 }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { EventImage } from '@/components/events/event-image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -75,7 +76,8 @@ export function EventCard({
 
   if (variant === 'compact') {
     return (
-      <Card className="hover:shadow-lg transition-shadow duration-300">
+      <Card className="hover:shadow-lg transition-shadow duration-300 overflow-hidden">
+        <EventImage src={event.image} alt="" className="w-full h-36 object-cover object-top bg-gray-100" />
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-2">
             <Badge className={getEventTypeColor(event.type)}>
@@ -125,8 +127,9 @@ export function EventCard({
 
   if (variant === 'featured') {
     return (
-      <Card className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg">
-        <CardHeader className="bg-linear-to-r from-purple-600 to-purple-700 text-white rounded-t-lg">
+      <Card className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg overflow-hidden">
+        <EventImage src={event.image} alt="" className="w-full h-48 object-cover object-top bg-gray-100" />
+        <CardHeader className="bg-linear-to-r from-purple-600 to-purple-700 text-white">
           <div className="flex items-center justify-between">
             <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
               Featured Event
@@ -190,7 +193,8 @@ export function EventCard({
 
   // Default variant
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-300">
+    <Card className="hover:shadow-lg transition-shadow duration-300 overflow-hidden">
+      <EventImage src={event.image} alt="" className="w-full h-44 object-cover object-top bg-gray-100" />
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between mb-2">
           <Badge className={getEventTypeColor(event.type)}>

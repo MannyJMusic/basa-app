@@ -3,6 +3,7 @@ name: Deploy to Production
 on:
   push:
     branches:
+      - dev
       - main
       - master
   pull_request:
@@ -121,6 +122,11 @@ jobs:
             fi
             exit $fail'
 
+      - name: Validate sandbox Compose config
+        run: |
+          cp .env.sandbox.example .env.sandbox
+          docker compose --env-file .env.sandbox -f docker-compose.sandbox.yml config -q
+
   # The money path in a real browser against a real build (#65): a guest buys a
   # ticket, a visitor joins as a member, a declined card confirms nothing. Runs on
   # every PR and every push to main, and the deploy waits for it: a broken checkout
@@ -223,8 +229,10 @@ jobs:
     # first's half-built image as its rollback point. Queue instead of cancel,
     # so a deploy that has started always finishes (or rolls back).
     concurrency:
-      group: production-deploy
+      # The sandbox builds on this same 2-CPU host. Serialize both deploy jobs.
+      group: basa-vps-deploy
       cancel-in-progress: false
+      queue: max
 
     steps:
       - name: Checkout code
@@ -331,3 +339,56 @@ jobs:
         if: failure()
         run: |
           echo "Deployment failed! Check the logs above for details."
+
+  deploy-sandbox:
+    name: Deploy to Review Sandbox
+    needs: [build-and-test, docker-build, e2e]
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
+    concurrency:
+      group: basa-vps-deploy
+      cancel-in-progress: false
+      queue: max
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up verified SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          set -euo pipefail
+          host="$(printf '%s' "${SERVER_HOST:-}" | xargs || true)"
+          user="$(printf '%s' "${SERVER_USER:-}" | xargs || true)"
+          if [ -z "${SSH_PRIVATE_KEY:-}" ] || [ -z "${SSH_KNOWN_HOSTS:-}" ] || \
+             ! [[ "$host" =~ ^[A-Za-z0-9._-]+$ ]] || \
+             ! [[ "$user" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo '::error::Missing or invalid SSH deployment secret.'
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+          echo "::add-mask::$host"
+          echo "SSH_HOST=$host" >> "$GITHUB_ENV"
+          echo "SSH_USER=$user" >> "$GITHUB_ENV"
+
+      - name: Deploy sandbox
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/deploy-sandbox.sh
+
+      - name: Verify sandbox
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/verify-sandbox.sh

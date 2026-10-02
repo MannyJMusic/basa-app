@@ -1,6 +1,7 @@
 'use client'
 
 import Link from "next/link"
+import { EventImage } from '@/components/events/event-image'
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -217,8 +218,11 @@ export default function EventsPage() {
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {events.map(event => (
-                <Card key={event.id} className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg">
-                  <CardHeader className="bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
+                <Card key={event.id} className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg overflow-hidden">
+                  <Link href={`/events/${event.slug}`} aria-hidden tabIndex={-1} className="block empty:hidden">
+                    <EventImage src={event.image ?? event.venue?.image} alt="" className="w-full h-48 object-cover object-top bg-gray-100" />
+                  </Link>
+                  <CardHeader className="bg-linear-to-r from-blue-600 to-blue-700 text-white">
                     <div className="flex items-center justify-between">
                       {event.isFeatured && (
                         <Badge variant="secondary" className="bg-basa-gold text-basa-navy border-basa-gold">
@@ -283,7 +287,10 @@ export default function EventsPage() {
           ) : (
             <div className="flex flex-col gap-6">
               {events.map(event => (
-                <Card key={event.id} className="flex flex-col md:flex-row items-stretch border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <Card key={event.id} className="flex flex-col md:flex-row items-stretch border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+                  <Link href={`/events/${event.slug}`} aria-hidden tabIndex={-1} className="block md:w-56 shrink-0 empty:hidden">
+                    <EventImage src={event.image ?? event.venue?.image} alt="" className="w-full h-48 md:h-full object-cover object-top bg-gray-100" />
+                  </Link>
                   <div className="flex-1 p-6 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-t-lg md:rounded-l-lg md:rounded-tr-none flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-2">

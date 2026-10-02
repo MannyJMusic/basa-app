@@ -17,6 +17,7 @@ dist
 # and the BuildKit cache. The build now gets its few values as build args and a
 # BuildKit secret from docker-compose.prod.yml.
 .env*
+.sandbox-sanitized
 !.env.example
 
 # IDE files
