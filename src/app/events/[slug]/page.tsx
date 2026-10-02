@@ -73,49 +73,29 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <section className="bg-linear-to-r from-purple-900 to-purple-700 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center mb-6">
-            <Button asChild variant="ghost" className="text-white hover:bg-white/10 mr-4">
-              <Link href="/events">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Events
-              </Link>
-            </Button>
+      <div className="container mx-auto px-4 pt-6">
+        <div className="max-w-6xl mx-auto">
+          <Link href="/events" className="inline-flex items-center text-sm text-gray-600 hover:text-purple-700">
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            All events
+          </Link>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge className="bg-blue-100 text-blue-800">{event.category}</Badge>
+            {isPast && <Badge variant="secondary">Past event</Badge>}
+            {!isPast && isFull && <Badge className="bg-red-100 text-red-800">Sold out</Badge>}
           </div>
-          <div className="max-w-4xl mx-auto">
-            <div className="flex flex-wrap gap-2 mb-4">
-              <Badge className="bg-blue-100 text-blue-800">{event.category}</Badge>
-              {isPast && <Badge variant="secondary">Past event</Badge>}
-              {!isPast && isFull && <Badge className="bg-red-100 text-red-800">Sold out</Badge>}
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">{event.title}</h1>
-            {event.shortDescription && (
-              <p className="text-xl text-purple-100 leading-relaxed mb-6">{event.shortDescription}</p>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-2 shrink-0" />
-                <span>{dateFmt.format(event.startDate)}</span>
-              </div>
-              <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-2 shrink-0" />
-                <span>{timeFmt.format(event.startDate)} &ndash; {timeFmt.format(event.endDate)}</span>
-              </div>
-              {where && (
-                <div className="flex items-center">
-                  <MapPin className="w-4 h-4 mr-2 shrink-0" />
-                  <span>{where}</span>
-                </div>
-              )}
-            </div>
+          <h1 className="mt-2 text-3xl md:text-4xl font-bold text-basa-navy">{event.title}</h1>
+          <div className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-gray-700">
+            <span className="flex items-center"><Calendar className="w-4 h-4 mr-2 text-purple-700 shrink-0" />{dateFmt.format(event.startDate)}</span>
+            <span className="flex items-center"><Clock className="w-4 h-4 mr-2 text-purple-700 shrink-0" />{timeFmt.format(event.startDate)} &ndash; {timeFmt.format(event.endDate)}</span>
+            {where && <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-purple-700 shrink-0" />{where}</span>}
           </div>
         </div>
-      </section>
+      </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
+      <div className="container mx-auto px-4 py-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
+          <div className="lg:col-span-2 lg:col-start-1 lg:row-start-1 space-y-6">
             {event.image && (
               <EventImage src={event.image} alt={`${event.title} flyer`} variant="full" className="w-full rounded-lg border bg-white shadow-sm" />
             )}
@@ -169,7 +149,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             )}
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 order-first lg:order-none lg:col-start-3 lg:row-start-1 lg:sticky lg:top-4">
             <Card>
               <CardHeader><CardTitle>{isPast ? 'This event has ended' : 'Register'}</CardTitle></CardHeader>
               <CardContent className="space-y-4">
