@@ -1,7 +1,6 @@
 import NextAuth from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import GoogleProvider from "next-auth/providers/google"
-import LinkedInProvider from "next-auth/providers/linkedin"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
@@ -53,9 +52,14 @@ export const authConfig: NextAuthConfig = {
           }
           
           try {
-            const user = await prisma.user.findUnique({
-              where: { email: credentials.email as string }
-            })
+            // Stored addresses are not all lower-case (imports, staff entry), and
+            // people type theirs however they like: match case-insensitively.
+            const email = credentials.email.trim().toLowerCase()
+            const user = email
+              ? await prisma.user.findFirst({
+                  where: { email: { equals: email, mode: "insensitive" } }
+                })
+              : null
 
             // Always pay for one bcrypt compare, even when there is no usable
             // account, so response time does not reveal which emails exist
@@ -154,15 +158,42 @@ export const authConfig: NextAuthConfig = {
         if (user) {
           try {
 
-            // For credentials login, we don't need to do anything special
-            // as the authorize function already handles validation
+            // For credentials login authorize() has already validated everything.
+            // The social-login branch below must not run for it: it would write an
+            // Account row with provider "credentials" on every password sign-in.
             if (!account?.provider) {
               return true;
             }
+            if (account.provider === "credentials") {
+              // Bookkeeping only: a failure here must not refuse a valid sign-in.
+              if (user.id) try {
+                await prisma.user.update({
+                  where: { id: user.id },
+                  data: { lastLogin: new Date() },
+                });
+                await prisma.auditLog.create({
+                  data: {
+                    userId: user.id,
+                    action: "SIGN_IN",
+                    entityType: "USER",
+                    entityId: user.id,
+                    newValues: { timestamp: new Date().toISOString(), provider: "credentials" },
+                  },
+                });
+              } catch (error) {
+                console.error("Failed to record credentials sign-in:", error);
+              }
+              return true;
+            }
 
-            // For social logins, check if user exists
-            const existingUser = await prisma.user.findUnique({
-              where: { email: user.email },
+            // For social logins, check if user exists. Stored addresses may be
+            // mixed-case, so match case-insensitively.
+            const socialEmail = typeof user.email === "string" ? user.email.trim().toLowerCase() : "";
+            if (!socialEmail) {
+              return false;
+            }
+            const existingUser = await prisma.user.findFirst({
+              where: { email: { equals: socialEmail, mode: "insensitive" } },
               include: { accounts: true }
             });
 

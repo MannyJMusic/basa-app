@@ -13,7 +13,7 @@
  * a member comes back of their own accord. In practice that means the forgot-password
  * form, which is where someone who cannot get in actually goes.
  */
-import type { AccountStatus } from '@prisma/client'
+import type { AccountStatus, Status } from '@prisma/client'
 
 /** The subset of a User this module needs. Keeps it testable without a database. */
 export interface ClaimableUser {
@@ -39,15 +39,36 @@ export function isUnclaimedLegacyAccount(user: ClaimableUser): boolean {
 }
 
 /**
- * What claiming changes on the User row, beyond setting the password.
- *
- * Note what is *not* here: `role`. A claimed account stays `GUEST` until a payment
- * makes it a `MEMBER` - the Stripe webhook does that. Claiming proves who you are and
- * gets you into your account; it does not hand back a membership that lapsed years
- * ago. The member signs in, sees their expired membership and their history, and
- * renews from there.
+ * What claiming always changes on the User row, beyond setting the password: the
+ * account becomes usable. Role is decided separately by `claimActivation`.
  */
 export const CLAIM_ACTIVATION = {
   isActive: true,
   accountStatus: 'ACTIVE' as AccountStatus,
 } as const
+
+/** The subset of a User (with its Member row) that decides the claimed role. */
+export interface ClaimRoleInput {
+  role: string
+  member?: { membershipStatus: Status } | null
+}
+
+/**
+ * Everything a successful claim writes, beyond the password.
+ *
+ * Role follows the membership, not the claim: a `GUEST` whose Member row is
+ * `ACTIVE` (an invited current member, or an imported one staff have confirmed)
+ * becomes `MEMBER`, otherwise they would set a password and still be shown as a
+ * guest with no member pricing. A lapsed member (Member row not `ACTIVE`) stays
+ * `GUEST`: claiming proves who you are and gets you into your account, it does
+ * not hand back a membership; the Stripe webhook promotes them when they renew.
+ * No other role is ever changed here - an ADMIN or MODERATOR stays what they are.
+ */
+export function claimActivation(user: ClaimRoleInput): {
+  isActive: true
+  accountStatus: AccountStatus
+  role?: 'MEMBER'
+} {
+  const promote = user.role === 'GUEST' && user.member?.membershipStatus === 'ACTIVE'
+  return promote ? { ...CLAIM_ACTIVATION, role: 'MEMBER' } : { ...CLAIM_ACTIVATION }
+}

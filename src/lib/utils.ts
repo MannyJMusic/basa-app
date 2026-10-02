@@ -118,7 +118,9 @@ export function getRedirectUrl(role: UserRole): string {
     case "ADMIN":
       return "/admin"
     case "MODERATOR":
-      return "/admin"
+      // /admin is ADMIN-only (middleware and the admin layout send everyone
+      // else to /dashboard), so a moderator starts on the dashboard.
+      return "/dashboard"
     case "MEMBER":
       return "/dashboard"
     case "GUEST":

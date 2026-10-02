@@ -1,5 +1,14 @@
 import { z } from "zod"
 
+/**
+ * At least one lowercase letter, one uppercase letter and one digit; any other
+ * characters (spaces, symbols, accented letters) are allowed. Length is checked
+ * separately with `.min(8)`.
+ */
+export const PASSWORD_PATTERN = /^(?=[\s\S]*[a-z])(?=[\s\S]*[A-Z])(?=[\s\S]*\d)[\s\S]{8,}$/
+/** The rule in words, for form hints. Keep in step with PASSWORD_PATTERN. */
+export const PASSWORD_HINT = "At least 8 characters, with an uppercase letter, a lowercase letter and a number. Symbols and spaces are allowed."
+
 // Placeholder for validation utilities 
 
 // Login validation schema
@@ -22,6 +31,7 @@ export type LoginFormData = z.infer<typeof loginSchema>
 export const passwordResetRequestSchema = z.object({
   email: z
     .string()
+    .trim()
     .min(1, "Email is required")
     .email("Invalid email format"),
 })
@@ -35,7 +45,7 @@ export const passwordResetSchema = z.object({
     .string()
     .min(8, "Password must be at least 8 characters")
     .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/,
+      PASSWORD_PATTERN,
       "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     ),
   confirmPassword: z
@@ -57,7 +67,7 @@ export const passwordChangeSchema = z.object({
     .string()
     .min(8, "Password must be at least 8 characters")
     .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/,
+      PASSWORD_PATTERN,
       "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     ),
   confirmNewPassword: z
