@@ -167,7 +167,7 @@ export function EventDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[1400px] max-h-[94vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -511,12 +511,13 @@ export function EventDetailDialog({
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Overview: flyer beside the key facts */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-[14rem_1fr]">
+                {/* Wide layout: flyer and facts on the left, the description beside them */}
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
+                  <div className="space-y-5">
                   {event.image && (
-                    <EventImage src={event.image} alt={`${event.title} flyer`} variant="full" className="w-full rounded-lg border bg-white object-contain" />
+                    <EventImage src={event.image} alt={`${event.title} flyer`} variant="full" className="w-full rounded-lg border bg-white object-contain max-h-[70vh] mx-auto" />
                   )}
-                  <div className={`space-y-4 ${event.image ? '' : 'md:col-span-2'}`}>
+                  <div className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge className={getStatusColor(event.status)}>{event.status}</Badge>
                       <Badge className={getTypeColor(event.type)}>{event.type}</Badge>
@@ -557,18 +558,15 @@ export function EventDetailDialog({
                       </div>
                     )}
                   </div>
-                </div>
-
-                <Separator />
-
-                {/* Description, rendered the way the public page renders it */}
-                <div>
+                  </div>
+                <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
                   {looksLikeHtml(event.description) ? (
                     <div className="rich-text" dangerouslySetInnerHTML={{ __html: sanitizeRichText(event.description) }} />
                   ) : (
                     <p className="text-gray-700 whitespace-pre-line">{event.description}</p>
                   )}
+                </div>
                 </div>
 
                 <Separator />
