@@ -34,6 +34,8 @@ import {
 import { Event, UpdateEventData } from '@/hooks/use-events'
 import { TicketTiersPanel } from '@/components/events/ticket-tiers-panel'
 import { ImageDropzone } from '@/components/admin/image-dropzone'
+import { EventImage } from '@/components/events/event-image'
+import { sanitizeRichText, looksLikeHtml } from '@/lib/sanitize-html'
 import { useMembers } from '@/hooks/use-members'
 
 interface EventDetailDialogProps {
@@ -509,44 +511,15 @@ export function EventDetailDialog({
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Event Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Event Information</h3>
-                      <p className="text-gray-600">{event.description}</p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm">
-                        <Calendar className="w-4 h-4 text-gray-500 mr-2" />
-                        <span>{formatDate(event.startDate)}</span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <Clock className="w-4 h-4 text-gray-500 mr-2" />
-                        <span>{formatTime(event.startDate)} - {formatTime(event.endDate)}</span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <MapPin className="w-4 h-4 text-gray-500 mr-2" />
-                        <span>{event.location}</span>
-                      </div>
-                      {event.address && (
-                        <div className="flex items-center text-sm">
-                          <Building className="w-4 h-4 text-gray-500 mr-2" />
-                          <span>{event.address}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Badge className={getStatusColor(event.status)}>
-                        {event.status}
-                      </Badge>
-                      <Badge className={getTypeColor(event.type)}>
-                        {event.type}
-                      </Badge>
+                {/* Overview: flyer beside the key facts */}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-[14rem_1fr]">
+                  {event.image && (
+                    <EventImage src={event.image} alt={`${event.title} flyer`} variant="full" className="w-full rounded-lg border bg-white object-contain" />
+                  )}
+                  <div className={`space-y-4 ${event.image ? '' : 'md:col-span-2'}`}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className={getStatusColor(event.status)}>{event.status}</Badge>
+                      <Badge className={getTypeColor(event.type)}>{event.type}</Badge>
                       {event.isFeatured && (
                         <Badge className="bg-yellow-100 text-yellow-800">
                           <Star className="w-3 h-3 mr-1" />
@@ -555,38 +528,47 @@ export function EventDetailDialog({
                       )}
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center"><Calendar className="w-4 h-4 text-gray-500 mr-2" /><span>{formatDate(event.startDate)}</span></div>
+                      <div className="flex items-center"><Clock className="w-4 h-4 text-gray-500 mr-2" /><span>{formatTime(event.startDate)} - {formatTime(event.endDate)}</span></div>
+                      <div className="flex items-start"><MapPin className="w-4 h-4 text-gray-500 mr-2 mt-0.5 shrink-0" />
+                        <span>{event.venue?.name ?? event.location}{[event.address, event.city, event.state].filter(Boolean).length > 0 && <span className="text-gray-500"> · {[event.address, event.city, event.state].filter(Boolean).join(', ')}</span>}</span>
+                      </div>
+                      <div className="flex items-center">
                         <Users className="w-4 h-4 text-gray-500 mr-2" />
                         <span>{event.registrations.length} registrations</span>
-                        {event.capacity && (
-                          <span className="text-gray-400 ml-1">/ {event.capacity}</span>
-                        )}
+                        {event.capacity && <span className="text-gray-400 ml-1">/ {event.capacity}</span>}
                       </div>
-                      <div className="flex items-center text-sm">
+                      <div className="flex items-center">
                         <DollarSign className="w-4 h-4 text-gray-500 mr-2" />
                         <span>
                           {event.price ? `$${event.price}` : 'Free'}
+                          {event.memberPrice ? <span className="text-gray-500"> · members ${event.memberPrice}</span> : null}
                         </span>
                       </div>
                     </div>
 
                     {event.tags && event.tags.length > 0 && (
-                      <div>
-                        <div className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                          <Tag className="w-4 h-4 mr-2" />
-                          Tags
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {event.tags.map((tag, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Tag className="w-4 h-4 mr-1 text-gray-500" />
+                        {event.tags.map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">{tag}</Badge>
+                        ))}
                       </div>
                     )}
                   </div>
+                </div>
+
+                <Separator />
+
+                {/* Description, rendered the way the public page renders it */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
+                  {looksLikeHtml(event.description) ? (
+                    <div className="rich-text" dangerouslySetInnerHTML={{ __html: sanitizeRichText(event.description) }} />
+                  ) : (
+                    <p className="text-gray-700 whitespace-pre-line">{event.description}</p>
+                  )}
                 </div>
 
                 <Separator />
