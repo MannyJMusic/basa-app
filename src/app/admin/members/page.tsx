@@ -161,9 +161,7 @@ export default function MembersPage() {
   const getTierBadge = (tier?: string) => {
     const def = tier ? MEMBERSHIP_TIERS[tier as MembershipTier] : undefined
     if (!def) return <Badge variant="outline">No Tier</Badge>
-    return def.kind === "CHAPTER"
-      ? <Badge className="bg-blue-100 text-blue-800">{def.label}</Badge>
-      : <Badge className="bg-purple-100 text-purple-800">{def.label}</Badge>
+    return <Badge className="bg-blue-100 text-blue-800">{def.label}</Badge>
   }
 
   return (

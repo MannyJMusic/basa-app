@@ -78,3 +78,7 @@ nginx/cutover/basa-redirects.conf
 # Playwright
 playwright-report/
 test-results/
+
+# Local working files: member lists contain PII, flyers are inputs. Never commit.
+/member-lists/
+/event-flyers/

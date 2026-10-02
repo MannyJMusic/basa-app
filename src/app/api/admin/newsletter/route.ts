@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const members = await prisma.member.findMany({
       where: {
         newsletterSubscribed: true,
-        ...(segment === "premium" ? { membershipTier: { in: ["ASSOCIATE_MEMBER", "TRIO_MEMBER"] } } : {}),
+        ...(segment === "premium" ? { membershipTier: { in: ["MIXER_MEMBER", "SPONSORSHIP_MEMBER"] as const } } : {}),
         user: userFilter,
       },
       select: { user: { select: { email: true, firstName: true } } },

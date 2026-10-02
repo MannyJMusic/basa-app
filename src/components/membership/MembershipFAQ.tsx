@@ -3,28 +3,28 @@ import React, { useState } from "react";
 
 const faqs = [
   {
-    q: "What is the difference between Chapter and Resource Memberships?",
-    a: "Chapter Memberships focus on in-person networking, local events, and chapter-specific benefits in Stone Oak, Center of City, and Southside. Resource Memberships are digital-first, offering online benefits and select physical perks for remote or digital-focused members."
+    q: "How does billing work?",
+    a: "Memberships are yearly. When you join online your card is charged today and again on the same date each year, at the price you joined at, until you cancel."
   },
   {
-    q: "Can I upgrade from a Resource Membership to a Chapter Membership?",
-    a: "Yes! You can upgrade at any time. Contact BASA support to apply your current resource membership toward a chapter membership."
+    q: "How do I cancel?",
+    a: "Sign in and open My Membership in your member dashboard, then choose Manage billing. Cancelling stops the next renewal; your membership stays active until the end of the year you have paid for."
   },
   {
-    q: "Where are the BASA chapters located?",
-    a: "BASA has chapters in Stone Oak, Center of City, and Southside. Each chapter hosts regular networking events and provides location-specific benefits."
+    q: "Can I pay monthly?",
+    a: "Mixer and Sponsorship members can arrange monthly payments with the BASA office. Monthly memberships need 30 days' notice to cancel and can be cancelled after twelve monthly payments."
   },
   {
-    q: "What digital benefits are included with Resource Memberships?",
-    a: "Resource Memberships include access to the BASA Resource Website, private Facebook group, directory listing, digital marketing opportunities, and more."
+    q: "What is the BASA Channel?",
+    a: "The BASA Channel features member businesses in video episodes. Action, Mixer and Sponsorship levels include episodes, and it can be added to any membership for $400 per month, with quarterly payment options, through the office."
   },
   {
-    q: "Are there opportunities to promote my business?",
-    a: "Yes! All memberships include directory listings and welcome posts. Associate Members and above receive additional social media and e-blast opportunities."
+    q: "Can I change my level later?",
+    a: "Yes. Contact the BASA office and we will move you to the level that fits, crediting what you have already paid."
   },
   {
-    q: "How do I join or get more information?",
-    a: "You can join directly from this page or contact us for a personalized consultation. We're here to help you choose the best membership for your business."
+    q: "What happens after I join?",
+    a: "You get a welcome email with a link to set up your member account. The office then gets in touch about your Bundle Bag, name badge, directory listing and the marketing included in your level."
   }
 ];
 
@@ -53,7 +53,7 @@ const MembershipFAQ = () => {
             </button>
             <div
               id={`faq-panel-${idx}`}
-              className={`mt-2 text-gray-600 text-sm transition-all duration-300 ease-in-out ${open === idx ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}
+              className={`mt-2 text-gray-600 text-sm transition-all duration-300 ease-in-out ${open === idx ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}
               aria-hidden={open !== idx}
             >
               {faq.a}

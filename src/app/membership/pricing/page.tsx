@@ -1,3 +1,6 @@
-export default function MembershipPricingPage() {
-  return <div>Membership Pricing Tiers Page Placeholder</div>;
-} 
+import { permanentRedirect } from 'next/navigation'
+
+/** Old URL (and dashboard link target); the levels page covers it. */
+export default function Page() {
+  permanentRedirect('/membership#levels')
+}

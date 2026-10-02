@@ -2542,7 +2542,7 @@ export function generateMembershipRenewalReminderEmailHtml(
               <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${escapeHtml(firstName)},</p>
               <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
                 Your BASA membership ends on <strong style="color:#1B365D;">${formatRenewalDate(renewalDate)}</strong>.
-                Renewing keeps your member rate on every event, your place in the member directory, and your chapter membership running without a gap.
+                Renewing keeps your member rate on every event, your place in the member directory, and your member benefits running without a gap.
               </p>${MEMBERSHIP_SALES_ENABLED ? '' : `
               <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
                 Renewals are handled by the BASA office for now: call ${OFFICE_CONTACT.name} at <strong>${OFFICE_CONTACT.phone}</strong> or email <a href="mailto:${OFFICE_CONTACT.email}" style="color:#1B365D;">${OFFICE_CONTACT.email}</a>. Digital membership purchase and account management are coming soon.
@@ -2581,6 +2581,59 @@ export function generateMembershipExpiredEmailHtml(
                 If you meant to renew and something got in the way, reply to this email and we will sort it out.${MEMBERSHIP_SALES_ENABLED ? '' : ` You can also call ${OFFICE_CONTACT.name} at <strong>${OFFICE_CONTACT.phone}</strong> or email <a href="mailto:${OFFICE_CONTACT.email}" style="color:#1B365D;">${OFFICE_CONTACT.email}</a>; memberships are handled by the office for now.`}
               </p>`,
   })
+}
+
+export interface MembershipWelcomeDetails {
+  tierLabel: string
+  amountCents: number
+  renewalDate: Date
+  /** Set-password link for an account that has never been signed in to; null otherwise. */
+  setupUrl: string | null
+}
+
+export function generateMembershipWelcomeEmailHtml(
+  firstName: string,
+  email: string,
+  details: MembershipWelcomeDetails,
+  options: { siteUrl?: string; logoUrl?: string } = {}
+): string {
+  const siteUrl = options.siteUrl || getSiteUrl()
+  const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
+  const amount = `$${(details.amountCents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+  const renews = formatRenewalDate(details.renewalDate)
+
+  return renderNoticeEmail({
+    title: 'Welcome to BASA',
+    preheader: `Your ${details.tierLabel} membership is active. It renews on ${renews}.`,
+    heading: `Welcome to BASA${firstName ? `, ${firstName}` : ''}!`,
+    accent: '#FFD700',
+    siteUrl,
+    logoUrl,
+    ctaLabel: details.setupUrl ? 'Set up my account' : 'Go to my dashboard',
+    ctaUrl: details.setupUrl ?? `${siteUrl}/dashboard/membership`,
+    bodyHtml: `
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">Hi ${escapeHtml(firstName || 'there')},</p>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
+                Thank you for joining the Business Association of San Antonio. Your <strong style="color:#1B365D;">${escapeHtml(details.tierLabel)}</strong> membership is active now.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px;font-size:14px;color:#374151;">
+                <tr><td style="padding:2px 16px 2px 0;color:#6b7280;">Paid today</td><td><strong>${amount}</strong></td></tr>
+                <tr><td style="padding:2px 16px 2px 0;color:#6b7280;">Renews on</td><td><strong>${renews}</strong> at the same price</td></tr>
+              </table>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
+                Your membership renews automatically each year until you cancel. You can update your card or cancel any time from your member dashboard, and a cancelled membership stays active until the end of the year you paid for.
+              </p>${details.setupUrl ? `
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
+                Your sign-in email is <strong>${escapeHtml(email)}</strong>. Use the button below to choose a password; the link works for ${INVITATION_LINK_DAYS} days. After that, use <em>Forgot password</em> on the sign-in page to get a new one.
+              </p>` : ''}
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151;">
+                ${OFFICE_CONTACT.name} from the BASA office will be in touch about your Bundle Bag, name badge and directory listing. Questions? Call <strong>${OFFICE_CONTACT.phone}</strong> or email <a href="mailto:${OFFICE_CONTACT.email}" style="color:#1B365D;">${OFFICE_CONTACT.email}</a>.
+              </p>`,
+  })
+}
+
+export async function sendMembershipWelcomeEmail(email: string, firstName: string, details: MembershipWelcomeDetails): Promise<void> {
+  await sendEmail(email, `Welcome to BASA: your ${details.tierLabel} membership is active`, generateMembershipWelcomeEmailHtml(firstName, email, details))
 }
 
 export async function sendMembershipRenewalReminderEmail(

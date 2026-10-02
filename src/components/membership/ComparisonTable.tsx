@@ -1,186 +1,62 @@
-"use client";
-import React, { useState } from "react";
+import { Check, Minus } from "lucide-react";
+import { TIERS_IN_ORDER, formatTierPrice } from "@/lib/membership-tiers";
 
-const allTiers = [
-  {
-    name: "Meeting",
-    color: "text-blue-500",
-    price: "$149",
-    type: "Full"
-  },
-  {
-    name: "Associate",
-    color: "text-green-500",
-    price: "$245",
-    type: "Full"
-  },
-  {
-    name: "TRIO",
-    color: "text-purple-500",
-    price: "$295",
-    type: "Full"
-  },
-  {
-    name: "Class Resource",
-    color: "text-blue-400",
-    price: "$120",
-    type: "Resource"
-  },
-  {
-    name: "NAG Resource",
-    color: "text-red-500",
-    price: "Included",
-    type: "Resource"
-  },
-  {
-    name: "Training Resource",
-    color: "text-yellow-500",
-    price: "$225",
-    type: "Resource"
-  }
+/**
+ * Side-by-side view of the levels. Rows are the benefits that differ between
+ * levels; the per-level wording lives in the cards above. Server component.
+ */
+const ROWS: Array<{ label: string; values: Record<string, string | boolean> }> = [
+  { label: "Employees at member event rates", values: { meeting: "1", market: "1", action: "2", mixer: "Mixers included for 2", sponsorship: "Mixers included for 2" } },
+  { label: "Directory listing", values: { meeting: true, market: true, action: true, mixer: "With link", sponsorship: "With link" } },
+  { label: "Shared e-blasts per month", values: { meeting: "1", market: "1", action: "2", mixer: "4", sponsorship: "4" } },
+  { label: "Social media posts per month", values: { meeting: "1", market: "2", action: "2", mixer: "4", sponsorship: "4" } },
+  { label: "Video posts per month", values: { meeting: false, market: "1", action: "1", mixer: "2", sponsorship: "2" } },
+  { label: "Ribbon cutting", values: { meeting: false, market: true, action: "Or Member Rally", mixer: true, sponsorship: "At your business" } },
+  { label: "Guest at member rate", values: { meeting: false, market: false, action: true, mixer: "Guest at mixers", sponsorship: "Guest at mixers" } },
+  { label: "Table at selected events", values: { meeting: false, market: false, action: true, mixer: true, sponsorship: false } },
+  { label: "The BASA Channel", values: { meeting: false, market: false, action: "4 episodes", mixer: "6 episodes", sponsorship: "10 episodes" } },
+  { label: "Golf & Bowling Tournament sponsor", values: { meeting: false, market: false, action: false, mixer: false, sponsorship: true } },
+  { label: "Mixer signage and two-minute speech", values: { meeting: false, market: false, action: false, mixer: false, sponsorship: true } },
 ];
 
-const allBenefits = [
-  {
-    label: "Event Discount",
-    values: ["Special Rate", "Special Rate", "Special Rate", "Special Rate", "-", "Special Rate"]
-  },
-  {
-    label: "# Employees Included",
-    values: ["1", "2", "1 (All Chapters)", "-", "-", "1"]
-  },
-  {
-    label: "Directory Listing",
-    values: ["✓", "✓", "✓", "✓ Resource Page", "✓ Resource Page", "✓ Resource Page"]
-  },
-  {
-    label: "Bundle Bag",
-    values: ["✓", "✓", "✓", "✓", "✓", "✓"]
-  },
-  {
-    label: "Social Media Welcome",
-    values: ["✓", "✓", "✓", "✓", "✓", "✓"]
-  },
-  {
-    label: "E-Blasts/Social Posts",
-    values: ["-", "2/mo E-Blasts, 1/mo Social, 1/mo Video", "-", "-", "-", "-"],
-    highlight: 1
-  },
-  {
-    label: "Trainer/Panelist Opportunity",
-    values: ["-", "-", "-", "-", "-", "✓"]
-  },
-  {
-    label: "All Chapters Access",
-    values: ["-", "-", "✓", "-", "-", "-"],
-    highlight: 2
-  },
-  {
-    label: "NAG Benefits Included",
-    values: ["-", "-", "-", "-", "✓", "-"]
-  },
-  {
-    label: "Annual Price",
-    values: allTiers.map(t => t.price)
-  }
-];
+function Cell({ v }: { v: string | boolean }) {
+  if (v === true) return <Check className="mx-auto h-5 w-5 text-green-600" aria-label="Included" />;
+  if (v === false) return <Minus className="mx-auto h-5 w-5 text-gray-300" aria-label="Not included" />;
+  return <span>{v}</span>;
+}
 
-const icon = (val: string) => {
-  if (val === "✓") return <span className="text-green-500 font-bold">&#10003;</span>;
-  if (val === "-") return <span className="text-gray-400">&mdash;</span>;
-  return val;
-};
-
-const groups = [
-  { label: "Full Memberships", type: "Full", indices: [0, 1, 2] },
-  { label: "Resource Memberships", type: "Resource", indices: [3, 4, 5] }
-];
-
-const ComparisonTable = ({ salesEnabled = true }: { salesEnabled?: boolean }) => {
-  // Prices only while memberships can be bought online; otherwise the office handles them.
-  const visibleRows = salesEnabled ? allBenefits : allBenefits.filter(r => r.label !== 'Annual Price')
-  const [group, setGroup] = useState(0); // 0: Full, 1: Resource
-  const { indices } = groups[group];
-  const tiers = indices.map(i => allTiers[i]);
-  const benefits = visibleRows.map(b => ({
-    ...b,
-    values: indices.map(i => b.values[i]),
-    highlight: b.highlight !== undefined && indices.includes(b.highlight) ? indices.indexOf(b.highlight) : undefined
-  }));
-
+export default function ComparisonTable({ salesEnabled }: { salesEnabled: boolean }) {
   return (
-    <section className="py-16 bg-white" id="comparison">
-      <div className="max-w-5xl mx-auto px-4 border border-gray-200 rounded-xl shadow-lg bg-white">
-        <div className="text-center mb-8 pt-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Compare Memberships</h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
-            See which membership fits your needs. Toggle to compare full or resource memberships.
-          </p>
-          <div className="inline-flex rounded-lg shadow-sm bg-gray-100 mb-4">
-            {groups.map((g, i) => (
-              <button
-                key={g.type}
-                className={`px-4 py-2 font-semibold text-sm md:text-base rounded-lg transition-colors focus:outline-hidden focus:ring-2 focus:ring-blue-400 ${group === i ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-blue-100'}`}
-                onClick={() => setGroup(i)}
-                aria-pressed={group === i}
-              >
-                {g.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Card-based layout for mobile */}
-        <div className="block md:hidden">
-          <div className="flex gap-4 overflow-x-auto pb-2 px-2">
-            {tiers.map((tier, idx) => (
-              <div key={tier.name} className="min-w-[260px] max-w-[320px] bg-gray-50 rounded-xl shadow-lg p-5 shrink-0 border border-gray-200">
-                <div className={`text-lg font-bold mb-1 ${tier.color}`}>{tier.name}</div>
-                {salesEnabled && <div className="text-2xl font-bold mb-2">{tier.price}</div>}
-                <ul className="divide-y divide-gray-100">
-                  {benefits.map((benefit, bidx) => (
-                    <li key={benefit.label} className="py-2 flex items-center justify-between text-sm">
-                      <span className="text-gray-700 w-1/2 pr-2">{benefit.label}</span>
-                      <span className={`w-1/2 text-right ${benefit.highlight === idx ? 'bg-yellow-50 font-bold px-1 rounded' : ''}`}>{icon(benefit.values[idx])}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Table layout for desktop */}
-        <div className="hidden md:block overflow-x-auto w-full">
-          <table className="w-full min-w-[480px] border-collapse text-sm border border-gray-200 rounded-lg overflow-hidden">
-            <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className="text-left p-4 font-semibold text-gray-900 bg-gray-50 sticky left-0 z-10 min-w-[180px] border-r border-gray-200">Benefit</th>
-                {tiers.map(tier => (
-                  <th key={tier.name} className={`text-center p-4 font-semibold ${tier.color} bg-gray-50 min-w-[120px] border-r border-gray-200`}>{tier.name}</th>
+    <section id="compare" className="py-16 bg-white scroll-mt-20">
+      <div className="max-w-6xl mx-auto px-4">
+        <h2 className="text-3xl font-bold text-center text-blue-900 mb-8">Compare the levels</h2>
+        <div className="overflow-x-auto rounded-xl border border-gray-200">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead className="bg-blue-900 text-white">
+              <tr>
+                <th scope="col" className="p-3 text-left font-semibold">Benefit</th>
+                {TIERS_IN_ORDER.map((t) => (
+                  <th key={t.tier} scope="col" className="p-3 text-center font-semibold">
+                    {t.name}
+                    {salesEnabled && <div className="font-normal text-blue-100">{formatTierPrice(t.priceCents)}/yr</div>}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {benefits.map((benefit, i) => (
-                <tr key={benefit.label} className="border-b border-gray-200 last:border-b-0">
-                  <td className="p-4 font-medium text-gray-700 bg-white sticky left-0 z-10 min-w-[180px] border-r border-gray-200">{benefit.label}</td>
-                  {benefit.values.map((val, idx) => (
-                    <td
-                      key={idx}
-                      className={`p-4 text-center bg-white border-r border-gray-200 ${benefit.highlight === idx ? 'bg-yellow-50 font-bold' : ''}`}
-                    >
-                      {icon(val)}
-                    </td>
+              {ROWS.map((row, i) => (
+                <tr key={row.label} className={i % 2 ? "bg-gray-50" : "bg-white"}>
+                  <th scope="row" className="p-3 text-left font-medium text-gray-800">{row.label}</th>
+                  {TIERS_IN_ORDER.map((t) => (
+                    <td key={t.tier} className="p-3 text-center text-gray-700"><Cell v={row.values[t.slug]} /></td>
                   ))}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <p className="mt-3 text-xs text-gray-500">Every level includes a name badge lanyard, the New Member Bundle Bag, BASA member benefits and a membership certificate.</p>
       </div>
     </section>
   );
-};
-
-export default ComparisonTable; 
+}
