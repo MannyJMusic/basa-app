@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { EventImage } from "@/components/events/event-image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -147,7 +148,10 @@ export async function FeaturedEvents() {
             const confirmedRegistrations = event.registrations?.filter(r => r.status === 'CONFIRMED').length || 0
             
             return (
-              <Card key={event.id} className="basa-card group hover:scale-105 transition-all duration-500">
+              <Card key={event.id} className="basa-card group hover:scale-105 transition-all duration-500 overflow-hidden">
+                <Link href={`/events/${event.slug}`} aria-hidden tabIndex={-1} className="block empty:hidden">
+                  <EventImage src={event.image ?? event.venue?.image} alt="" className="w-full h-48 object-cover object-top bg-gray-100" />
+                </Link>
                 <CardHeader>
                   <div className="flex items-center justify-between mb-4">
                     <Badge variant="outline" className={typeBadge.className}>

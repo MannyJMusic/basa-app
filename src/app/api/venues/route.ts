@@ -12,6 +12,9 @@ const createVenueSchema = z.object({
   zipCode: z.string().optional(),
   capacity: z.number().int().positive().optional(),
   website: z.string().url().optional().or(z.literal("")),
+  image: z.string().url().optional().or(z.literal("")),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
 })
 
 // Listing venues is needed to populate the event form, so any signed-in user may
@@ -31,6 +34,11 @@ export async function GET() {
         state: true,
         zipCode: true,
         capacity: true,
+        website: true,
+        image: true,
+        latitude: true,
+        longitude: true,
+        _count: { select: { events: true } },
       },
     })
     return NextResponse.json(venues)
@@ -56,6 +64,9 @@ export async function POST(request: NextRequest) {
         zipCode: data.zipCode || null,
         capacity: data.capacity ?? null,
         website: data.website || null,
+        image: data.image || null,
+        latitude: data.latitude ?? null,
+        longitude: data.longitude ?? null,
       },
     })
 

@@ -57,7 +57,7 @@ export const FlyerExtractionSchema = z.object({
   category: text("A short label such as Mixer, Ribbon Cutting, Banquet, Workshop, Tournament, Coffee"),
   ticketTiers: z
     .array(z.object({ name: z.string(), price: z.number().nullable() }))
-    .describe("Every distinct ticket or sponsorship level printed, with its dollar price"),
+    .describe("Every distinct ticket or sponsorship level printed, with its dollar price. BASA prices Members and Future Members (non-members) separately: list them as two levels named exactly as printed"),
   contactName: text("Contact person"),
   contactEmail: text("Contact email"),
   contactPhone: text("Contact phone"),
@@ -74,9 +74,53 @@ export type FlyerExtraction = z.infer<typeof FlyerExtractionSchema>
 // Mapping the extraction onto the admin form. Pure, and unit-tested.
 // ---------------------------------------------------------------------------
 
+export type TierAudienceDraft = "ALL" | "MEMBER" | "NON_MEMBER"
+
+/** One ticket type to create with the event. Prices are dollars. */
+export interface TierDraft {
+  name: string
+  price: number
+  audience: TierAudienceDraft
+  description?: string
+}
+
+const FUTURE_RE = /future|non[\s-]?member|guest|visitor|prospective/i
+
+/** BASA calls non-members "Future Members"; both spellings must end up NON_MEMBER. */
+export function audienceFromName(name: string): TierAudienceDraft {
+  if (FUTURE_RE.test(name)) return "NON_MEMBER"
+  if (/member/i.test(name)) return "MEMBER"
+  return "ALL"
+}
+
+/**
+ * Ticket types for the event. The flyer's own levels win; otherwise the single
+ * price / member price pair becomes a Member and a Future Member ticket, which is
+ * how every BASA flyer is priced.
+ */
+export function deriveTiers(x: Pick<FlyerExtraction, "ticketTiers" | "price" | "memberPrice">): TierDraft[] {
+  const fromFlyer = x.ticketTiers
+    .filter((t): t is { name: string; price: number } => t.price !== null && t.price >= 0 && t.name.trim() !== "")
+    .map((t) => ({ name: t.name.trim(), price: t.price, audience: audienceFromName(t.name) }))
+  if (fromFlyer.length > 0) return fromFlyer
+
+  if (x.memberPrice !== null && x.memberPrice >= 0 && x.price !== null && x.price >= 0) {
+    return [
+      { name: "Member", price: x.memberPrice, audience: "MEMBER" },
+      { name: "Future Member", price: x.price, audience: "NON_MEMBER" },
+    ]
+  }
+  if (x.price !== null && x.price >= 0) {
+    return [{ name: x.price === 0 ? "Free admission" : "General admission", price: x.price, audience: "ALL" }]
+  }
+  return []
+}
+
 export interface FlyerFormDraft {
   /** Fields to spread over the create-event form. Only keys with a value are present. */
   fields: Partial<CreateEventData>
+  /** Ticket types to create with the event. Empty when the flyer prints no price. */
+  tiers: TierDraft[]
   /** Field names the admin should look at first (from the model, plus our own defaults). */
   lowConfidence: string[]
   /** Things the form cannot hold, or defaults we had to pick. Shown, never hidden. */
@@ -205,10 +249,16 @@ export function flyerToFormDraft(x: FlyerExtraction): FlyerFormDraft {
     fields.category = { NETWORKING: "Networking", SUMMIT: "Summit", RIBBON_CUTTING: "Ribbon Cutting", COMMUNITY: "Community" }[x.eventType]
   }
 
-  // The form has one price and one member price; extra tiers are reported, not dropped.
-  if (x.ticketTiers.length > 0) {
-    const tiers = x.ticketTiers.map((t) => (t.price === null ? t.name : `${t.name} ($${t.price})`)).join(", ")
-    warnings.push(`Ticket levels on the flyer: ${tiers}. Set these up as ticket tiers after saving.`)
+  const tiers = deriveTiers(x)
+  const unpriced = x.ticketTiers.filter((t) => t.price === null).map((t) => t.name)
+  if (unpriced.length > 0) warnings.push(`Ticket levels without a printed price were skipped: ${unpriced.join(", ")}.`)
+  if (tiers.length === 0) warnings.push("No ticket price on the flyer; add ticket types before opening registration.")
+  // Event.price / memberPrice are a derived "from" summary of the tiers.
+  if (tiers.length > 0) {
+    const nonMember = tiers.filter((t) => t.audience !== "MEMBER").map((t) => t.price)
+    const member = tiers.filter((t) => t.audience === "MEMBER").map((t) => t.price)
+    if (fields.price === undefined && nonMember.length) fields.price = Math.min(...nonMember)
+    if (fields.memberPrice === undefined && member.length) fields.memberPrice = Math.min(...member)
   }
 
   const contact = [x.contactName, x.contactEmail, x.contactPhone].filter(Boolean).join(", ")
@@ -216,5 +266,5 @@ export function flyerToFormDraft(x: FlyerExtraction): FlyerFormDraft {
   if (x.registrationUrl) warnings.push(`Registration link on the flyer: ${x.registrationUrl}.`)
   if (x.notes) warnings.push(x.notes.trim())
 
-  return { fields, lowConfidence: Array.from(lowConfidence), warnings }
+  return { fields, tiers, lowConfidence: Array.from(lowConfidence), warnings }
 }

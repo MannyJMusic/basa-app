@@ -27,6 +27,7 @@ const updateEventSchema = z.object({
   isFeatured: z.boolean().optional(),
   image: z.string().url().optional(),
   organizerId: z.string().min(1).optional(),
+  venueId: z.string().min(1).nullable().optional(),
   tags: z.array(z.string()).optional(),
 })
 
@@ -145,6 +146,11 @@ export async function PUT(
       }
     }
 
+    if (validatedData.venueId) {
+      const venue = await prisma.venue.findUnique({ where: { id: validatedData.venueId } })
+      if (!venue) return NextResponse.json({ error: "Venue not found" }, { status: 400 })
+    }
+
     // Update event
     const updatedEvent = await prisma.event.update({
       where: { id },
@@ -169,6 +175,7 @@ export async function PUT(
         ...(validatedData.isFeatured !== undefined && { isFeatured: validatedData.isFeatured }),
         ...(validatedData.image !== undefined && { image: validatedData.image }),
         ...(validatedData.organizerId && { organizerId: validatedData.organizerId }),
+        ...(validatedData.venueId !== undefined && { venueId: validatedData.venueId }),
         ...(validatedData.tags && { tags: validatedData.tags }),
       },
       include: {

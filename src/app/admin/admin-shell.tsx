@@ -87,6 +87,12 @@ function AdminNav() {
         <Link href="/admin/events" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-blue-50 text-blue-900 font-medium">
           <Calendar className="w-5 h-5" /> Events
         </Link>
+        <Link href="/admin/venues" className="flex items-center gap-2 px-3 py-2 pl-10 rounded-md hover:bg-blue-50 text-blue-900 text-sm">
+          Venues
+        </Link>
+        <Link href="/admin/events/batch" className="flex items-center gap-2 px-3 py-2 pl-10 rounded-md hover:bg-blue-50 text-blue-900 text-sm">
+          Batch from flyers
+        </Link>
         <Link href="/admin/leads" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-blue-50 text-blue-900 font-medium">
           <UserPlus className="w-5 h-5" /> Leads
         </Link>

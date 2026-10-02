@@ -124,7 +124,9 @@ describe('flyerToFormDraft', () => {
       }),
     )
     const text = draft.warnings.join('\n')
-    expect(text).toContain('Team of 4 ($200), Lane Sponsor ($500), Spectator')
+    // Priced levels become tickets; an unpriced one is reported, not dropped silently.
+    expect(draft.tiers.map(t => `${t.name} ${t.price}`)).toEqual(['Team of 4 200', 'Lane Sponsor 500'])
+    expect(text).toContain('without a printed price were skipped: Spectator')
     expect(text).toContain('Jen, jen@example.com')
     expect(text).toContain('https://example.com/bowl')
     expect(text).toContain('Shoe rental included.')

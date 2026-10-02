@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Calendar, CalendarPlus, Clock, MapPin, Users, Building } from 'lucide-react'
 import { prisma } from '@/lib/db'
+import { EventImage } from '@/components/events/event-image'
+import { VenueMap } from '@/components/events/venue-map'
 import { soldCounts } from '@/lib/ticket-tiers'
 import { sanitizeRichText, looksLikeHtml, toPlainText } from '@/lib/sanitize-html'
 
@@ -39,6 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: `${event.title} | BASA`,
     description: event.shortDescription ?? toPlainText(event.description, 160),
+    ...(event.image ? { openGraph: { images: [event.image] } } : {}),
   }
 }
 
@@ -113,6 +116,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
+            {event.image && (
+              <EventImage src={event.image} alt={`${event.title} flyer`} variant="full" className="w-full rounded-lg border bg-white shadow-sm" />
+            )}
             <Card>
               <CardHeader><CardTitle>About This Event</CardTitle></CardHeader>
               <CardContent>
@@ -129,13 +135,21 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               </CardContent>
             </Card>
 
-            {event.venue && (
+            {(event.venue || event.location) && (
               <Card>
-                <CardHeader><CardTitle>Venue</CardTitle></CardHeader>
-                <CardContent className="text-gray-700">
-                  <p className="font-medium">{event.venue.name}</p>
-                  {event.venue.address && <p>{event.venue.address}</p>}
-                  <p>{[event.venue.city, event.venue.state, event.venue.zipCode].filter(Boolean).join(' ')}</p>
+                <CardHeader><CardTitle>Location</CardTitle></CardHeader>
+                <CardContent>
+                  <VenueMap
+                    name={event.venue?.name ?? event.location}
+                    address={event.venue?.address ?? event.address}
+                    city={event.venue?.city ?? event.city}
+                    state={event.venue?.state ?? event.state}
+                    zipCode={event.venue?.zipCode ?? event.zipCode}
+                    latitude={event.venue?.latitude}
+                    longitude={event.venue?.longitude}
+                    image={event.venue?.image}
+                    website={event.venue?.website}
+                  />
                 </CardContent>
               </Card>
             )}

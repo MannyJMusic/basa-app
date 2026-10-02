@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,12 +29,17 @@ import {
   ChevronRight,
   AlertTriangle,
   Clock,
-  Building
+  Building,
+  Layers
 } from 'lucide-react'
 import { useEvents, Event, CreateEventData, EventFilters } from '@/hooks/use-events'
 import { EventDetailDialog } from '@/components/events/event-detail-dialog'
 import { FlyerUpload, type FlyerDraft } from '@/components/admin/flyer-upload'
 import { RichTextEditor } from '@/components/admin/rich-text-editor'
+import { DraftTiersEditor } from '@/components/admin/draft-tiers-editor'
+import { ImageDropzone } from '@/components/admin/image-dropzone'
+import { EventImage } from '@/components/events/event-image'
+import { deriveTiers, type TierDraft } from '@/lib/flyer-draft'
 import { DashboardTableLoading } from '@/components/ui/dashboard-loading'
 
 export default function AdminEventsPage() {
@@ -49,6 +55,8 @@ export default function AdminEventsPage() {
   } = useEvents()
 
   const [organizers, setOrganizers] = useState<Array<{ id: string; name: string }>>([])
+  const [venues, setVenues] = useState<Array<{ id: string; name: string; address?: string | null; city?: string | null; state?: string | null; zipCode?: string | null }>>([])
+  const [tiers, setTiers] = useState<TierDraft[]>([])
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState<EventFilters>({})
@@ -82,6 +90,7 @@ export default function AdminEventsPage() {
     isFeatured: false,
     image: '',
     organizerId: '',
+    venueId: '',
     tags: [],
   })
 
@@ -92,6 +101,18 @@ export default function AdminEventsPage() {
   const applyFlyerDraft = (draft: FlyerDraft) => {
     setCreateError(null)
     setCreateFormData(prev => ({ ...prev, ...draft.fields }))
+    setTiers(draft.tiers)
+  }
+
+  // Choosing a saved venue copies its address into the form.
+  const chooseVenue = (id: string) => {
+    if (id === 'none') { setCreateFormData(prev => ({ ...prev, venueId: '' })); return }
+    const v = venues.find(x => x.id === id)
+    if (!v) return
+    setCreateFormData(prev => ({
+      ...prev, venueId: v.id, location: v.name,
+      address: v.address ?? '', city: v.city ?? '', state: v.state ?? '', zipCode: v.zipCode ?? '',
+    }))
   }
 
   useEffect(() => {
@@ -105,6 +126,10 @@ export default function AdminEventsPage() {
       .then(r => (r.ok ? r.json() : []))
       .then(setOrganizers)
       .catch(() => setOrganizers([]))
+    fetch('/api/venues')
+      .then(r => (r.ok ? r.json() : []))
+      .then(setVenues)
+      .catch(() => setVenues([]))
   }, [])
 
   const handleSearch = () => {
@@ -151,8 +176,21 @@ export default function AdminEventsPage() {
 
     try {
       // BASA runs its own events; only send an organizer when one was picked.
-      await createEvent({ ...createFormData, organizerId: createFormData.organizerId || undefined } as CreateEventData)
+      // Tickets: what is on the form, else the price / member price pair.
+      const ticketTiers = (tiers.length > 0
+        ? tiers
+        : deriveTiers({ ticketTiers: [], price: createFormData.price ?? null, memberPrice: createFormData.memberPrice ?? null })
+      ).filter(t => t.name.trim() && Number.isFinite(t.price))
+      await createEvent({
+        ...createFormData,
+        organizerId: createFormData.organizerId || undefined,
+        venueId: createFormData.venueId || undefined,
+        autoVenue: !createFormData.venueId,
+        image: createFormData.image || undefined,
+        ticketTiers,
+      } as CreateEventData)
       setShowCreateDialog(false)
+      setTiers([])
       setCreateFormData({
         title: '',
         slug: '',
@@ -174,6 +212,7 @@ export default function AdminEventsPage() {
         isFeatured: false,
         image: '',
         organizerId: '',
+        venueId: '',
         tags: [],
       })
       fetchEvents(filters, currentPage, 20, sortBy, sortOrder)
@@ -239,6 +278,9 @@ export default function AdminEventsPage() {
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
             Export
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/events/batch"><Layers className="w-4 h-4 mr-2" />Batch from flyers</Link>
           </Button>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
@@ -333,6 +375,16 @@ export default function AdminEventsPage() {
                 </div>
 
                 {/* Location */}
+                <div>
+                  <Label htmlFor="venue">Saved venue <span className="text-gray-400 font-normal">(or type a new one below; it will be saved)</span></Label>
+                  <Select value={createFormData.venueId || 'none'} onValueChange={chooseVenue}>
+                    <SelectTrigger id="venue"><SelectValue placeholder="Choose a saved venue" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">New or unlisted venue</SelectItem>
+                      {venues.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="location">Location *</Label>
@@ -420,6 +472,12 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
 
+                <div>
+                  <Label>Ticket types</Label>
+                  <p className="text-xs text-gray-500 mb-2">Members and future members are separate tickets. Left empty, they are made from Price and Member Price above.</p>
+                  <DraftTiersEditor tiers={tiers} onChange={setTiers} />
+                </div>
+
                 {/* Category and Type */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -501,7 +559,9 @@ export default function AdminEventsPage() {
 
                 {/* Image URL */}
                 <div>
-                  <Label htmlFor="image">Image URL</Label>
+                  <Label htmlFor="image">Featured image (the flyer)</Label>
+                  <ImageDropzone kind="events" label="the flyer" value={createFormData.image} onChange={(url) => setCreateFormData(prev => ({ ...prev, image: url }))} />
+                  <Label htmlFor="image" className="mt-2 block text-xs text-gray-500">Or paste an image URL</Label>
                   <Input
                     id="image"
                     type="url"
@@ -686,7 +746,8 @@ export default function AdminEventsPage() {
           <>
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {events.map((event) => (
-                <Card key={event.id} className="hover:shadow-lg transition-shadow">
+                <Card key={event.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+                  <EventImage src={event.image ?? event.venue?.image} alt="" className="h-40 w-full object-cover object-top bg-gray-100" />
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">

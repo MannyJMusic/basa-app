@@ -3,6 +3,7 @@ import { z } from "zod"
 import { requireAdmin, isResponse } from "@/lib/api-auth"
 import { auth } from "@/lib/auth"
 import { parseEventDateTime } from "@/lib/event-time"
+import { matchVenue } from "@/lib/venues"
 
 // Get Prisma client dynamically to support test injection
 const getPrisma = () => {
@@ -38,6 +39,21 @@ const createEventSchema = z.object({
   // BASA runs its own events; an organizer is only recorded when there is a separate one.
   organizerId: z.string().min(1).nullable().optional(),
   tags: z.array(z.string()).default([]),
+  venueId: z.string().min(1).nullable().optional(),
+  /** Reuse the venue whose name matches `location`, or create one from the address fields (#274). */
+  autoVenue: z.boolean().default(false),
+  /** Ticket types created with the event, so a flyer-made event can be sold at once (#274). */
+  ticketTiers: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(120),
+        price: z.number().nonnegative(),
+        audience: z.enum(["ALL", "MEMBER", "NON_MEMBER"]).default("ALL"),
+        description: z.string().trim().max(500).optional(),
+      }),
+    )
+    .max(20)
+    .optional(),
 })
 
 const searchParamsSchema = z.object({
@@ -157,6 +173,8 @@ export async function GET(request: NextRequest) {
           isFeatured: true,
           image: true,
           organizerId: true,
+          venueId: true,
+          venue: { select: { id: true, name: true, image: true } },
           tags: true,
           createdAt: true,
           updatedAt: true,
@@ -279,31 +297,83 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create event
-    const event = await prisma.event.create({
-      data: {
-        title: validatedData.title,
-        slug: validatedData.slug,
-        description: validatedData.description,
-        shortDescription: validatedData.shortDescription,
-        startDate,
-        endDate,
-        location: validatedData.location,
-        address: validatedData.address,
-        city: validatedData.city,
-        state: validatedData.state,
-        zipCode: validatedData.zipCode,
-        capacity: validatedData.capacity,
-        price: validatedData.price,
-        memberPrice: validatedData.memberPrice,
-        category: validatedData.category,
-        type: validatedData.type,
-        status: validatedData.status,
-        isFeatured: validatedData.isFeatured,
-        image: validatedData.image,
-        organizerId,
-        tags: validatedData.tags,
-      },
+    // Venue: an explicit id, else (opt-in) a name match or a new record from the address.
+    let venueId: string | null = validatedData.venueId || null
+    if (venueId) {
+      const venueCheck = await prisma.venue.findUnique({ where: { id: venueId } })
+      if (!venueCheck) {
+        return NextResponse.json({ error: "Venue not found" }, { status: 400 })
+      }
+    }
+
+    const tierInputs = validatedData.ticketTiers ?? []
+
+    // Event, venue link and tickets succeed or fail together.
+    const event = await prisma.$transaction(async (tx: any) => {
+      if (!venueId && validatedData.autoVenue) {
+        const known = await tx.venue.findMany({ select: { id: true, name: true } })
+        const found = matchVenue(known as { id: string; name: string }[], validatedData.location)
+        if (found) venueId = found.id
+        else {
+          const created = await tx.venue.create({
+            data: {
+              name: validatedData.location.trim(),
+              address: validatedData.address || null,
+              city: validatedData.city || null,
+              state: validatedData.state || null,
+              zipCode: validatedData.zipCode || null,
+            },
+          })
+          venueId = created.id
+        }
+      }
+
+      const created = await tx.event.create({
+        data: {
+          title: validatedData.title,
+          slug: validatedData.slug,
+          description: validatedData.description,
+          shortDescription: validatedData.shortDescription,
+          startDate,
+          endDate,
+          location: validatedData.location,
+          address: validatedData.address,
+          city: validatedData.city,
+          state: validatedData.state,
+          zipCode: validatedData.zipCode,
+          capacity: validatedData.capacity,
+          price: validatedData.price,
+          memberPrice: validatedData.memberPrice,
+          category: validatedData.category,
+          type: validatedData.type,
+          status: validatedData.status,
+          isFeatured: validatedData.isFeatured,
+          image: validatedData.image,
+          organizerId,
+          venueId,
+          tags: validatedData.tags,
+        },
+      })
+
+      // Non-member tiers first so each member tier can point at the one it is held at.
+      const ordered = [...tierInputs].sort((a, b) => (a.audience === "NON_MEMBER" ? 0 : 1) - (b.audience === "NON_MEMBER" ? 0 : 1))
+      let firstNonMemberId: string | null = null
+      for (let i = 0; i < ordered.length; i++) {
+        const t = ordered[i]
+        const tier: { id: string } = await tx.ticketTier.create({
+          data: {
+            eventId: created.id,
+            name: t.name,
+            description: t.description ?? null,
+            price: t.price,
+            audience: t.audience,
+            sortOrder: i,
+            nonMemberTierId: t.audience === "MEMBER" ? firstNonMemberId : null,
+          },
+        })
+        if (t.audience === "NON_MEMBER" && !firstNonMemberId) firstNonMemberId = tier.id
+      }
+      return created
     })
 
     const organizer = event.organizerId

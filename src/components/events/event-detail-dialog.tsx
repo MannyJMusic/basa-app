@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { Event, UpdateEventData } from '@/hooks/use-events'
 import { TicketTiersPanel } from '@/components/events/ticket-tiers-panel'
+import { ImageDropzone } from '@/components/admin/image-dropzone'
 import { useMembers } from '@/hooks/use-members'
 
 interface EventDetailDialogProps {
@@ -452,7 +453,9 @@ export function EventDetailDialog({
 
                 {/* Image URL */}
                 <div>
-                  <Label htmlFor="image">Image URL</Label>
+                  <Label htmlFor="image">Featured image (the flyer)</Label>
+                  <ImageDropzone kind="events" label="the flyer" value={formData.image} onChange={(url) => setFormData({ ...formData, image: url || undefined })} />
+                  <Label htmlFor="image" className="mt-2 block text-xs text-gray-500">Or paste an image URL</Label>
                   <Input
                     id="image"
                     type="url"

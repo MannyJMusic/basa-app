@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { EventImage } from '@/components/events/event-image'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -126,8 +127,11 @@ export default function EventsListPage() {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {filteredEvents.map((event) => (
-                  <Card key={event.id} className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg">
-                    <CardHeader className="bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
+                  <Card key={event.id} className="hover:shadow-xl transition-shadow duration-300 border-0 shadow-lg overflow-hidden">
+                    <Link href={`/events/${event.slug}`} aria-hidden tabIndex={-1} className="block empty:hidden">
+                      <EventImage src={event.image ?? event.venue?.image} alt="" className="w-full h-48 object-cover object-top bg-gray-100" />
+                    </Link>
+                    <CardHeader className="bg-linear-to-r from-blue-600 to-blue-700 text-white">
                       <div className="flex items-center justify-between">
                         {event.isFeatured && (
                           <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
