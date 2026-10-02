@@ -1,4 +1,6 @@
 import formData from 'form-data'
+import type { MembershipTier } from '@prisma/client'
+import { tierLabel, tierFromSlug, MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
 import { SITE_URL } from '@/lib/site-url'
 import { MEMBERSHIP_SALES_ENABLED, OFFICE_CONTACT } from '@/lib/feature-flags'
 import Mailgun from 'mailgun.js'
@@ -96,7 +98,7 @@ export function generateWelcomeEmailHtml(firstName: string, activationUrl: strin
   firstName = escapeHtml(firstName)
   activationUrl = escapeHtml(activationUrl)
   const siteUrl = options.siteUrl || getSiteUrl()
-  const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOG%20-SIDE2%20-%20WHITE%20-PROOF.png`
+  const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOGO%20-SIDE2%20-%20WHITE%20-PROOF.png`
   
   return `
 <!DOCTYPE html>
@@ -746,7 +748,7 @@ export async function sendContactFormEmail(
 // Verification / newsletter emails (moved from the former src/lib/email.ts, #33)
 
 export async function sendEmailVerification(email: string, firstName: string, verificationToken: string) {
-  const verificationUrl = `${process.env.NEXTAUTH_URL}/auth/verify?token=${verificationToken}`
+  const verificationUrl = `${getSiteUrl()}/auth/verify-email?token=${verificationToken}`
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h1>Verify your email, ${escapeHtml(firstName)}</h1>
@@ -885,7 +887,7 @@ export function generatePasswordResetEmailHtml(firstName: string, resetUrl: stri
   resetUrl = escapeHtml(resetUrl)
   const copy = options.copy || RESET_COPY
   const siteUrl = options.siteUrl || getSiteUrl()
-  const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOG%20-SIDE2%20-%20WHITE%20-PROOF.png`
+  const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOGO%20-SIDE2%20-%20WHITE%20-PROOF.png`
   
   return `
 <!DOCTYPE html>
@@ -1080,7 +1082,7 @@ export function generateEventInvitationEmailHtml(firstName: string, event: {
     shareUrl: escapeHtml(event.shareUrl),
   }
   const siteUrl = options.siteUrl || getSiteUrl()
-  const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOG%20-SIDE2%20-%20WHITE%20-PROOF.png`
+  const logoUrl = options.logoUrl || `${siteUrl}/images/logos/BASA%20-%20LOGO%20-SIDE2%20-%20WHITE%20-PROOF.png`
   
   return `
 <!DOCTYPE html>
@@ -1447,7 +1449,7 @@ export function generateEventInvitationEmailHtml(firstName: string, event: {
               <!-- Contact Info -->
               <div style="background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); border-left: 4px solid #FFD700; padding: 16px; border-radius: 0 8px 8px 0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">
                 <p style="font-size: 14px; line-height: 1.5; margin: 0; color: #64748b;">
-                  <strong>Questions?</strong> Contact us at <a href="mailto:events@businessassociationsa.com" class="basa-text-teal basa-hover-underline" style="text-decoration: none;">events@businessassociationsa.com</a> or call (210) 555-0123.
+                  <strong>Questions?</strong> Contact us at <a href="mailto:events@businessassociationsa.com" class="basa-text-teal basa-hover-underline" style="text-decoration: none;">events@businessassociationsa.com</a> or call (210) 549-7190.
                 </p>
               </div>
 
@@ -1761,16 +1763,7 @@ export function generateMembershipInvitationEmailHtml(name: string, tierId: stri
   const siteUrl = options.siteUrl || getSiteUrl()
   const logoUrl = options.logoUrl || `${siteUrl}/images/BASA-LOGO.png`
   
-  const tierNames: Record<string, string> = {
-    'meeting-member': 'Meeting Member',
-    'associate-member': 'Associate Member',
-    'trio-member': 'TRIO Member',
-    'class-resource-member': 'Class Resource Member',
-    'nag-resource-member': 'NAG Resource Member',
-    'training-resource-member': 'Training Resource Member'
-  }
-  
-  const tierName = tierNames[tierId] || 'BASA Member'
+  const tierName = tierLabel(tierFromSlug(tierId) ?? (MEMBERSHIP_TIER_VALUES as readonly string[]).find(t => t === tierId) as MembershipTier | undefined)
   
   return `
 <!DOCTYPE html>
