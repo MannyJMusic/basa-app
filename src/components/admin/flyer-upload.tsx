@@ -1,9 +1,8 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertTriangle, FileImage, Loader2, Sparkles } from 'lucide-react'
+import { AlertTriangle, Loader2, Sparkles, UploadCloud } from 'lucide-react'
 import type { CreateEventData } from '@/hooks/use-events'
 import type { TierDraft } from '@/lib/flyer-draft'
 
@@ -24,20 +23,25 @@ const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,application/pdf'
 const ACCEPTED_TYPES = ACCEPT.split(',')
 
 /**
- * "Create from flyer" (#69): upload an image or PDF, Claude pre-fills the form, the
- * admin confirms. This component only produces the draft; it never saves anything.
+ * "Create from flyer" (#69): drop (or choose) an image or PDF, Claude pre-fills the
+ * form, the admin confirms. The drop works anywhere on the page while this is shown,
+ * so a flyer dropped slightly off target is read instead of opening in the browser.
+ * This component only produces the draft; it never saves anything.
  */
 export function FlyerUpload({ onDraft, disabled }: FlyerUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [file, setFile] = useState<File | null>(null)
+  const [fileName, setFileName] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<FlyerDraft | null>(null)
-
   const [dragging, setDragging] = useState(false)
 
-  const extract = async (chosen: File | null = file) => {
-    if (!chosen) return
+  const extract = useCallback(async (chosen: File) => {
+    if (!ACCEPTED_TYPES.includes(chosen.type)) {
+      setError('Use an image (JPG, PNG, GIF, WebP) or a PDF.')
+      return
+    }
+    setFileName(chosen.name)
     setBusy(true)
     setError(null)
     setDone(null)
@@ -58,67 +62,65 @@ export function FlyerUpload({ onDraft, disabled }: FlyerUploadProps) {
     } finally {
       setBusy(false)
     }
-  }
+  }, [onDraft])
 
-  // Dropping a flyer reads it straight away; choosing one waits for the button.
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragging(false)
-    if (disabled || busy) return
-    const dropped = e.dataTransfer.files?.[0]
-    if (!dropped) return
-    if (!ACCEPTED_TYPES.includes(dropped.type)) {
-      setError('Drop an image (JPG, PNG, GIF, WebP) or a PDF.')
-      return
+  // Keep the latest handler for the window listeners without re-binding them.
+  const latest = useRef({ extract, blocked: false })
+  latest.current = { extract, blocked: !!disabled || busy }
+
+  useEffect(() => {
+    const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files')
+    const over = (e: DragEvent) => { if (hasFiles(e)) { e.preventDefault(); setDragging(true) } }
+    const leave = (e: DragEvent) => { if (!e.relatedTarget) setDragging(false) }
+    const drop = (e: DragEvent) => {
+      setDragging(false)
+      // A more specific drop target (the event image field) already took it.
+      if (!hasFiles(e) || e.defaultPrevented) return
+      e.preventDefault()
+      const f = e.dataTransfer?.files?.[0]
+      if (f && !latest.current.blocked) latest.current.extract(f)
     }
-    setFile(dropped)
-    setDone(null)
-    extract(dropped)
-  }
+    window.addEventListener('dragover', over)
+    window.addEventListener('dragleave', leave)
+    window.addEventListener('drop', drop)
+    return () => {
+      window.removeEventListener('dragover', over)
+      window.removeEventListener('dragleave', leave)
+      window.removeEventListener('drop', drop)
+    }
+  }, [])
 
   return (
-    <div
-      onDragOver={(e) => { e.preventDefault(); if (!disabled && !busy) setDragging(true) }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={onDrop}
-      className={`rounded-lg border border-dashed p-4 space-y-3 transition-colors ${dragging ? 'border-amber-500 bg-amber-50' : 'border-gray-300 bg-gray-50'}`}
-    >
-      <div className="flex items-center gap-2 text-sm font-medium text-gray-800">
-        <Sparkles className="h-4 w-4 text-amber-500" />
-        Start from a flyer
-        <span className="font-normal text-gray-500">(optional)</span>
-      </div>
-      <p className="text-xs text-gray-600">
-        Drag the event flyer here, or choose a file. The fields below will be pre-filled for you to check, including member and future member tickets.
-        Nothing is saved until you click Create Event.
-      </p>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPT}
-          className="hidden"
-          onChange={(e) => {
-            setFile(e.target.files?.[0] ?? null)
-            setError(null)
-            setDone(null)
-          }}
-        />
-        <Button type="button" variant="outline" size="sm" disabled={disabled || busy} onClick={() => inputRef.current?.click()}>
-          <FileImage className="h-4 w-4 mr-2" />
-          {file ? 'Choose a different file' : 'Choose flyer'}
-        </Button>
-        {file && (
-          <span className="text-xs text-gray-700 truncate max-w-[16rem]" title={file.name}>
-            {file.name} ({(file.size / 1024).toFixed(0)} KB)
-          </span>
-        )}
-        <Button type="button" size="sm" disabled={!file || disabled || busy} onClick={() => extract()}>
-          {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-          {busy ? 'Reading flyer…' : 'Pre-fill from flyer'}
-        </Button>
-      </div>
+    <div className="space-y-3">
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPT}
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) extract(f)
+          e.target.value = ''
+        }}
+      />
+      <button
+        type="button"
+        disabled={disabled || busy}
+        onClick={() => inputRef.current?.click()}
+        className={`flex w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors disabled:cursor-wait ${
+          dragging ? 'border-amber-500 bg-amber-50' : 'border-gray-300 bg-gray-50 hover:border-amber-400 hover:bg-amber-50/50'
+        }`}
+      >
+        {busy ? <Loader2 className="h-8 w-8 animate-spin text-amber-500" /> : <UploadCloud className="h-8 w-8 text-amber-500" />}
+        <span className="text-base font-semibold text-gray-900">
+          {busy ? `Reading ${fileName ?? 'flyer'}…` : dragging ? 'Drop it to pre-fill the event' : 'Drop the event flyer here to pre-fill this form'}
+        </span>
+        <span className="text-xs text-gray-600">
+          {busy
+            ? 'This takes a few seconds.'
+            : 'or click to choose an image or PDF. Details and member and future member tickets are filled in for you to check. Nothing is saved until you click Create Event.'}
+        </span>
+      </button>
 
       {error && (
         <Alert className="border-red-200 bg-red-50">
