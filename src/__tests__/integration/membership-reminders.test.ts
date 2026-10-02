@@ -49,13 +49,13 @@ describe('Renewal notices', () => {
       await makeMember(prisma, 'faroff@test.test', daysFromNow(90), 'ACTIVE');
       await makeMember(prisma, 'nodate@test.test', null, 'ACTIVE');
 
-      const first = await sendDueRenewalNotices();
+      const first = await sendDueRenewalNotices(undefined, { enabled: true });
       expect(first.remindersSent).toBe(3);
       expect(first.missingRenewalDate).toBe(1);
       expect(reminderMock).toHaveBeenCalledTimes(3);
 
       // A second run the same day is the case that a daily cron actually hits.
-      const second = await sendDueRenewalNotices();
+      const second = await sendDueRenewalNotices(undefined, { enabled: true });
       expect(second.remindersSent).toBe(0);
       expect(second.alreadySent).toBe(3);
       expect(reminderMock).toHaveBeenCalledTimes(3);
@@ -69,7 +69,7 @@ describe('Renewal notices', () => {
       // Three days out falls in the 7-day bucket after a missed run.
       await makeMember(prisma, 'three@test.test', daysFromNow(3), 'ACTIVE');
 
-      await sendDueRenewalNotices();
+      await sendDueRenewalNotices(undefined, { enabled: true });
 
       expect(reminderMock).toHaveBeenCalledTimes(1);
       const [, , , daysRemaining] = reminderMock.mock.calls[0];
@@ -84,7 +84,7 @@ describe('Renewal notices', () => {
       const original = daysFromNow(7);
       const member = await makeMember(prisma, 'renewer@test.test', original, 'ACTIVE');
 
-      await sendDueRenewalNotices();
+      await sendDueRenewalNotices(undefined, { enabled: true });
       expect(reminderMock).toHaveBeenCalledTimes(1);
 
       // Renewal moves the date on a year: out of range, so nothing yet.
@@ -92,7 +92,7 @@ describe('Renewal notices', () => {
         where: { id: member.id },
         data: { renewalDate: daysFromNow(7 + 365) },
       });
-      await sendDueRenewalNotices();
+      await sendDueRenewalNotices(undefined, { enabled: true });
       expect(reminderMock).toHaveBeenCalledTimes(1);
 
       // Back inside the window on a different day: a different cycle, so it sends.
@@ -100,7 +100,7 @@ describe('Renewal notices', () => {
         where: { id: member.id },
         data: { renewalDate: daysFromNow(6) },
       });
-      const later = await sendDueRenewalNotices();
+      const later = await sendDueRenewalNotices(undefined, { enabled: true });
       expect(later.remindersSent).toBe(1);
     })
   );
@@ -111,7 +111,7 @@ describe('Renewal notices', () => {
       const { prisma } = database;
       const member = await makeMember(prisma, 'resaved@test.test', daysFromNow(7), 'ACTIVE');
 
-      await sendDueRenewalNotices();
+      await sendDueRenewalNotices(undefined, { enabled: true });
       expect(reminderMock).toHaveBeenCalledTimes(1);
 
       // Something rewrites renewalDate to a slightly different instant on the same
@@ -128,7 +128,7 @@ describe('Renewal notices', () => {
         data: { renewalDate: new Date(current.getTime() - 1000) },
       });
 
-      const second = await sendDueRenewalNotices();
+      const second = await sendDueRenewalNotices(undefined, { enabled: true });
       expect(second.remindersSent).toBe(0);
       expect(second.alreadySent).toBe(1);
       expect(reminderMock).toHaveBeenCalledTimes(1);
@@ -145,7 +145,7 @@ describe('Renewal notices', () => {
       await makeMember(prisma, 'legacy@test.test', daysFromNow(-1200), 'EXPIRED');
       await makeMember(prisma, 'legacy2@test.test', daysFromNow(-400), 'EXPIRED');
 
-      const result = await sendDueRenewalNotices();
+      const result = await sendDueRenewalNotices(undefined, { enabled: true });
 
       expect(result.expiredNoticesSent).toBe(1);
       expect(expiredMock).toHaveBeenCalledTimes(1);
@@ -160,15 +160,34 @@ describe('Renewal notices', () => {
       await makeMember(prisma, 'bounces@test.test', daysFromNow(7), 'ACTIVE');
       reminderMock.mockResolvedValueOnce({ success: false, error: 'Mailgun is down' });
 
-      const first = await sendDueRenewalNotices();
+      const first = await sendDueRenewalNotices(undefined, { enabled: true });
       expect(first.failed).toBe(1);
       expect(first.remindersSent).toBe(0);
 
       // Tomorrow's run must not try again: a broken mail key would otherwise turn
       // into a flood aimed at whoever happens to be inside a window.
-      const second = await sendDueRenewalNotices();
+      const second = await sendDueRenewalNotices(undefined, { enabled: true });
       expect(second.remindersSent).toBe(0);
       expect(second.alreadySent).toBe(1);
     })
   );
+
+  describe('switch', () => {
+    it('sends nothing and claims nothing while member notices are off', withEmptyTestDatabase(async ({ database }) => {
+      const { prisma } = database;
+      const user = await prisma.user.create({ data: { email: 'gate@test.test', firstName: 'Gate', role: 'MEMBER' } });
+      await prisma.member.create({ data: { userId: user.id, membershipStatus: 'ACTIVE', renewalDate: new Date(Date.now() + 5 * 86_400_000) } });
+      const result = await sendDueRenewalNotices(undefined, { enabled: false });
+      expect(result.remindersSent).toBe(0);
+      expect(await prisma.membershipReminder.count()).toBe(0);
+    }));
+
+    it('never reminds a member whose membership renews through Stripe', withEmptyTestDatabase(async ({ database }) => {
+      const { prisma } = database;
+      const user = await prisma.user.create({ data: { email: 'sub@test.test', firstName: 'Sub', role: 'MEMBER' } });
+      await prisma.member.create({ data: { userId: user.id, membershipStatus: 'ACTIVE', subscriptionId: 'sub_test_1', renewalDate: new Date(Date.now() + 5 * 86_400_000) } });
+      const result = await sendDueRenewalNotices(undefined, { enabled: true });
+      expect(result.remindersSent).toBe(0);
+    }));
+  });
 });

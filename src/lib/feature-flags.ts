@@ -15,6 +15,13 @@
  */
 export const MEMBERSHIP_SALES_ENABLED = process.env.MEMBERSHIP_SALES_ENABLED === 'true'
 
+/**
+ * Whether the daily sweep may email members about renewals and lapsed memberships.
+ * Off unless the environment says `true` (owner, 2026-10-02: no member emails go
+ * out until the owner says so). Expiry itself still runs; only the emails wait.
+ */
+export const MEMBER_NOTICES_ENABLED = process.env.MEMBER_NOTICES_ENABLED === 'true'
+
 /** Who handles memberships while online sales are off. */
 export const OFFICE_CONTACT = {
   name: 'Jen',
