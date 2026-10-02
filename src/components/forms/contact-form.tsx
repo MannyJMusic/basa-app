@@ -278,7 +278,7 @@ export default function ContactForm() {
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     className="border-gray-300 focus:border-navy-500 focus:ring-navy-500"
-                    placeholder="your.email@company.com"
+                    placeholder="Your email address"
                   />
                 </div>
                 <div className="space-y-2">
@@ -291,7 +291,7 @@ export default function ContactForm() {
                     value={formData.phone}
                     onChange={(e) => handleInputChange("phone", e.target.value)}
                     className="border-gray-300 focus:border-navy-500 focus:ring-navy-500"
-                    placeholder="(210) 555-0123"
+                    placeholder="Your phone number"
                   />
                 </div>
               </div>

@@ -11,12 +11,11 @@ const STATIC_PAGES: Array<{ path: string; priority: number; changeFrequency: Met
   { path: '/events', priority: 0.9, changeFrequency: 'daily' },
   { path: '/events/calendar', priority: 0.7, changeFrequency: 'daily' },
   { path: '/membership', priority: 0.9, changeFrequency: 'monthly' },
-  { path: '/membership/pricing', priority: 0.8, changeFrequency: 'monthly' },
-  { path: '/membership/benefits', priority: 0.7, changeFrequency: 'monthly' },
-  { path: '/membership/compare', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/membership/join', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/about', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/contact', priority: 0.5, changeFrequency: 'yearly' },
+  { path: '/privacy', priority: 0.2, changeFrequency: 'yearly' },
+  { path: '/terms', priority: 0.2, changeFrequency: 'yearly' },
 ]
 
 /**

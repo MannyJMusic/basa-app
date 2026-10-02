@@ -16,8 +16,8 @@ const inter = Inter({
 
 export function generateMetadata(): Metadata {
   return {
-    title: "BASA - Business Association of San Antonio | Premier Business Network",
-    description: "Join 150+ thriving businesses in San Antonio's premier business network. Connect, collaborate, and grow with BASA's strategic networking events and community partnerships.",
+    title: "BASA - Business Association of San Antonio",
+    description: "Business Association of San Antonio (BASA): networking events and membership for San Antonio businesses.",
     keywords: ["business network", "San Antonio", "networking", "business association", "BASA", "professional development", "business growth"],
     authors: [{ name: "BASA - Business Association of San Antonio" }],
     creator: "BASA",
@@ -33,13 +33,9 @@ export function generateMetadata(): Metadata {
       telephone: false,
     },
     metadataBase: new URL(SITE_URL),
-    alternates: {
-      canonical: '/',
-    },
     openGraph: {
       title: "BASA - Business Association of San Antonio",
-      description: "Join 150+ thriving businesses in San Antonio's premier business network. Connect, collaborate, and grow with BASA's strategic networking events and community partnerships.",
-      url: '/',
+      description: "Business Association of San Antonio (BASA): networking events and membership for San Antonio businesses.",
       siteName: 'BASA',
       images: [
         {
@@ -55,7 +51,7 @@ export function generateMetadata(): Metadata {
     twitter: {
       card: 'summary_large_image',
       title: "BASA - Business Association of San Antonio",
-      description: "Join 150+ thriving businesses in San Antonio's premier business network.",
+      description: "Business Association of San Antonio (BASA): networking events and membership for San Antonio businesses.",
       images: ['/images/BASA-LOGO.png'],
     },
     robots: {
