@@ -22,7 +22,6 @@ import {
   Star,
   Edit,
   Save,
-  X,
   Trash2,
   AlertTriangle,
   CheckCircle,
@@ -169,7 +168,7 @@ export function EventDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[1400px] max-h-[94vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pr-8">
             <div>
               <DialogTitle className="text-2xl font-bold">
                 {isEditing ? 'Edit Event' : event.title}
@@ -189,13 +188,6 @@ export function EventDetailDialog({
                   Edit
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onOpenChange(false)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
             </div>
           </div>
         </DialogHeader>
