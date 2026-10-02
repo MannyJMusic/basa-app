@@ -212,10 +212,25 @@ describe('Events API Integration Tests', () => {
         expect(member.nonMemberTierId).toBe(future.id);
 
         // An unknown venue is created from the address.
-        const res2 = await post(body({ slug: 'taco-tuesday-274b', location: 'Elsewhere Too', ticketTiers: undefined }));
+        const res2 = await post(body({ slug: 'taco-tuesday-274b', title: 'Elsewhere Mixer', location: 'Elsewhere Too', ticketTiers: undefined }));
         expect(res2.status).toBe(200);
         const created = await prisma.venue.findFirst({ where: { name: 'Elsewhere Too' } });
         expect(created?.address).toBe('20210 Stone Oak Pkwy');
+
+        // The same title on the same day is refused unless explicitly allowed...
+        const dup = await post(body({ slug: 'taco-tuesday-274c' }));
+        expect(dup.status).toBe(409);
+        const dupBody = await dup.json();
+        expect(dupBody.duplicates[0]).toMatchObject({ id: event.id, level: 'exact' });
+        // ...while the same title a week later is a different event.
+        const later = await post(body({
+          slug: 'taco-tuesday-274d',
+          startDate: new Date(Date.now() + 14 * 864e5).toISOString(),
+          endDate: new Date(Date.now() + 14 * 864e5 + 72e5).toISOString(),
+        }));
+        expect(later.status).toBe(200);
+        const forced = await post(body({ slug: 'taco-tuesday-274e', allowDuplicate: true }));
+        expect(forced.status).toBe(200);
       })
     );
 

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { toast } from '@/components/ui/use-toast'
+import type { DuplicateMatch } from '@/lib/event-duplicates'
 
 export interface Event {
   id: string
@@ -86,6 +87,8 @@ export interface CreateEventData {
   venueId?: string | null
   /** Reuse a venue matching `location`, or create one from the address (#274). */
   autoVenue?: boolean
+  /** Create even if the same event is already on that date (#duplicates). */
+  allowDuplicate?: boolean
   /** Ticket types created with the event (#274). */
   ticketTiers?: Array<{ name: string; price: number; audience: 'ALL' | 'MEMBER' | 'NON_MEMBER'; description?: string }>
   tags: string[]
@@ -212,7 +215,8 @@ export function useEvents() {
       if (!response.ok) {
         const errorData = await response.json()
         console.error('useEvents: create event error:', errorData)
-        throw new Error(errorData.error || 'Failed to create event')
+        // A 409 carries the events it collided with so the form can offer "update that one".
+        throw Object.assign(new Error(errorData.error || 'Failed to create event'), { duplicates: errorData.duplicates as DuplicateMatch[] | undefined })
       }
 
       const event: Event = await response.json()
@@ -223,12 +227,15 @@ export function useEvents() {
       })
       return event
     } catch (error) {
-      console.error('Error creating event:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create event",
-        variant: "destructive",
-      })
+      // A duplicate is handled by the form (update it, or create anyway), not an error toast.
+      if (!(error instanceof Error && 'duplicates' in error)) {
+        console.error('Error creating event:', error)
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to create event",
+          variant: "destructive",
+        })
+      }
       throw error
     } finally {
       setLoading(false)
