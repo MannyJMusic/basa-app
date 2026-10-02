@@ -4,6 +4,7 @@ import { requireAdmin, isResponse } from "@/lib/api-auth"
 import { auth } from "@/lib/auth"
 import { parseEventDateTime } from "@/lib/event-time"
 import { matchVenue } from "@/lib/venues"
+import { findDuplicates } from "@/lib/event-duplicates"
 
 // Get Prisma client dynamically to support test injection
 const getPrisma = () => {
@@ -40,6 +41,8 @@ const createEventSchema = z.object({
   organizerId: z.string().min(1).nullable().optional(),
   tags: z.array(z.string()).default([]),
   venueId: z.string().min(1).nullable().optional(),
+  /** Create even though an event with the same title is already on the same day. */
+  allowDuplicate: z.boolean().default(false),
   /** Reuse the venue whose name matches `location`, or create one from the address fields (#274). */
   autoVenue: z.boolean().default(false),
   /** Ticket types created with the event, so a flyer-made event can be sold at once (#274). */
@@ -294,6 +297,19 @@ export async function POST(request: NextRequest) {
       const organizerCheck = await prisma.organizer.findUnique({ where: { id: organizerId } })
       if (!organizerCheck) {
         return NextResponse.json({ error: "Organizer not found" }, { status: 400 })
+      }
+    }
+
+    // Same title on the same day is almost always a re-issued flyer: update the
+    // existing event instead. Different dates of the same title are fine.
+    if (!validatedData.allowDuplicate) {
+      const existing = await prisma.event.findMany({ select: { id: true, title: true, slug: true, startDate: true, location: true, status: true } })
+      const { matches } = findDuplicates({ title: validatedData.title, startDate, location: validatedData.location }, existing)
+      if (matches.length > 0) {
+        return NextResponse.json(
+          { error: `An event like this is already on that date: "${matches[0].title}"`, duplicates: matches },
+          { status: 409 },
+        )
       }
     }
 
