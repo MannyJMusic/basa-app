@@ -40,6 +40,8 @@ import { DraftTiersEditor } from '@/components/admin/draft-tiers-editor'
 import { ImageDropzone } from '@/components/admin/image-dropzone'
 import { EventImage } from '@/components/events/event-image'
 import { deriveTiers, type TierDraft } from '@/lib/flyer-draft'
+import { fieldsToUpdate } from '@/lib/flyer-batch'
+import type { DuplicateMatch } from '@/lib/event-duplicates'
 import { DashboardTableLoading } from '@/components/ui/dashboard-loading'
 
 export default function AdminEventsPage() {
@@ -96,6 +98,8 @@ export default function AdminEventsPage() {
 
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  // Events already on that date with a like title; shown instead of creating a second one.
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[] | null>(null)
 
   // A flyer draft only fills the form; the admin still reviews and clicks Create (#69).
   const applyFlyerDraft = (draft: FlyerDraft) => {
@@ -142,9 +146,10 @@ export default function AdminEventsPage() {
     setCurrentPage(1)
   }
 
-  const handleCreateEvent = async () => {
+  const handleCreateEvent = async (allowDuplicate = false) => {
     setCreateLoading(true)
     setCreateError(null)
+    setDuplicates(null)
 
     // Client-side validation
     const requiredFields = {
@@ -188,6 +193,7 @@ export default function AdminEventsPage() {
         autoVenue: !createFormData.venueId,
         image: createFormData.image || undefined,
         ticketTiers,
+        allowDuplicate,
       } as CreateEventData)
       setShowCreateDialog(false)
       setTiers([])
@@ -217,7 +223,26 @@ export default function AdminEventsPage() {
       })
       fetchEvents(filters, currentPage, 20, sortBy, sortOrder)
     } catch (error) {
-      setCreateError(error instanceof Error ? error.message : 'Failed to create event')
+      const found = error instanceof Error ? (error as Error & { duplicates?: DuplicateMatch[] }).duplicates : undefined
+      if (found?.length) setDuplicates(found)
+      else setCreateError(error instanceof Error ? error.message : 'Failed to create event')
+    } finally {
+      setCreateLoading(false)
+    }
+  }
+
+  // The flyer was a re-issue of an event that exists: apply it there instead.
+  const updateExisting = async (match: DuplicateMatch) => {
+    setCreateLoading(true)
+    setCreateError(null)
+    try {
+      await updateEvent(match.id, fieldsToUpdate(createFormData))
+      setDuplicates(null)
+      setShowCreateDialog(false)
+      setTiers([])
+      fetchEvents(filters, currentPage, 20, sortBy, sortOrder)
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : 'Failed to update event')
     } finally {
       setCreateLoading(false)
     }
@@ -296,6 +321,36 @@ export default function AdminEventsPage() {
                   Add a new event to the BASA calendar
                 </DialogDescription>
               </DialogHeader>
+
+              {duplicates && (
+                <Alert className="border-amber-300 bg-amber-50">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="space-y-3 text-amber-900">
+                    <p className="font-medium">
+                      {duplicates.length === 1 ? 'This event looks like one already on the calendar for that day:' : 'These events are already on the calendar for that day:'}
+                    </p>
+                    <ul className="space-y-2">
+                      {duplicates.map(d => (
+                        <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white/70 p-2 text-sm">
+                          <span>
+                            <strong>{d.title}</strong> · {new Date(d.startDate).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Chicago' })} · {d.status.toLowerCase()}
+                            {d.level === 'likely' && <span className="text-amber-700"> (similar title)</span>}
+                          </span>
+                          <Button type="button" size="sm" disabled={createLoading} onClick={() => updateExisting(d)}>
+                            Update this event with the flyer
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant="outline" disabled={createLoading} onClick={() => handleCreateEvent(true)}>
+                        It is a different event, create it anyway
+                      </Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => setDuplicates(null)}>Dismiss</Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {createError && (
                 <Alert className="border-red-200 bg-red-50">
@@ -594,7 +649,7 @@ export default function AdminEventsPage() {
                     Cancel
                   </Button>
                   <Button
-                    onClick={handleCreateEvent}
+                    onClick={() => handleCreateEvent()}
                     disabled={createLoading || !createFormData.title || !createFormData.slug || !createFormData.description}
                   >
                     {createLoading ? 'Creating...' : 'Create Event'}
