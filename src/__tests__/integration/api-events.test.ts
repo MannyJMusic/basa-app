@@ -171,6 +171,55 @@ describe('Events API Integration Tests', () => {
 
   describe('POST /api/events', () => {
     it(
+      'creates member and future member tickets and a venue with the event (#274)',
+      withTestDatabase(async ({ database }) => {
+        const { prisma } = database;
+        const user = await TestUtils.createTestUser(prisma, 'flyer-admin@test.com', 'ADMIN');
+        const existing = await prisma.venue.create({ data: { name: "Smokey Mo's" } });
+
+        const body = (over: Record<string, unknown>) => ({
+          title: 'Taco Tuesday', slug: 'taco-tuesday-274', description: '<p>Tacos</p>',
+          startDate: new Date(Date.now() + 7 * 864e5).toISOString(),
+          endDate: new Date(Date.now() + 7 * 864e5 + 72e5).toISOString(),
+          location: "Smokey Mo's - Stone Oak", address: '20210 Stone Oak Pkwy', city: 'San Antonio', state: 'TX',
+          category: 'Breakfast', autoVenue: true,
+          ticketTiers: [
+            { name: 'Member', price: 18, audience: 'MEMBER' },
+            { name: 'Future Member', price: 25, audience: 'NON_MEMBER' },
+          ],
+          ...over,
+        });
+        const { POST } = createTestAPI(database.prisma);
+        (auth as jest.Mock).mockResolvedValue({ user: { id: user.id, email: user.email, role: 'ADMIN' } });
+        const post = (b: object) => POST(TestUtils.createMockRequest({
+          method: 'POST', url: 'http://localhost:3000/api/events', body: b, headers: { 'content-type': 'application/json' },
+        }) as any);
+
+        const res = await post(body({}));
+        expect(res.status).toBe(200);
+        const event = await res.json();
+
+        // Matched the saved venue instead of creating a second one.
+        expect(event.venueId).toBe(existing.id);
+        expect(await prisma.venue.count()).toBe(1);
+
+        const tiers = await prisma.ticketTier.findMany({ where: { eventId: event.id }, orderBy: { sortOrder: 'asc' } });
+        const member = tiers.find((t: any) => t.audience === 'MEMBER');
+        const future = tiers.find((t: any) => t.audience === 'NON_MEMBER');
+        expect(Number(member.price)).toBe(18);
+        expect(Number(future.price)).toBe(25);
+        // Unverified members are held at the future member price.
+        expect(member.nonMemberTierId).toBe(future.id);
+
+        // An unknown venue is created from the address.
+        const res2 = await post(body({ slug: 'taco-tuesday-274b', location: 'Elsewhere Too', ticketTiers: undefined }));
+        expect(res2.status).toBe(200);
+        const created = await prisma.venue.findFirst({ where: { name: 'Elsewhere Too' } });
+        expect(created?.address).toBe('20210 Stone Oak Pkwy');
+      })
+    );
+
+    it(
       'should create a new event',
       withTestDatabase(async ({ database }) => {
         const { prisma } = database;

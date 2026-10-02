@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { mkdir, writeFile } from "fs/promises"
-import path from "path"
 import * as Sentry from "@sentry/nextjs"
 import { requireAdmin, isResponse } from "@/lib/api-auth"
+import { prisma } from "@/lib/db"
+import { storeImage } from "@/lib/uploads"
+import { matchVenue } from "@/lib/venues"
 import {
   extractEventFromFlyer,
   flyerToFormDraft,
@@ -67,11 +68,29 @@ export async function POST(request: NextRequest) {
       // Keep the flyer as the featured image when it is one. PDFs are not images and
       // are not stored: an <img> pointing at a PDF renders broken.
       if (isFlyerImageType(mediaType)) {
-        const stored = await storeFlyer(data, file.name, mediaType, request)
-        if (stored) draft.fields.image = stored
+        const stored = await storeImage(data, file.name, mediaType, "flyers", request.url)
+        if (stored) draft.fields.image = stored.url
         else draft.warnings.push("The flyer could not be stored as the event image; add one by hand.")
       } else {
         draft.warnings.push("PDF flyers are read but not used as the event image; add an image by hand.")
+      }
+
+      // Link to a known venue so the event page gets its photo and map. An unknown
+      // one is created when the event is saved (autoVenue), not here.
+      if (draft.fields.location) {
+        const venues = await prisma.venue.findMany({ select: { id: true, name: true, address: true, city: true, state: true, zipCode: true } })
+        const venue = matchVenue(venues, draft.fields.location)
+        if (venue) {
+          draft.fields.venueId = venue.id
+          draft.fields.location = venue.name
+          if (!draft.fields.address && venue.address) draft.fields.address = venue.address
+          if (!draft.fields.city && venue.city) draft.fields.city = venue.city
+          if (!draft.fields.state && venue.state) draft.fields.state = venue.state
+          if (!draft.fields.zipCode && venue.zipCode) draft.fields.zipCode = venue.zipCode
+          draft.warnings.push(`Matched the saved venue "${venue.name}".`)
+        } else {
+          draft.warnings.push(`"${draft.fields.location}" is a new venue and will be saved with the event.`)
+        }
       }
 
       span.setAttribute("flyer.low_confidence", draft.lowConfidence.length)
@@ -87,34 +106,4 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Reading the flyer failed unexpectedly" }, { status: 500 })
     }
   })
-}
-
-/**
- * Write the flyer under public/uploads/flyers (the bind-mounted uploads volume in
- * production, served by nginx) and return an absolute URL, or null if the volume
- * is not writable. The create-event API validates `image` as a URL, so relative
- * paths are not an option here.
- */
-async function storeFlyer(data: Buffer, originalName: string, mediaType: string, request: NextRequest): Promise<string | null> {
-  const ext = { "image/jpeg": "jpg", "image/png": "png", "image/gif": "gif", "image/webp": "webp" }[mediaType] ?? "bin"
-  const base = path
-    .basename(originalName, path.extname(originalName))
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60) || "flyer"
-  const stamp = new Date().toISOString().slice(0, 10)
-  const name = `${stamp}-${base}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-
-  const dir = path.join(process.cwd(), "public", "uploads", "flyers")
-  try {
-    await mkdir(dir, { recursive: true })
-    await writeFile(path.join(dir, name), data, { flag: "wx" })
-  } catch (error) {
-    Sentry.captureException(error)
-    return null
-  }
-
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? new URL(request.url).origin
-  return `${origin.replace(/\/$/, "")}/uploads/flyers/${name}`
 }
