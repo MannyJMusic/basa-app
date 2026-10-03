@@ -109,7 +109,19 @@ There is **no self-registration** (owner decision 2026-09-22, #166). Accounts ar
 
 ## Feature gates
 
-`src/lib/feature-flags.ts`, read from the server environment at request time and passed to client components as props. `MEMBERSHIP_SALES_ENABLED` (off unless exactly `true`) controls whether memberships can be bought or renewed online: off means the join and payment pages show how to reach the office, tier listings show no prices or buy buttons, the dashboard shows no upgrade offers, renewal emails point at the office, and `POST /api/payments/membership` answers 403. Event tickets are unaffected. The e2e suite runs with it on so the join wizard stays tested.
+`src/lib/feature-flags.ts`, read from the server environment at request time and passed to client components as props. `MEMBERSHIP_SALES_ENABLED` (off unless exactly `true`) controls whether memberships can be bought or renewed online: off means the join and payment pages show how to reach the office, tier listings show no prices or buy buttons, the dashboard shows no upgrade offers, renewal emails point at the office, and `POST /api/payments/membership` answers 403. Event tickets are unaffected. The e2e suite runs with it on so the join flow stays tested.
+
+`MEMBER_NOTICES_ENABLED` (off unless exactly `true`; owner rule 2026-10-02: no member emails until the owner says so) gates the renewal reminders and lapse notices the daily `/api/cron/membership-expiry` sweep sends. Expiry itself still runs; while off, nothing is claimed in `MembershipReminder`, so turning it on sends what is due then. Account invitations are separate: an admin sends them by hand from `/admin/members/invitations`.
+
+## Membership levels and billing (2026 relaunch)
+
+Levels are `src/lib/membership-tiers.ts`, the only place prices live: Meeting $350, Market $650, Action $950, Mixer $1,990, Sponsorship $3,900 a year (from "BASA Membership Levels - 10.01.2026"; the contract form's $995 for Sponsorship is out of date). There are no chapters; `Chapter` rows remain for history only.
+
+- **Online purchase** is a yearly Stripe subscription through Checkout that renews at the joining price until cancelled (the contract's terms). `/membership/join` posts to `POST /api/payments/membership`, which returns a Checkout URL and grants nothing. Prices are Stripe Prices with lookup keys `basa_<slug>_yearly_<cents>` (`ensureTierPrice`); a price change makes a new key, so existing subscribers keep their rate.
+- **The webhook** (`src/lib/membership-billing.ts`) is the only place a membership is granted or changed: `checkout.session.completed` activates (creating a claim-state account and emailing a set-password link when needed), `invoice.payment_succeeded` with `billing_reason` other than `subscription_create` moves `renewalDate` on, `customer.subscription.updated` tracks `cancelAtPeriodEnd`, and `customer.subscription.deleted` expires. The live endpoint is subscribed to all of these.
+- **Members manage billing** in the Stripe billing portal (`POST /api/membership/billing-portal`, from My Membership); cancellation is at period end.
+- **Office-billed members** (the office's master list, loaded with `scripts/member-list/import-master-list.ts`, or added by staff) have no subscription; staff set `renewalDate`, and the expiry sweep ends them. Subscription members get `SUBSCRIPTION_GRACE_DAYS` before the sweep expires them, and never get renewal-reminder emails. Monthly billing (Mixer, Sponsorship) and the BASA Channel add-on are arranged by the office, not sold online.
+- `membershipPurchaseBlock` stops a second purchase while a subscription runs, or by an office-billed member more than 60 days before renewal.
 
 ## Member and non-member ticket tiers
 
@@ -160,7 +172,7 @@ API routes are in `src/app/api/`. Key domains:
 
 Static files under `public/` and `/uploads/` (served by nginx) are public by definition.
 
-There is one Stripe webhook handler, `/api/webhooks/stripe` (the legacy `/api/payments/webhook` was deleted 2026-09-22). It verifies the signature with `STRIPE_WEBHOOK_SECRET`, then claims the event id in `StripeEvent` before calling `handleWebhookEvent`: a redelivery is acknowledged without running again, and a failed run deletes the claim so Stripe's retry is processed. It is the only place a membership purchase takes effect; `POST /api/payments/membership` creates the PaymentIntent (and at most a `GUEST` user with a `PENDING` member row) and grants nothing. A purchase promotes `GUEST` to `MEMBER` and never changes any other role.
+There is one Stripe webhook handler, `/api/webhooks/stripe` (the legacy `/api/payments/webhook` was deleted 2026-09-22). It verifies the signature with `STRIPE_WEBHOOK_SECRET`, then claims the event id in `StripeEvent` before calling `handleWebhookEvent`: a redelivery is acknowledged without running again, and a failed run deletes the claim so Stripe's retry is processed. It is the only place a membership purchase takes effect; `POST /api/payments/membership` only creates a Stripe Checkout Session (no user, no member row) and grants nothing. A purchase promotes `GUEST` to `MEMBER` and never changes any other role.
 
 ### Sessions and member data
 - The `jwt` callback re-reads `role`, `isActive` and `accountStatus` on every request (`src/lib/session-revalidation.ts`), so demotion and deactivation take effect immediately. Setting `User.sessionsInvalidBefore` ends every session issued before it; password reset and an admin password change set it.

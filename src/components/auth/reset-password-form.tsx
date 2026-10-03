@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Alert } from "@/components/ui/alert"
+import { PASSWORD_HINT } from "@/lib/validations"
 
 /**
  * Set a password from an emailed link.
@@ -76,7 +77,7 @@ export default function ResetPasswordForm() {
           required
         />
         <p className="mt-1 text-xs text-muted-foreground">
-          At least 8 characters, with an uppercase letter, a lowercase letter and a number.
+          {PASSWORD_HINT}
         </p>
       </div>
       <div>

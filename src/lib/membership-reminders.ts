@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db"
 import * as Sentry from "@sentry/nextjs"
 import { sendMembershipExpiredEmail, sendMembershipRenewalReminderEmail } from "@/lib/basa-emails"
+import { MEMBER_NOTICES_ENABLED } from "@/lib/feature-flags"
 
 const { logger } = Sentry
 
@@ -106,10 +107,16 @@ interface Candidate {
  * repeating it every day until someone notices, and two workers racing cannot both
  * send: the second one's insert violates the unique constraint.
  */
-export async function sendDueRenewalNotices(now: Date = new Date()): Promise<ReminderSweepResult> {
+export async function sendDueRenewalNotices(
+  now: Date = new Date(),
+  { enabled = MEMBER_NOTICES_ENABLED }: { enabled?: boolean } = {},
+): Promise<ReminderSweepResult> {
   const result: ReminderSweepResult = {
     remindersSent: 0, expiredNoticesSent: 0, alreadySent: 0, failed: 0, missingRenewalDate: 0,
   }
+  // Switched off: nothing is claimed either, so turning it on later sends what is
+  // due then rather than silently skipping members.
+  if (!enabled) return result
 
   const horizon = new Date(now.getTime() + Math.max(...REMINDER_INTERVALS) * DAY_MS)
   const lapsedSince = new Date(now.getTime() - EXPIRED_NOTICE_WINDOW_DAYS * DAY_MS)
@@ -119,6 +126,9 @@ export async function sendDueRenewalNotices(now: Date = new Date()): Promise<Rem
       where: {
         membershipStatus: "ACTIVE",
         renewalDate: { not: null, gte: now, lte: horizon },
+        // Online members renew automatically through Stripe; these notices are for
+        // memberships the office bills by hand.
+        subscriptionId: null,
       },
       select: { id: true, renewalDate: true, user: { select: { email: true, firstName: true, name: true } } },
     }),
@@ -127,6 +137,7 @@ export async function sendDueRenewalNotices(now: Date = new Date()): Promise<Rem
         membershipStatus: "EXPIRED",
         // The window, not just "in the past": see EXPIRED_NOTICE_WINDOW_DAYS.
         renewalDate: { not: null, gte: lapsedSince, lt: now },
+        subscriptionId: null,
       },
       select: { id: true, renewalDate: true, user: { select: { email: true, firstName: true, name: true } } },
     }),

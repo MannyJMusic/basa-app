@@ -1,19 +1,14 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Facebook, 
-  Twitter, 
-  Linkedin, 
-  Instagram,
-  ArrowRight,
+import { OFFICE_CONTACT } from "@/lib/feature-flags"
+import { NewsletterForm } from "@/components/marketing/newsletter-form"
+import {
+  Mail,
+  Phone,
+  MapPin,
   Building2,
   Users,
   Calendar,
-  FileText,
   MessageSquare,
   Heart
 } from "lucide-react"
@@ -27,13 +22,6 @@ export default function Footer() {
     { href: "/events", label: "Events", icon: Calendar },
     { href: "/membership", label: "Membership", icon: Users },
     { href: "/contact", label: "Contact", icon: MessageSquare },
-  ]
-
-  const socialLinks = [
-    { href: "#", label: "Facebook", icon: Facebook },
-    { href: "#", label: "Twitter", icon: Twitter },
-    { href: "#", label: "LinkedIn", icon: Linkedin },
-    { href: "#", label: "Instagram", icon: Instagram },
   ]
 
   return (
@@ -64,11 +52,15 @@ export default function Footer() {
               <div className="space-y-3">
                 <div className="flex items-center text-gray-300">
                   <Mail className="w-4 h-4 mr-3 text-blue-400" />
-                  <span>info@businessassociationsa.com</span>
+                  <a href={`mailto:${OFFICE_CONTACT.email}`} className="hover:text-blue-400 transition-colors duration-200">
+                    {OFFICE_CONTACT.email}
+                  </a>
                 </div>
                 <div className="flex items-center text-gray-300">
                   <Phone className="w-4 h-4 mr-3 text-blue-400" />
-                  <span>(210) 549-7190</span>
+                  <a href={OFFICE_CONTACT.phoneHref} className="hover:text-blue-400 transition-colors duration-200">
+                    {OFFICE_CONTACT.phone}
+                  </a>
                 </div>
                 <div className="flex items-start text-gray-300">
                   <MapPin className="w-4 h-4 mr-3 mt-0.5 text-blue-400 shrink-0" />
@@ -98,7 +90,7 @@ export default function Footer() {
               </ul>
             </div>
             
-            {/* Newsletter & Social */}
+            {/* Newsletter */}
             <div>
               <h4 className="text-lg font-semibold mb-6 text-white">Stay Connected</h4>
               <p className="text-gray-300 mb-6">
@@ -106,37 +98,7 @@ export default function Footer() {
               </p>
               
               {/* Newsletter Signup */}
-              <div className="mb-8">
-                <div className="flex">
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-l-lg text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-r-lg border-l-0">
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Social Links */}
-              <div>
-                <h5 className="text-sm font-semibold mb-4 text-gray-300">Follow Us</h5>
-                <div className="flex space-x-3">
-                  {socialLinks.map((social) => {
-                    const Icon = social.icon
-                    return (
-                      <Link
-                        key={social.label}
-                        href={social.href}
-                        className="w-10 h-10 bg-gray-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-all duration-200 group"
-                      >
-                        <Icon className="w-5 h-5 text-gray-300 group-hover:text-white" />
-                      </Link>
-                    )
-                  })}
-                </div>
-              </div>
+              <NewsletterForm source="footer" tone="dark" />
             </div>
           </div>
         </div>
@@ -164,9 +126,9 @@ export default function Footer() {
               <Link href="/terms" className="hover:text-blue-400 transition-colors duration-200">
                 Terms of Service
               </Link>
-              <Link href="/sitemap" className="hover:text-blue-400 transition-colors duration-200">
+              <a href="/sitemap.xml" className="hover:text-blue-400 transition-colors duration-200">
                 Sitemap
-              </Link>
+              </a>
             </div>
           </div>
           

@@ -2,335 +2,22 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
-import { useRef, useState, useEffect } from "react"
-import { 
-  Users, 
-  TrendingUp, 
-  Calendar, 
-  Heart,
+import {
   Star,
-  Quote,
-  Award,
-  Handshake,
   Building2,
   MapPin,
   Target,
-  CheckCircle,
-  Globe,
-  Lightbulb,
   Shield,
   ArrowRight,
-  DollarSign,
   Users2,
   Sparkles
 } from "lucide-react"
 import Image from "next/image"
 
-// TypeScript Interfaces
-interface AnimatedCounterProps {
-  value: number
-  suffix?: string
-  duration?: number
-}
-
-interface Testimonial {
-  name: string
-  company: string
-  membership: string
-  quote: string
-  results: string
-}
-
-interface TestimonialCardProps {
-  testimonial: Testimonial
-  index: number
-}
-
-interface ImpactCardProps {
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-  value: number
-  suffix: string
-  description: string
-  delay?: number
-}
-
-interface SuccessStory {
-  title: string
-  description: string
-  metrics: Array<{
-    value: number
-    suffix: string
-    label: string
-  }>
-  link: string
-  imageAlt: string
-}
-
-interface SuccessStoryProps {
-  story: SuccessStory
-  index: number
-}
-
-// Animated Counter Component
-const AnimatedCounter = ({ value, suffix = "", duration = 2 }: AnimatedCounterProps) => {
-  const [count, setCount] = useState(0)
-  const [isInView, setIsInView] = useState(false)
-  const ref = useRef(null)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !isInView) {
-          setIsInView(true)
-        }
-      },
-      { threshold: 0.5 }
-    )
-
-    if (ref.current) {
-      observer.observe(ref.current)
-    }
-
-    return () => observer.disconnect()
-  }, [isInView])
-
-  useEffect(() => {
-    if (isInView) {
-      const startTime = Date.now()
-      const animate = () => {
-        const elapsed = Date.now() - startTime
-        const progress = Math.min(elapsed / (duration * 1000), 1)
-        const currentCount = Math.floor(progress * value)
-        
-        setCount(currentCount)
-        
-        if (progress < 1) {
-          requestAnimationFrame(animate)
-        }
-      }
-      animate()
-    }
-  }, [isInView, value, duration])
-
-  return (
-    <span ref={ref} className="text-4xl md:text-5xl font-bold text-basa-navy">
-      {count.toLocaleString()}{suffix}
-    </span>
-  )
-}
-
-// Testimonial Card Component
-const TestimonialCard = ({ testimonial, index }: TestimonialCardProps) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: index * 0.1 }}
-      viewport={{ once: true }}
-      whileHover={{ 
-        y: -8,
-        transition: { duration: 0.3 }
-      }}
-      className="group"
-    >
-      <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-linear-to-br from-white to-gray-50/50 backdrop-blur-xs">
-        <CardContent className="p-8">
-          <div className="flex items-start space-x-4 mb-6">
-            <div className="w-16 h-16 bg-linear-to-br from-basa-navy to-basa-teal rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
-              <Quote className="w-8 h-8 text-white" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-lg font-semibold text-basa-navy mb-1">{testimonial.name}</h4>
-              <p className="text-basa-teal font-medium">{testimonial.company}</p>
-              <p className="text-sm text-gray-500">{testimonial.membership}</p>
-            </div>
-          </div>
-          
-          <blockquote className="text-gray-700 leading-relaxed mb-6 italic">
-            "{testimonial.quote}"
-          </blockquote>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-basa-gold text-basa-gold" />
-              ))}
-            </div>
-            <Badge variant="secondary" className="bg-basa-gold/10 text-basa-navy border-basa-gold/20">
-              {testimonial.results}
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  )
-}
-
-// Impact Number Card Component
-const ImpactCard = ({ icon: Icon, title, value, suffix, description, delay = 0 }: ImpactCardProps) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.6, delay }}
-      viewport={{ once: true }}
-      whileHover={{ 
-        scale: 1.05,
-        transition: { duration: 0.3 }
-      }}
-      className="group"
-    >
-      <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-linear-to-br from-white to-gray-50/50 backdrop-blur-xs overflow-hidden">
-        <CardContent className="p-8 relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-linear-to-br from-basa-gold/10 to-basa-teal/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
-          
-          <div className="relative z-10">
-            <div className="w-16 h-16 bg-linear-to-br from-basa-navy to-basa-teal rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-              <Icon className="w-8 h-8 text-white" />
-            </div>
-            
-            <h3 className="text-2xl font-bold text-basa-navy mb-2">{title}</h3>
-            <div className="text-4xl font-bold text-basa-teal mb-4">
-              <AnimatedCounter value={value} suffix={suffix} />
-            </div>
-            <p className="text-gray-600 leading-relaxed">{description}</p>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  )
-}
-
-// Success Story Component
-const SuccessStory = ({ story, index }: SuccessStoryProps) => {
-  return (
-    <motion.section
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      transition={{ duration: 0.8, delay: index * 0.2 }}
-      viewport={{ once: true }}
-      className={`py-16 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-    >
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className={`grid lg:grid-cols-2 gap-12 items-center ${index % 2 === 1 ? 'lg:grid-flow-col-dense' : ''}`}>
-            <motion.div
-              initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              viewport={{ once: true }}
-              className="space-y-6"
-            >
-              <Badge variant="secondary" className="bg-basa-gold/10 text-basa-navy border-basa-gold/20 w-fit">
-                Success Story
-              </Badge>
-              <h2 className="text-3xl md:text-4xl font-bold text-basa-navy leading-tight">
-                {story.title}
-              </h2>
-              <p className="text-xl text-gray-600 leading-relaxed">
-                {story.description}
-              </p>
-              
-              <div className="grid grid-cols-2 gap-6 pt-6">
-                {story.metrics.map((metric, idx) => (
-                  <div key={idx} className="text-center">
-                    <div className="text-2xl font-bold text-basa-teal mb-1">
-                      <AnimatedCounter value={metric.value} suffix={metric.suffix} />
-                    </div>
-                    <p className="text-sm text-gray-600">{metric.label}</p>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="pt-4">
-                <Button asChild className="basa-btn-primary">
-                  <Link href={story.link}>
-                    Read Full Story
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Link>
-                </Button>
-              </div>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.5 }}
-              viewport={{ once: true }}
-              className="relative"
-            >
-              <div className="aspect-video bg-linear-to-br from-basa-navy to-basa-teal rounded-2xl shadow-2xl overflow-hidden">
-                <div className="absolute inset-0 bg-linear-to-br from-basa-navy/80 to-basa-teal/80 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <Building2 className="w-16 h-16 mx-auto mb-4 opacity-80" />
-                    <p className="text-lg font-medium">{story.imageAlt}</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </div>
-    </motion.section>
-  )
-}
-
 export default function AboutPage() {
-  const testimonials = [
-    {
-      name: "Sarah Martinez",
-      company: "TechFlow Solutions",
-      membership: "Professional Member",
-      quote: "BASA transformed our business. Through their network, we've secured $150K+ in new contracts and built lasting partnerships that continue to drive growth.",
-      results: "$150K+ Results"
-    },
-    {
-      name: "Michael Chen",
-      company: "Chen Development Group",
-      membership: "Corporate Partner",
-      quote: "The quality of connections at BASA is unmatched. Every interaction has been meaningful and has directly contributed to our company's success.",
-      results: "40+ New Clients"
-    },
-    {
-      name: "Elena Rodriguez",
-      company: "Rodriguez Consulting",
-      membership: "Essential Member",
-      quote: "BASA's focus on community impact while building business relationships is what sets them apart. It's networking with purpose.",
-      results: "15+ Partnerships"
-    }
-  ]
-
-  const successStories = [
-    {
-      title: "TechFlow Solutions: From Startup to Market Leader",
-      description: "How a local tech startup leveraged BASA's network to secure major contracts and scale from 5 to 50 employees in just 18 months.",
-      metrics: [
-        { value: 150, suffix: "K+", label: "Revenue Generated" },
-        { value: 45, suffix: "", label: "New Employees" },
-        { value: 12, suffix: "", label: "Major Contracts" },
-        { value: 300, suffix: "%", label: "Growth Rate" }
-      ],
-      link: "/success-stories/techflow",
-      imageAlt: "TechFlow Solutions Office"
-    },
-    {
-      title: "Networking & Giving: $250K+ for Local Nonprofits",
-      description: "Our innovative approach to networking that combines business development with community impact, creating a win-win for everyone involved.",
-      metrics: [
-        { value: 250, suffix: "K+", label: "Funds Raised" },
-        { value: 15, suffix: "", label: "Nonprofits Supported" },
-        { value: 1000, suffix: "+", label: "Volunteer Hours" },
-        { value: 25, suffix: "", label: "Community Events" }
-      ],
-      link: "/success-stories/networking-giving",
-      imageAlt: "Community Impact Event"
-    }
-  ]
-
   return (
     <div className="min-h-screen bg-white">
       {/* Header Section - Traditional Layout */}
@@ -364,7 +51,7 @@ export default function AboutPage() {
               transition={{ duration: 0.8, delay: 0.4 }}
               className="text-4xl md:text-5xl font-bold mb-6 leading-tight text-basa-gold"
             >
-              San Antonio's Premier Business Network
+              Business Association of San Antonio
             </motion.h1>
             
             <motion.p
@@ -378,66 +65,6 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
-
-      {/* Impact Numbers - Traditional Grid */}
-      {/* <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <Badge variant="secondary" className="bg-basa-gold/10 text-basa-navy border-basa-gold/20 mb-4">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Our Impact
-            </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
-              Real Results, Real Growth
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our members have achieved remarkable success through meaningful connections 
-              and collaborative opportunities.
-            </p>
-          </motion.div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-            <ImpactCard
-              icon={Users}
-              title="Active Members"
-              value={150}
-              suffix="+"
-              description="Diverse business leaders across San Antonio"
-              delay={0.1}
-            />
-            <ImpactCard
-              icon={DollarSign}
-              title="Member Referrals"
-              value={2000}
-              suffix="K+"
-              description="Generated through BASA connections"
-              delay={0.2}
-            />
-            <ImpactCard
-              icon={Calendar}
-              title="Annual Events"
-              value={40}
-              suffix="+"
-              description="Networking and community events"
-              delay={0.3}
-            />
-            <ImpactCard
-              icon={Heart}
-              title="Community Impact"
-              value={250}
-              suffix="K+"
-              description="Raised for local nonprofits"
-              delay={0.4}
-            />
-          </div>
-        </div>
-      </section> */}
 
       {/* Our Story Section */}
       <section className="py-16 bg-white">
@@ -458,7 +85,7 @@ export default function AboutPage() {
                 From Vision to Reality
               </h2>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                How BASA evolved from a small gathering of business leaders to San Antonio's premier networking organization.
+                How BASA got started.
               </p>
             </motion.div>
             
@@ -493,7 +120,7 @@ export default function AboutPage() {
 
               <p>
                 What began as a mission to connect like-minded professionals and help them prepare for 
-                reopening has evolved into San Antonio's premier business networking organization. Jennifer's 
+                reopening has grown into a San Antonio business networking organization. Jennifer's 
                 vision of creating meaningful connections that go beyond traditional networking has resulted 
                 in a community where businesses genuinely support each other, driving growth for individual 
                 entrepreneurs and the broader San Antonio economy.
@@ -528,7 +155,7 @@ export default function AboutPage() {
               Meet Our Leadership Team
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Experienced professionals dedicated to building San Antonio's premier business network.
+              The people behind BASA.
             </p>
           </motion.div>
           
@@ -611,7 +238,7 @@ export default function AboutPage() {
               className="text-xl text-white max-w-3xl mx-auto"
               style={{ textShadow: '0 3px 16px rgba(0,0,0,0.85), 0 1px 0 #000' }}
             >
-              We've redefined business networking by focusing on quality, purpose, and local impact.
+              We focus on quality, purpose, and local impact.
             </p>
           </motion.div>
           
@@ -631,8 +258,8 @@ export default function AboutPage() {
                   </div>
                   <h3 className="text-2xl font-bold text-basa-navy mb-4">Quality Over Quantity</h3>
                   <p className="text-gray-600 leading-relaxed">
-                    Curated membership ensures every connection is meaningful. We focus on building 
-                    deep, lasting relationships rather than superficial networks.
+                    We focus on building deep, lasting relationships rather than
+                    superficial networks.
                   </p>
                 </CardContent>
               </Card>
@@ -685,43 +312,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Member Testimonials - Traditional Layout */}
-      <section className="py-16 bg-basa-teal/10">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <Badge variant="secondary" className="bg-basa-gold/10 text-basa-navy border-basa-gold/20 mb-4">
-              <Quote className="w-4 h-4 mr-2" />
-              Member Stories
-            </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold text-basa-navy mb-6">
-              What Our Members Say
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Real testimonials from business leaders who've experienced the BASA difference.
-            </p>
-          </motion.div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {testimonials.map((testimonial, index) => (
-              <TestimonialCard key={index} testimonial={testimonial} index={index} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Success Stories - Traditional Layout */}
-      {/*
-      {successStories.map((story, index) => (
-        <SuccessStory key={index} story={story} index={index} />
-      ))}
-      */}
-
       {/* Call-to-Action Section - Traditional Layout */}
       <section className="relative py-16 text-white overflow-hidden">
         {/* Background Image */}
@@ -745,14 +335,13 @@ export default function AboutPage() {
               className="text-3xl md:text-4xl font-bold mb-6 text-basa-gold"
               style={{ textShadow: '0 4px 24px rgba(0,0,0,0.85), 0 1.5px 0 #000' }}
             >
-              Ready to Join San Antonio's Most Connected Business Network?
+              Ready to Join BASA?
             </h2>
             <p
               className="text-xl mb-12 text-blue-100 leading-relaxed"
               style={{ textShadow: '0 3px 16px rgba(0,0,0,0.85), 0 1px 0 #000' }}
             >
-              Connect with 150+ business leaders who've discovered the power of meaningful 
-              relationships and collaborative growth.
+              Meet San Antonio business owners and professionals at our networking events.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild size="lg" className="bg-basa-gold text-basa-navy hover:bg-basa-gold/90 focus:bg-basa-gold/80 text-lg px-8 py-4 border-2 border-basa-gold shadow-2xl">

@@ -272,3 +272,43 @@ describe('Claiming an imported account', () => {
     })
   )
 })
+
+describe('Invited members and mixed-case addresses', () => {
+  it(
+    'an invited member with an active membership becomes a MEMBER when they set a password',
+    withEmptyTestDatabase(async ({ database }: any) => {
+      testPrisma = database.prisma
+      const user = await makeLegacyUser(testPrisma, 'invited@test.test')
+      await testPrisma.member.create({ data: { userId: user.id, membershipStatus: 'ACTIVE', membershipTier: 'MEETING_MEMBER' } })
+
+      await forgot('invited@test.test')
+      const token = await tokenOf(testPrisma, user.id)
+      expect((await submitReset(token)).status).toBe(200)
+
+      const after = await testPrisma.user.findUnique({ where: { id: user.id } })
+      expect(after.role).toBe('MEMBER')
+      expect(after.isActive).toBe(true)
+      expect(after.accountStatus).toBe('ACTIVE')
+    })
+  )
+
+  it(
+    'finds a mixed-case stored address and keeps an unexpired invitation link',
+    withEmptyTestDatabase(async ({ database }: any) => {
+      testPrisma = database.prisma
+      const user = await makeLegacyUser(testPrisma, 'Mixed.Case@Test.test')
+      const invitation = 'i'.repeat(64)
+      await testPrisma.user.update({
+        where: { id: user.id },
+        data: { resetToken: invitation, resetTokenExpiry: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) },
+      })
+
+      await forgot('mixed.case@test.test')
+
+      expect(await tokenOf(testPrisma, user.id)).toBe(invitation)
+      expect(mockSendClaim).toHaveBeenCalledTimes(1)
+      expect(mockSendClaim.mock.calls[0][0]).toBe('Mixed.Case@Test.test')
+      expect(mockSendClaim.mock.calls[0][2]).toContain(invitation)
+    })
+  )
+})

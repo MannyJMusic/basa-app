@@ -4,70 +4,57 @@ import { z } from "zod"
 import { requireSession, isResponse } from "@/lib/api-auth"
 import { requestEmailChange, EmailChangeError } from "@/lib/email-change"
 import { withoutSecrets } from "@/lib/user-safe"
+import { optionalEmail, optionalText, optionalUrl } from "@/lib/optional-fields"
 
-// Validation schema for profile updates
+// Validation schema for profile updates. Optional text fields accept "" or
+// null to clear them (stored as null); web addresses may omit the scheme.
 const profileUpdateSchema = z.object({
   // User fields
-  firstName: z.string().min(1, "First name is required").optional(),
-  lastName: z.string().min(1, "Last name is required").optional(),
-  email: z.string().email("Invalid email address").optional(),
-  
+  firstName: z.string().trim().min(1, "First name is required").max(100).optional(),
+  lastName: z.string().trim().min(1, "Last name is required").max(100).optional(),
+  email: z.string().trim().email("Invalid email address").optional(),
+
   // Member fields
-  businessName: z.string().optional(),
-  businessType: z.string().optional(),
-  industry: z.array(z.string()).optional(),
-  businessEmail: z.string().email("Invalid business email").optional().or(z.literal("")),
-  businessPhone: z.string().optional(),
-  personalPhone: z.string().optional(),
-  businessAddress: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zipCode: z.string().optional(),
-  website: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
-    message: "Invalid website URL"
-  }),
-  description: z.string().optional(),
-  tagline: z.string().optional(),
-  specialties: z.array(z.string()).optional(),
-  certifications: z.array(z.string()).optional(),
-  linkedin: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
-    message: "Invalid LinkedIn URL"
-  }),
-  facebook: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
-    message: "Invalid Facebook URL"
-  }),
-  instagram: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
-    message: "Invalid Instagram URL"
-  }),
-  twitter: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
-    message: "Invalid Twitter URL"
-  }),
-  youtube: z.string().optional().refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
-    message: "Invalid YouTube URL"
-  }),
+  businessName: optionalText(200),
+  businessType: optionalText(200),
+  industry: z.array(z.string().trim().min(1).max(100)).max(20).optional(),
+  businessEmail: optionalEmail(),
+  businessPhone: optionalText(50),
+  businessAddress: optionalText(300),
+  city: optionalText(100),
+  state: optionalText(100),
+  zipCode: optionalText(20),
+  website: optionalUrl(),
+  description: optionalText(5000),
+  tagline: optionalText(300),
+  specialties: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
+  certifications: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
+  linkedin: optionalUrl(),
+  facebook: optionalUrl(),
+  instagram: optionalUrl(),
+  twitter: optionalUrl(),
+  youtube: optionalUrl(),
   showInDirectory: z.boolean().optional(),
   allowContact: z.boolean().optional(),
   showAddress: z.boolean().optional(),
-}).transform((data) => {
-  // Convert empty strings to undefined for optional fields
-  const transformed = { ...data }
-  const urlFields = ['website', 'linkedin', 'facebook', 'instagram', 'twitter', 'youtube']
-  const emailFields = ['businessEmail']
-  
-  urlFields.forEach(field => {
-    if (transformed[field as keyof typeof transformed] === '') {
-      transformed[field as keyof typeof transformed] = undefined
-    }
-  })
-  
-  emailFields.forEach(field => {
-    if (transformed[field as keyof typeof transformed] === '') {
-      transformed[field as keyof typeof transformed] = undefined
-    }
-  })
-  
-  return transformed
 })
+
+const MEMBER_FIELDS = [
+  "businessName", "businessType", "industry", "businessEmail", "businessPhone",
+  "businessAddress", "city", "state", "zipCode", "website", "description", "tagline",
+  "specialties", "certifications", "linkedin", "facebook", "instagram", "twitter",
+  "youtube", "showInDirectory", "allowContact", "showAddress",
+] as const
+
+/** Zod issues as { field: first message }, for showing next to each input. */
+function fieldErrorsOf(error: z.ZodError): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const issue of error.errors) {
+    const key = String(issue.path[0] ?? "form")
+    if (!out[key]) out[key] = issue.message
+  }
+  return out
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -215,31 +202,10 @@ export async function PUT(request: NextRequest) {
         })
       }
 
-      // Update or create member
-      const memberUpdateData: any = {}
-      if (validatedData.businessName !== undefined) memberUpdateData.businessName = validatedData.businessName
-      if (validatedData.businessType !== undefined) memberUpdateData.businessType = validatedData.businessType
-      if (validatedData.industry !== undefined) memberUpdateData.industry = validatedData.industry
-      if (validatedData.businessEmail !== undefined) memberUpdateData.businessEmail = validatedData.businessEmail
-      if (validatedData.businessPhone !== undefined) memberUpdateData.businessPhone = validatedData.businessPhone
-      if (validatedData.personalPhone !== undefined) memberUpdateData.businessPhone = validatedData.personalPhone
-      if (validatedData.businessAddress !== undefined) memberUpdateData.businessAddress = validatedData.businessAddress
-      if (validatedData.city !== undefined) memberUpdateData.city = validatedData.city
-      if (validatedData.state !== undefined) memberUpdateData.state = validatedData.state
-      if (validatedData.zipCode !== undefined) memberUpdateData.zipCode = validatedData.zipCode
-      if (validatedData.website !== undefined) memberUpdateData.website = validatedData.website
-      if (validatedData.description !== undefined) memberUpdateData.description = validatedData.description
-      if (validatedData.tagline !== undefined) memberUpdateData.tagline = validatedData.tagline
-      if (validatedData.specialties !== undefined) memberUpdateData.specialties = validatedData.specialties
-      if (validatedData.certifications !== undefined) memberUpdateData.certifications = validatedData.certifications
-      if (validatedData.linkedin !== undefined) memberUpdateData.linkedin = validatedData.linkedin
-      if (validatedData.facebook !== undefined) memberUpdateData.facebook = validatedData.facebook
-      if (validatedData.instagram !== undefined) memberUpdateData.instagram = validatedData.instagram
-      if (validatedData.twitter !== undefined) memberUpdateData.twitter = validatedData.twitter
-      if (validatedData.youtube !== undefined) memberUpdateData.youtube = validatedData.youtube
-      if (validatedData.showInDirectory !== undefined) memberUpdateData.showInDirectory = validatedData.showInDirectory
-      if (validatedData.allowContact !== undefined) memberUpdateData.allowContact = validatedData.allowContact
-      if (validatedData.showAddress !== undefined) memberUpdateData.showAddress = validatedData.showAddress
+      const memberUpdateData: Record<string, unknown> = {}
+      for (const key of MEMBER_FIELDS) {
+        if (validatedData[key] !== undefined) memberUpdateData[key] = validatedData[key]
+      }
 
       let updatedMember = null
       if (Object.keys(memberUpdateData).length > 0) {
@@ -248,6 +214,9 @@ export async function PUT(request: NextRequest) {
           update: memberUpdateData,
           create: {
             userId: session.user.id,
+            // Private until the member says otherwise.
+            showInDirectory: false,
+            allowContact: false,
             ...memberUpdateData,
             // Never self-activate (#166); ACTIVE comes from the office or a payment.
             membershipStatus: "PENDING",
@@ -275,13 +244,13 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ ...result, user: withoutSecrets(result.user), emailChangePending })
   } catch (error) {
-    console.error("Error updating profile:", error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Validation error", details: error.errors },
+        { error: "Please correct the highlighted fields", details: error.errors, fieldErrors: fieldErrorsOf(error) },
         { status: 400 }
       )
     }
+    console.error("Error updating profile:", error)
     return NextResponse.json(
       { error: "Failed to update profile" },
       { status: 500 }

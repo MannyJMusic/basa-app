@@ -1,10 +1,6 @@
-import { MEMBERSHIP_SALES_ENABLED } from '@/lib/feature-flags'
-import { MembershipOfficeNotice } from '@/components/membership/MembershipOfficeNotice'
-import MembershipPaymentWizard from './payment-wizard'
+import { permanentRedirect } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
-export default function MembershipPaymentPage() {
-  if (!MEMBERSHIP_SALES_ENABLED) return <MembershipOfficeNotice variant="page" intent="join" />
-  return <MembershipPaymentWizard />
+/** The old two-step checkout. Payment now happens on Stripe Checkout from /membership/join. */
+export default function Page() {
+  permanentRedirect('/membership/join')
 }

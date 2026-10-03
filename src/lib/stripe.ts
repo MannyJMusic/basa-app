@@ -1,5 +1,4 @@
 import Stripe from 'stripe'
-import { MEMBERSHIP_TIERS, MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
 
 /**
  * The Stripe API version every request is pinned to. It is independent of the SDK
@@ -40,10 +39,6 @@ export const getStripePublishableKey = () => {
 }
 
 // Membership pricing, in cents, keyed by tier slug. Defined once in membership-tiers.ts.
-export const MEMBERSHIP_PRICES: Record<string, number> = Object.fromEntries(
-  MEMBERSHIP_TIER_VALUES.map(t => [MEMBERSHIP_TIERS[t].slug, MEMBERSHIP_TIERS[t].priceCents])
-)
-
 // Event pricing structure
 export const EVENT_PRICING = {
   member: 2500, // $25 for members

@@ -161,3 +161,74 @@ describe('claiming an imported account (#104)', () => {
     expect(data).not.toHaveProperty('accountStatus')
   })
 })
+
+describe('claiming as an invited member whose membership is active', () => {
+  const invited = (role: string, membershipStatus: string | null) => ({
+    id: 'u1',
+    hashedPassword: null,
+    accountStatus: 'INACTIVE',
+    role,
+    member: membershipStatus ? { membershipStatus } : null,
+  })
+
+  it('makes a GUEST with an ACTIVE membership a MEMBER in the same update', async () => {
+    mockFindFirst.mockResolvedValue(invited('GUEST', 'ACTIVE'))
+    const res = await POST(post(payload(VALID)) as never)
+
+    expect(res.status).toBe(200)
+    const data = mockUpdateMany.mock.calls[0][0].data
+    expect(data.role).toBe('MEMBER')
+    expect(data.isActive).toBe(true)
+    expect(data.accountStatus).toBe('ACTIVE')
+  })
+
+  it('reads the membership with the token lookup', async () => {
+    mockFindFirst.mockResolvedValue(invited('GUEST', 'ACTIVE'))
+    await POST(post(payload(VALID)) as never)
+
+    expect(mockFindFirst.mock.calls[0][0].include).toEqual({ member: { select: { membershipStatus: true } } })
+  })
+
+  it('leaves a lapsed member a GUEST', async () => {
+    mockFindFirst.mockResolvedValue(invited('GUEST', 'EXPIRED'))
+    await POST(post(payload(VALID)) as never)
+
+    expect(mockUpdateMany.mock.calls[0][0].data).not.toHaveProperty('role')
+  })
+
+  it('never changes any other role', async () => {
+    for (const role of ['ADMIN', 'MODERATOR', 'MEMBER']) {
+      mockUpdateMany.mockClear()
+      mockFindFirst.mockResolvedValue(invited(role, 'ACTIVE'))
+      await POST(post(payload(VALID)) as never)
+      expect(mockUpdateMany.mock.calls[0][0].data).not.toHaveProperty('role')
+    }
+  })
+
+  it('does not promote on an ordinary reset, even with an active membership', async () => {
+    mockFindFirst.mockResolvedValue({ id: 'u1', hashedPassword: '$2a$10$h', accountStatus: 'ACTIVE', role: 'GUEST', member: { membershipStatus: 'ACTIVE' } })
+    await POST(post(payload(VALID)) as never)
+
+    expect(mockUpdateMany.mock.calls[0][0].data).not.toHaveProperty('role')
+  })
+})
+
+describe('password rule', () => {
+  it('accepts symbols and spaces beyond the old short list', async () => {
+    mockFindFirst.mockResolvedValue({ id: 'u1', hashedPassword: 'x', accountStatus: 'ACTIVE' })
+    const pw = ['Good', 'pass 1', '#^~'].join('')
+    const res = await POST(post({ token: VALID, password: pw, confirmPassword: pw }) as never)
+
+    expect(res.status).toBe(200)
+  })
+
+  it('returns the specific reason, not "Validation failed"', async () => {
+    const pw = 'alllowercase1'
+    const res = await POST(post({ token: VALID, password: pw, confirmPassword: pw }) as never)
+
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/uppercase/)
+    expect(mockUpdateMany).not.toHaveBeenCalled()
+  })
+})

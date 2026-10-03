@@ -41,9 +41,11 @@ module.exports = {
     '/build/',
   ],
   // Testcontainers specific settings
+  modulePathIgnorePatterns: ['<rootDir>/.claude/'],
   testPathIgnorePatterns: [
     '/node_modules/',
     '/unit/',
+    '<rootDir>/.claude/',
   ],
   // Environment variables for tests
   testEnvironmentOptions: {

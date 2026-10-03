@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { toast } from "@/components/ui/use-toast"
-import type { MembershipTier } from "@prisma/client"
+import type { MembershipTier, Status } from "@prisma/client"
 
 export interface Member {
   id: string
@@ -22,7 +22,7 @@ export interface Member {
   zipCode?: string
   website?: string
   membershipTier?: MembershipTier
-  membershipStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+  membershipStatus: Status
   joinedAt: string
   renewalDate?: string
   stripeCustomerId?: string
@@ -119,14 +119,15 @@ export interface UpdateMemberData {
   zipCode?: string
   website?: string
   membershipTier?: MembershipTier
-  membershipStatus?: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+  // "SUSPENDED" kept only for the admin dialog's type; the API accepts Status values.
+  membershipStatus?: Status | "SUSPENDED"
   role?: "MEMBER" | "MODERATOR" | "ADMIN"
   isActive?: boolean
 }
 
 export interface MemberFilters {
   search?: string
-  status?: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+  status?: Status
   membershipTier?: MembershipTier
   industry?: string
   city?: string
@@ -230,41 +231,6 @@ export function useMembers() {
       toast({
         title: "Error",
         description: "Failed to fetch member",
-        variant: "destructive",
-      })
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  const createMember = useCallback(async (data: any) => {
-    setLoading(true)
-    try {
-      const response = await fetch('/api/members', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create member')
-      }
-
-      const member: Member = await response.json()
-      toast({
-        title: "Success",
-        description: "Member created successfully",
-      })
-      return member
-    } catch (error) {
-      console.error('Error creating member:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create member",
         variant: "destructive",
       })
       throw error
@@ -441,7 +407,6 @@ export function useMembers() {
     currentMember,
     fetchMembers,
     fetchMember,
-    createMember,
     updateMember,
     deleteMember,
     exportMembers,

@@ -1,6 +1,7 @@
 import type { Status } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { MEMBERSHIP_TIERS } from "@/lib/membership-tiers"
+import { directoryWhere } from "@/lib/member-privacy"
 
 /**
  * Server-side reads behind the member dashboard, the My Membership page and the
@@ -11,11 +12,19 @@ export interface MembershipSummary {
   status: Status
   /** Tier label, or the latest imported WordPress level name when no tier is set. */
   planLabel: string | null
-  /** Annual price in cents, from the tier or the latest legacy membership. */
+  /** Yearly price in cents of the current level; null without one. Old WordPress
+   * prices are deliberately not used: they are not what the member pays now. */
   priceCents: number | null
+  /** What the current level includes, from the 2026 levels sheet. */
+  benefits: string[]
   joinedAt: Date
   renewalDate: Date | null
-  chapterName: string | null
+  /** Bought online: a Stripe subscription that renews itself. Otherwise billed by the office. */
+  billing: "online" | "office"
+  /** Online only: the member cancelled; the membership ends at renewalDate. */
+  cancelAtPeriodEnd: boolean
+  /** Online only: whether the Stripe billing portal can be opened for this member. */
+  canManageBilling: boolean
   history: {
     id: string
     levelName: string
@@ -34,7 +43,9 @@ export async function getMembershipSummary(userId: string): Promise<MembershipSu
       membershipTier: true,
       joinedAt: true,
       renewalDate: true,
-      chapter: { select: { name: true } },
+      subscriptionId: true,
+      stripeCustomerId: true,
+      cancelAtPeriodEnd: true,
       legacyMemberships: {
         select: { id: true, levelName: true, price: true, status: true, startedAt: true, endedAt: true },
         orderBy: [{ startedAt: "desc" }, { createdAt: "desc" }],
@@ -57,10 +68,13 @@ export async function getMembershipSummary(userId: string): Promise<MembershipSu
   return {
     status: member.membershipStatus,
     planLabel: tier?.label ?? latest?.levelName ?? null,
-    priceCents: tier?.priceCents ?? latest?.priceCents ?? null,
+    priceCents: tier?.priceCents ?? null,
+    benefits: tier?.benefits ?? [],
     joinedAt: member.joinedAt,
     renewalDate: member.renewalDate,
-    chapterName: member.chapter?.name ?? null,
+    billing: member.subscriptionId ? "online" : "office",
+    cancelAtPeriodEnd: member.cancelAtPeriodEnd,
+    canManageBilling: !!member.subscriptionId && !!member.stripeCustomerId,
     history,
   }
 }
@@ -117,7 +131,7 @@ export async function countUpcomingEvents(now = new Date()) {
 /** Directory-visible active members, newest first. Only for signed-in members. */
 export async function getRecentDirectoryMembers(limit: number) {
   return prisma.member.findMany({
-    where: { membershipStatus: "ACTIVE", showInDirectory: true },
+    where: directoryWhere,
     select: {
       id: true,
       businessName: true,

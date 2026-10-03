@@ -152,7 +152,16 @@ export async function PUT(
   }
 }
 
-// DELETE /api/admin/users/[id] - Delete admin user
+
+/**
+ * DELETE /api/admin/users/[id] - remove a staff account.
+ *
+ * Nothing is deleted: the row stays so the audit history that points at it stays
+ * readable. The account is switched off instead (no sign-in, sessions ended, no
+ * staff role). A member is refused here, because switching them off would also take
+ * away their membership access: change their role with Edit, or deactivate them
+ * from Members. Nobody can remove their own account.
+ */
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -162,45 +171,51 @@ export async function DELETE(
     if (isResponse(session)) return session
     const params = await context.params
 
-    // Prevent deleting yourself
     if (session.user.id === params.id) {
       return NextResponse.json(
-        { error: 'Cannot delete your own account' },
+        { error: 'You cannot remove your own account' },
         { status: 400 }
       )
     }
 
-    // Get existing user
     const existingUser = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id: params.id },
+      include: { member: { select: { id: true } } },
     })
 
     if (!existingUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Delete user
-    await prisma.user.delete({
-      where: { id: params.id }
+    if (existingUser.member) {
+      return NextResponse.json(
+        { error: 'This person is a BASA member. Change their role with Edit instead, or deactivate them from Members.' },
+        { status: 409 }
+      )
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: params.id },
+      data: { isActive: false, role: 'GUEST', sessionsInvalidBefore: new Date() },
     })
 
-    // Log the admin user deletion
     await prisma.auditLog.create({
       data: {
         userId: session.user.id,
-        action: 'DELETE_ADMIN_USER',
+        action: 'DEACTIVATE_ADMIN_USER',
         entityType: 'USER',
         entityId: params.id,
-        oldValues: auditableUser(existingUser)
+        oldValues: auditableUser(existingUser),
+        newValues: auditableUser(updated),
       }
     })
 
-    return NextResponse.json({ message: 'User deleted successfully' })
+    return NextResponse.json({ message: 'Staff account removed' })
   } catch (error) {
-    console.error('Error deleting admin user:', error)
+    console.error('Error removing admin user:', error)
     return NextResponse.json(
-      { error: 'Failed to delete admin user' },
+      { error: 'Failed to remove admin user' },
       { status: 500 }
     )
   }
-} 
+}

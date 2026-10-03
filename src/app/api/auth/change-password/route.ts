@@ -40,11 +40,14 @@ export async function POST(request: NextRequest) {
     // Hash new password
     const hashedNewPassword = await hashPassword(newPassword)
 
-    // Update user password
+    // Update the password and end every session issued before now, as a
+    // reset does: a changed password should sign out other devices. The
+    // account page signs this browser back in with the new password.
     await prisma.user.update({
       where: { id: user.id },
       data: {
         hashedPassword: hashedNewPassword,
+        sessionsInvalidBefore: new Date(),
       }
     })
 

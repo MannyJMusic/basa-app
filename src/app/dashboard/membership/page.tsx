@@ -10,7 +10,7 @@ import { MembershipOfficeNotice } from "@/components/membership/MembershipOffice
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowRight, Calendar, Clock, Crown, History, Mail, Phone, Ticket } from "lucide-react"
+import { ArrowRight, Calendar, Check, Clock, CreditCard, Crown, History, Mail, Phone, Ticket } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -28,7 +28,8 @@ const eventWhen = (d: Date) =>
     weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: EVENT_TIME_ZONE,
   })
 
-export default async function MembershipPage() {
+export default async function MembershipPage({ searchParams }: { searchParams: Promise<{ billing?: string }> }) {
+  const { billing } = await searchParams
   const session = await auth()
   if (!session?.user) redirect("/auth/sign-in?callbackUrl=/dashboard/membership")
 
@@ -49,12 +50,18 @@ export default async function MembershipPage() {
           <p className="text-gray-600 mt-2">Your BASA membership, tickets and history</p>
         </div>
         <Button asChild variant="outline">
-          <Link href="/membership/benefits">
-            Member benefits
+          <Link href="/membership#levels">
+            Membership levels
             <ArrowRight className="w-4 h-4 ml-2" />
           </Link>
         </Button>
       </div>
+
+      {billing === "unavailable" && (
+        <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          Billing management is not available right now. Please try again shortly, or contact {OFFICE_CONTACT.name} at {OFFICE_CONTACT.phone}.
+        </div>
+      )}
 
       {/* Current Membership Status */}
       <Card className="border-2 border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50">
@@ -73,11 +80,24 @@ export default async function MembershipPage() {
                     </Badge>
                   </div>
                   <p className="text-gray-600">Member since {monthYear(summary.joinedAt)}</p>
-                  {summary.chapterName && <p className="text-sm text-gray-500">{summary.chapterName} chapter</p>}
                   {summary.renewalDate && (
-                    <p className="text-sm text-gray-500">
-                      {isActive ? "Renews" : summary.status === "EXPIRED" ? "Expired" : "Ends"} {longDate(summary.renewalDate)}
+                    <p className="text-sm text-gray-600">
+                      {!isActive
+                        ? `${summary.status === "EXPIRED" ? "Expired" : "Ended"} ${longDate(summary.renewalDate)}`
+                        : summary.billing === "online"
+                          ? summary.cancelAtPeriodEnd
+                            ? `Renewal cancelled: your membership ends ${longDate(summary.renewalDate)}`
+                            : `Renews automatically on ${longDate(summary.renewalDate)}`
+                          : `Renews ${longDate(summary.renewalDate)} through the BASA office`}
                     </p>
+                  )}
+                  {summary.canManageBilling && (
+                    <form action="/api/membership/billing-portal" method="post" className="mt-3">
+                      <Button type="submit" size="sm" variant="outline">
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        {summary.cancelAtPeriodEnd ? "Resume or manage billing" : "Manage billing, card or cancellation"}
+                      </Button>
+                    </form>
                   )}
                 </div>
               </div>
@@ -197,6 +217,22 @@ export default async function MembershipPage() {
             </CardContent>
           </Card>
 
+          {summary && isActive && summary.benefits.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>What your membership includes</CardTitle>
+                <CardDescription>Contact the office to schedule ribbon cuttings, e-blasts and social posts.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="grid gap-2 sm:grid-cols-2 text-sm text-gray-700">
+                  {summary.benefits.map(b => (
+                    <li key={b} className="flex gap-2"><Check className="w-4 h-4 mt-0.5 shrink-0 text-green-600" />{b}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Membership history (imported from the old site, then kept here) */}
           {summary && summary.history.length > 0 && (
             <Card>
@@ -244,7 +280,7 @@ export default async function MembershipPage() {
                 <Link href="/dashboard/profile">Edit Profile</Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start">
-                <Link href="/membership/compare">Compare Plans</Link>
+                <Link href="/membership#compare">Compare levels</Link>
               </Button>
             </CardContent>
           </Card>
@@ -269,18 +305,8 @@ export default async function MembershipPage() {
       </div>
 
       {/* Changing plans: online only while sales are on; otherwise the office */}
-      {isActive && (MEMBERSHIP_SALES_ENABLED ? (
-        <Card>
-          <CardContent className="p-6 flex flex-wrap items-center justify-between gap-4">
-            <p className="text-gray-700">Want a different membership level?</p>
-            <Button asChild variant="outline">
-              <Link href="/membership/compare">Compare plans</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <MembershipOfficeNotice variant="card" intent="upgrade" />
-      ))}
+      {/* Level changes are arranged by the office, which credits what has been paid. */}
+      {isActive && <MembershipOfficeNotice variant="card" intent="upgrade" />}
     </div>
   )
 }
