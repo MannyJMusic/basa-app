@@ -8,17 +8,22 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Users, Search, Edit, Trash2, Eye, Download, Filter, X, Upload, FileText, CheckCircle, AlertCircle, UserPlus } from "lucide-react"
-import { useMembers, type Member, type MemberFilters, type BulkUploadResult, type UpdateMemberData } from "@/hooks/use-members"
+import { useMembers, type Member, type MemberFilters, type BulkUploadResult } from "@/hooks/use-members"
+import { accountStatusOf, apiErrorMessage, type MemberChanges } from "@/components/members/member-edit"
 import { MemberDetailDialog, memberStatusBadge, memberTierBadge } from "@/components/members/member-detail-dialog"
 import { EnhancedMemberForm } from "@/components/admin/enhanced-member-form"
 import { formatDate } from "@/lib/utils"
+import { toast } from "@/components/ui/use-toast"
 import { TIERS_IN_ORDER } from "@/lib/membership-tiers"
 
 /** Select value for "no filter" (Radix Select does not allow an empty value). */
 const ALL = "all"
 
+/** The list API also takes ?account=active|unclaimed (sign-in set up or not). */
+type PageFilters = MemberFilters & { account?: "active" | "unclaimed" }
+
 export default function MembersPage() {
-  const { fetchMembers, fetchMember, deleteMember, updateMember, exportMembers, bulkUploadMembers, loading } = useMembers()
+  const { fetchMembers, fetchMember, deleteMember, exportMembers, bulkUploadMembers, loading } = useMembers()
   const [members, setMembers] = useState<Member[]>([])
   const [pagination, setPagination] = useState({
     page: 1,
@@ -28,7 +33,7 @@ export default function MembersPage() {
     hasNextPage: false,
     hasPrevPage: false,
   })
-  const [filters, setFilters] = useState<MemberFilters>({
+  const [filters, setFilters] = useState<PageFilters>({
     page: 1,
     limit: 20,
     sortBy: "joinedAt",
@@ -73,7 +78,7 @@ export default function MembersPage() {
     }))
   }
 
-  const handleFilterChange = (key: keyof MemberFilters, value: any) => {
+  const handleFilterChange = (key: keyof PageFilters, value: any) => {
     setFilters(prev => ({
       ...prev,
       [key]: value,
@@ -88,8 +93,19 @@ export default function MembersPage() {
 
 
   // Throws with the API's message so the dialog can show it.
-  const handleUpdateMember = async (id: string, data: UpdateMemberData) => {
-    await updateMember(id, data)
+  const handleUpdateMember = async (id: string, data: MemberChanges) => {
+    // Called directly (not through useMembers) so the dialog gets the API's
+    // validation detail, not just "Validation error".
+    const res = await fetch(`/api/members/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(apiErrorMessage(body, "Failed to update member"))
+    }
+    toast({ title: "Saved", description: "Member updated." })
     // Show what was actually stored (the API may fill in e.g. a renewal date).
     try {
       const fresh = await fetchMember(id)
@@ -383,7 +399,7 @@ export default function MembersPage() {
                           {memberStatusBadge(member.membershipStatus)}
                           {!member.user.isActive && (
                             <div className="mt-1 text-xs text-gray-500">
-                              {member.user.accountStatus === "INACTIVE" ? "Account not set up" : "Sign-in turned off"}
+                              {accountStatusOf(member) === "INACTIVE" ? "Account not set up" : "Sign-in turned off"}
                             </div>
                           )}
                         </td>

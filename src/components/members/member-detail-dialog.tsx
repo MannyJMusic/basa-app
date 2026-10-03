@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { User, Building, Calendar, Edit, X } from "lucide-react"
-import { type Member, type UpdateMemberData } from "@/hooks/use-members"
+import { type Member } from "@/hooks/use-members"
 import { formatDate } from "@/lib/utils"
 import type { MembershipTier } from "@prisma/client"
 import { MEMBERSHIP_TIERS, TIERS_IN_ORDER } from "@/lib/membership-tiers"
@@ -24,6 +24,8 @@ import {
   diffMemberForm,
   formStateFromMember,
   type MemberFormState,
+  type MemberChanges,
+  accountStatusOf,
 } from "@/components/members/member-edit"
 
 const INDUSTRY_TYPES = [
@@ -76,7 +78,7 @@ interface MemberDetailDialogProps {
   startEditing?: boolean
   onClose: () => void
   /** Saves the changes; throws with the API's message on failure. */
-  onUpdate: (id: string, data: UpdateMemberData) => Promise<void>
+  onUpdate: (id: string, data: MemberChanges) => Promise<void>
   /** Asks for confirmation and deactivates; the page owns the confirm dialog. */
   onDeactivate: (member: Member) => void
   isLoading?: boolean
@@ -128,7 +130,7 @@ export function MemberDetailDialog({
     try {
       setIsSaving(true)
       setError(null)
-      await onUpdate(member.id, changes as UpdateMemberData)
+      await onUpdate(member.id, changes)
       setIsEditing(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update member")
@@ -265,7 +267,7 @@ export function MemberDetailDialog({
                 <div className="text-sm text-gray-600">
                   Account: {member.user.isActive
                     ? "can sign in"
-                    : member.user.accountStatus === "INACTIVE"
+                    : accountStatusOf(member) === "INACTIVE"
                       ? "not set up yet (send an invitation from Members → Invitations)"
                       : "sign-in turned off"}
                 </div>

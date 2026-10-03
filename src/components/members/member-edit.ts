@@ -132,3 +132,16 @@ export function diffMemberForm(initial: MemberFormState, current: MemberFormStat
 
   return changes
 }
+
+/** The list and detail APIs return accountStatus; the shared Member type does not declare it. */
+export function accountStatusOf(member: Member): string | undefined {
+  return (member.user as { accountStatus?: string }).accountStatus
+}
+
+/** The API's error, with the first validation detail when there is one. */
+export function apiErrorMessage(body: any, fallback: string): string {
+  const detail = Array.isArray(body?.details) ? body.details[0] : undefined
+  const field = Array.isArray(detail?.path) && detail.path.length ? `${detail.path.join('.')}: ` : ''
+  if (detail?.message) return `${body?.error || fallback} (${field}${detail.message})`
+  return body?.error || fallback
+}
