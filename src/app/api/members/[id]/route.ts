@@ -1,29 +1,48 @@
 import { NextRequest, NextResponse } from "next/server"
+import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
-import { requireAdmin, requireSession, isResponse } from "@/lib/api-auth"
+import { requireAdmin, requireSession, isResponse, USER_ROLES } from "@/lib/api-auth"
 import { MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
-import { adminMemberSelect, directoryMemberSelect, applyMemberPrivacy } from '@/lib/member-privacy'
+import { adminMemberSelect, directoryMemberSelect, applyMemberPrivacy, directoryWhere } from '@/lib/member-privacy'
+import { emptyToNull, optionalEmail, optionalText, optionalUrl } from '@/lib/optional-fields'
 
 const updateMemberSchema = z.object({
-  firstName: z.string().min(1, "First name is required").optional(),
-  lastName: z.string().min(1, "Last name is required").optional(),
-  email: z.string().email("Invalid email address").optional(),
-  businessName: z.string().optional(),
-  businessType: z.string().optional(),
+  firstName: z.string().trim().min(1, "First name is required").max(100).optional(),
+  lastName: z.string().trim().min(1, "Last name is required").max(100).optional(),
+  email: z.string().trim().toLowerCase().email("Invalid email address").optional(),
+  businessName: optionalText(200),
+  businessType: optionalText(200),
   industry: z.array(z.string()).optional(),
-  businessEmail: z.string().email().optional(),
-  businessPhone: z.string().optional(),
-  businessAddress: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zipCode: z.string().optional(),
-  website: z.string().url().optional(),
-  membershipTier: z.enum(MEMBERSHIP_TIER_VALUES).optional(),
+  businessEmail: optionalEmail(),
+  businessPhone: optionalText(50),
+  businessAddress: optionalText(300),
+  city: optionalText(100),
+  state: optionalText(100),
+  zipCode: optionalText(20),
+  website: optionalUrl(),
+  membershipTier: z.preprocess(emptyToNull, z.enum(MEMBERSHIP_TIER_VALUES).nullable().optional()),
   membershipStatus: z.enum(["PENDING", "ACTIVE", "EXPIRED", "INACTIVE"]).optional(),
-  role: z.enum(["MEMBER", "MODERATOR", "ADMIN"]).optional(),
+  /** ISO date or date-time; "" or null clears it. */
+  renewalDate: z.preprocess(
+    emptyToNull,
+    z
+      .string()
+      .refine(v => !Number.isNaN(Date.parse(v)), "Invalid renewal date")
+      .transform(v => new Date(v))
+      .nullable()
+      .optional()
+  ),
+  role: z.enum(USER_ROLES).optional(),
   isActive: z.boolean().optional(),
 })
+
+/** One calendar year from `from`. */
+function oneYearFrom(from: Date): Date {
+  const d = new Date(from)
+  d.setFullYear(d.getFullYear() + 1)
+  return d
+}
 
 export async function GET(
   request: NextRequest,
@@ -33,35 +52,43 @@ export async function GET(
     const session = await requireSession()
     if (isResponse(session)) return session
 
+    // A GUEST session has no active membership; the directory is for members.
+    if (session.user.role === "GUEST") {
+      return NextResponse.json({ error: "The member directory is for active members" }, { status: 403 })
+    }
+
     const { id } = await params
 
-    const isAdmin = session.user.role === "ADMIN"
-    const member = await prisma.member.findUnique({
-      where: { id },
-      select: isAdmin
-        ? {
-            ...adminMemberSelect,
-            eventSponsors: {
-              include: {
-                event: { select: { id: true, title: true, startDate: true } },
-              },
-              orderBy: { id: "desc" },
-              take: 10,
+    if (session.user.role === "ADMIN") {
+      const member = await prisma.member.findUnique({
+        where: { id },
+        select: {
+          ...adminMemberSelect,
+          eventSponsors: {
+            include: {
+              event: { select: { id: true, title: true, startDate: true } },
             },
-          }
-        : directoryMemberSelect,
+            orderBy: { id: "desc" },
+            take: 10,
+          },
+        },
+      })
+      if (!member) {
+        return NextResponse.json({ error: "Member not found" }, { status: 404 })
+      }
+      return NextResponse.json(member)
+    }
+
+    // Non-admins see their own profile, or a member who is listed in the
+    // directory, and only what that member agreed to share. Anything else is
+    // reported as not found so the endpoint does not confirm who exists.
+    const member = await prisma.member.findFirst({
+      where: { id, OR: [{ userId: session.user.id }, directoryWhere] },
+      select: directoryMemberSelect,
     })
 
     if (!member) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 })
-    }
-
-    if (isAdmin) return NextResponse.json(member)
-
-    // Non-admins see a member only if they opted into the directory (or it is
-    // their own profile), and only what that member agreed to share.
-    if (!member.showInDirectory && member.userId !== session.user.id) {
-      return NextResponse.json({ error: "Not allowed" }, { status: 403 })
     }
 
     return NextResponse.json(applyMemberPrivacy(member, session.user.id))
@@ -84,82 +111,82 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json()
-    const validatedData = updateMemberSchema.parse(body)
+    const data = updateMemberSchema.parse(body)
 
-    // Check if member exists
     const existingMember = await prisma.member.findUnique({
       where: { id },
-      include: { user: true },
+      include: {
+        user: {
+          select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true },
+        },
+      },
     })
 
     if (!existingMember) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 })
     }
 
-    // Check if email is being changed and if it's already taken
-    if (validatedData.email && validatedData.email !== existingMember.user.email) {
-      const emailExists = await prisma.user.findUnique({
-        where: { email: validatedData.email },
-      })
-      if (emailExists) {
+    // An admin cannot lock themselves out (and leave the site with no admin
+    // by accident). Another admin has to do it.
+    if (existingMember.userId === session.user.id) {
+      if ((data.role !== undefined && data.role !== "ADMIN") || data.isActive === false) {
         return NextResponse.json(
-          { error: "Email already exists" },
+          { error: "You cannot remove your own admin role or deactivate your own account" },
           { status: 400 }
         )
       }
     }
 
-    // Update member and user in a transaction
+    if (data.email && data.email !== existingMember.user.email) {
+      const emailExists = await prisma.user.findUnique({ where: { email: data.email } })
+      if (emailExists) {
+        return NextResponse.json({ error: "Email already exists" }, { status: 400 })
+      }
+    }
+
+    // Activating a membership needs a term. Keep a future renewal date (given
+    // now or already on the row); otherwise the term runs a year from today.
+    let renewalDate = data.renewalDate
+    const becomingActive =
+      data.membershipStatus === "ACTIVE" && existingMember.membershipStatus !== "ACTIVE"
+    if (becomingActive) {
+      const now = new Date()
+      const effective = renewalDate !== undefined ? renewalDate : existingMember.renewalDate
+      if (!effective || effective.getTime() <= now.getTime()) {
+        renewalDate = oneYearFrom(now)
+      }
+    }
+
+    const userData: Prisma.UserUpdateInput = {}
+    if (data.firstName !== undefined) userData.firstName = data.firstName
+    if (data.lastName !== undefined) userData.lastName = data.lastName
+    if (data.email !== undefined) userData.email = data.email
+    if (data.role !== undefined) userData.role = data.role
+    if (data.isActive !== undefined) userData.isActive = data.isActive
+
+    const memberData: Prisma.MemberUpdateInput = {}
+    const memberFields = [
+      "businessName", "businessType", "industry", "businessEmail", "businessPhone",
+      "businessAddress", "city", "state", "zipCode", "website", "membershipTier",
+      "membershipStatus",
+    ] as const
+    for (const key of memberFields) {
+      if (data[key] !== undefined) (memberData as Record<string, unknown>)[key] = data[key]
+    }
+    if (renewalDate !== undefined) memberData.renewalDate = renewalDate
+
     const result = await prisma.$transaction(async (tx) => {
-      // Update user if user fields are provided
-      if (validatedData.firstName || validatedData.lastName || validatedData.email || validatedData.role || validatedData.isActive !== undefined) {
-        await tx.user.update({
-          where: { id: existingMember.userId },
-          data: {
-            ...(validatedData.firstName && { firstName: validatedData.firstName }),
-            ...(validatedData.lastName && { lastName: validatedData.lastName }),
-            ...(validatedData.email && { email: validatedData.email }),
-            ...(validatedData.role && { role: validatedData.role }),
-            ...(validatedData.isActive !== undefined && { isActive: validatedData.isActive }),
-          },
-        })
+      if (Object.keys(userData).length > 0) {
+        await tx.user.update({ where: { id: existingMember.userId }, data: userData })
       }
 
-      // Update member
       const updatedMember = await tx.member.update({
         where: { id },
-        data: {
-          ...(validatedData.businessName !== undefined && { businessName: validatedData.businessName }),
-          ...(validatedData.businessType !== undefined && { businessType: validatedData.businessType }),
-          ...(validatedData.industry !== undefined && { industry: validatedData.industry }),
-          ...(validatedData.businessEmail !== undefined && { businessEmail: validatedData.businessEmail }),
-          ...(validatedData.businessPhone !== undefined && { businessPhone: validatedData.businessPhone }),
-          ...(validatedData.businessAddress !== undefined && { businessAddress: validatedData.businessAddress }),
-          ...(validatedData.city !== undefined && { city: validatedData.city }),
-          ...(validatedData.state !== undefined && { state: validatedData.state }),
-          ...(validatedData.zipCode !== undefined && { zipCode: validatedData.zipCode }),
-          ...(validatedData.website !== undefined && { website: validatedData.website }),
-          ...(validatedData.membershipTier !== undefined && { membershipTier: validatedData.membershipTier }),
-          ...(validatedData.membershipStatus !== undefined && { membershipStatus: validatedData.membershipStatus }),
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              role: true,
-              isActive: true,
-              lastLogin: true,
-              createdAt: true,
-              updatedAt: true,
-            },
-          },
-        },
+        data: memberData,
+        select: adminMemberSelect,
       })
 
-      // Create audit log
+      const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null)
       await tx.auditLog.create({
         data: {
           userId: session.user.id,
@@ -169,16 +196,26 @@ export async function PUT(
           oldValues: {
             memberId: existingMember.id,
             userEmail: existingMember.user.email,
+            firstName: existingMember.user.firstName,
+            lastName: existingMember.user.lastName,
+            role: existingMember.user.role,
+            isActive: existingMember.user.isActive,
             businessName: existingMember.businessName,
             membershipTier: existingMember.membershipTier,
             membershipStatus: existingMember.membershipStatus,
+            renewalDate: iso(existingMember.renewalDate),
           },
           newValues: {
             memberId: updatedMember.id,
-            userEmail: updatedMember.user?.email,
+            userEmail: updatedMember.user.email,
+            firstName: updatedMember.user.firstName,
+            lastName: updatedMember.user.lastName,
+            role: updatedMember.user.role,
+            isActive: updatedMember.user.isActive,
             businessName: updatedMember.businessName,
             membershipTier: updatedMember.membershipTier,
             membershipStatus: updatedMember.membershipStatus,
+            renewalDate: iso(updatedMember.renewalDate),
           },
         },
       })
@@ -188,13 +225,13 @@ export async function PUT(
 
     return NextResponse.json(result)
   } catch (error) {
-    console.error("Error updating member:", error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
         { status: 400 }
       )
     }
+    console.error("Error updating member:", error)
     return NextResponse.json(
       { error: "Failed to update member" },
       { status: 500 }
@@ -220,6 +257,10 @@ export async function DELETE(
 
     if (!existingMember) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 })
+    }
+
+    if (existingMember.userId === session.user.id) {
+      return NextResponse.json({ error: "You cannot deactivate your own account" }, { status: 400 })
     }
 
     // Soft delete by deactivating the user

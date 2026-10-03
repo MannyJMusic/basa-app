@@ -1,40 +1,23 @@
 import { NextRequest, NextResponse } from "next/server"
+import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
-import { sendEmailVerification } from "@/lib/basa-emails"
-import { generateVerificationToken } from "@/lib/utils"
-import { requireAdmin, requireSession, isResponse } from "@/lib/api-auth"
+import { requireSession, isResponse } from "@/lib/api-auth"
 import { MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
-import { adminMemberSelect, directoryMemberSelect, applyMemberPrivacy } from '@/lib/member-privacy'
-
-// Validation schemas
-const createMemberSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  businessName: z.string().optional(),
-  businessType: z.string().optional(),
-  industry: z.array(z.string()).optional(),
-  businessEmail: z.string().email().optional(),
-  businessPhone: z.string().optional(),
-  businessAddress: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zipCode: z.string().optional(),
-  website: z.string().url().optional(),
-  membershipTier: z.enum(MEMBERSHIP_TIER_VALUES).optional(),
-  role: z.enum(["MEMBER", "MODERATOR", "ADMIN"]).default("MEMBER"),
-  membershipPaymentConfirmed: z.boolean().optional(),
-})
+import { adminMemberSelect, directoryMemberSelect, applyMemberPrivacy, directoryWhere } from '@/lib/member-privacy'
 
 const searchParamsSchema = z.object({
   search: z.string().optional(),
-  status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
+  status: z.enum(["PENDING", "ACTIVE", "EXPIRED", "INACTIVE"]).optional(),
   membershipTier: z.enum(MEMBERSHIP_TIER_VALUES).optional(),
   industry: z.string().optional(),
-  page: z.string().transform(Number).pipe(z.number().min(1)).default("1"),
-  limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).default("20"),
+  city: z.string().trim().min(1).optional(),
+  /** `directory`: the member-directory view, even for an admin. */
+  scope: z.enum(["directory"]).optional(),
+  /** Admin only: `active` = can sign in; `unclaimed` = imported, never claimed. */
+  account: z.enum(["active", "unclaimed"]).optional(),
+  page: z.string().transform(Number).pipe(z.number().int().min(1)).default("1"),
+  limit: z.string().transform(Number).pipe(z.number().int().min(1).max(100)).default("20"),
   sortBy: z.enum(["firstName", "lastName", "businessName", "joinedAt", "membershipTier"]).default("joinedAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 })
@@ -44,69 +27,68 @@ export async function GET(request: NextRequest) {
     const session = await requireSession()
     if (isResponse(session)) return session
 
+    // A GUEST session is someone without an active membership: the directory
+    // is a member benefit.
+    if (session.user.role === "GUEST") {
+      return NextResponse.json({ error: "The member directory is for active members" }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
-    const params = searchParamsSchema.parse(Object.fromEntries(searchParams))
-
-    // Build where clause for filtering
-    const where: any = {
-      user: {
-        isActive: true,
-      },
+    const parsed = searchParamsSchema.safeParse(Object.fromEntries(searchParams))
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid filters", details: parsed.error.errors }, { status: 400 })
     }
+    const params = parsed.data
 
-    const isAdmin = session.user.role === "ADMIN"
+    // Admins get the full staff list unless they ask for the directory view
+    // (the member-facing directory page does, so staff see what members see).
+    const isAdmin = session.user.role === "ADMIN" && params.scope !== "directory"
+    const and: Prisma.MemberWhereInput[] = []
 
-    // For non-admin users, only show members who have opted to be in directory
-    if (!isAdmin) {
-      where.showInDirectory = true
-    }
-
-    // Search functionality
-    if (params.search) {
-      where.OR = [
-        { user: { firstName: { contains: params.search, mode: "insensitive" } } },
-        { user: { lastName: { contains: params.search, mode: "insensitive" } } },
-        { businessName: { contains: params.search, mode: "insensitive" } },
-        // Searching by address would let a member confirm who owns an email
-        // they are not allowed to see; only staff search that way.
-        ...(isAdmin
-          ? [
-              { user: { email: { contains: params.search, mode: "insensitive" } } },
-              { businessEmail: { contains: params.search, mode: "insensitive" } },
-            ]
-          : []),
-      ]
-    }
-
-    // Status filter
-    if (params.status) {
-      where.membershipStatus = params.status
-    }
-
-    // Membership tier filter
-    if (params.membershipTier) {
-      where.membershipTier = params.membershipTier
-    }
-
-    // Industry filter
-    if (params.industry) {
-      where.industry = { has: params.industry }
-    }
-
-    // Build order by clause
-    const orderBy: any = {}
-    if (params.sortBy === "firstName" || params.sortBy === "lastName") {
-      orderBy.user = { [params.sortBy]: params.sortOrder }
-    } else if (params.sortBy === "businessName") {
-      orderBy[params.sortBy] = params.sortOrder
+    if (isAdmin) {
+      // Staff see every member, including imported people who have not yet
+      // claimed their account (inactive logins). `account` narrows it.
+      if (params.account === "active") {
+        and.push({ user: { isActive: true } })
+      } else if (params.account === "unclaimed") {
+        and.push({ user: { hashedPassword: null, accountStatus: "INACTIVE" } })
+      }
+      if (params.status) and.push({ membershipStatus: params.status })
     } else {
-      orderBy[params.sortBy] = params.sortOrder
+      and.push(directoryWhere)
     }
 
-    // Calculate pagination
+    if (params.search) {
+      and.push({
+        OR: [
+          { user: { firstName: { contains: params.search, mode: "insensitive" } } },
+          { user: { lastName: { contains: params.search, mode: "insensitive" } } },
+          { businessName: { contains: params.search, mode: "insensitive" } },
+          // Searching by address would let a member confirm who owns an email
+          // they are not allowed to see; only staff search that way.
+          ...(isAdmin
+            ? [
+                { user: { email: { contains: params.search, mode: "insensitive" as const } } },
+                { businessEmail: { contains: params.search, mode: "insensitive" as const } },
+              ]
+            : []),
+        ],
+      })
+    }
+
+    if (params.membershipTier) and.push({ membershipTier: params.membershipTier })
+    if (params.industry) and.push({ industry: { has: params.industry } })
+    if (params.city) and.push({ city: { contains: params.city, mode: "insensitive" } })
+
+    const where: Prisma.MemberWhereInput = { AND: and }
+
+    const orderBy: Prisma.MemberOrderByWithRelationInput[] =
+      params.sortBy === "firstName" || params.sortBy === "lastName"
+        ? [{ user: { [params.sortBy]: params.sortOrder } }, { id: "asc" }]
+        : [{ [params.sortBy]: params.sortOrder }, { id: "asc" }]
+
     const skip = (params.page - 1) * params.limit
 
-    // Get members with pagination
     const [members, total] = await Promise.all([
       prisma.member.findMany({
         where,
@@ -118,10 +100,7 @@ export async function GET(request: NextRequest) {
       prisma.member.count({ where }),
     ])
 
-    // Calculate pagination info
     const totalPages = Math.ceil(total / params.limit)
-    const hasNextPage = params.page < totalPages
-    const hasPrevPage = params.page > 1
 
     return NextResponse.json({
       members: isAdmin
@@ -132,8 +111,8 @@ export async function GET(request: NextRequest) {
         limit: params.limit,
         total,
         totalPages,
-        hasNextPage,
-        hasPrevPage,
+        hasNextPage: params.page < totalPages,
+        hasPrevPage: params.page > 1,
       },
     })
   } catch (error) {
@@ -144,138 +123,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await requireAdmin()
-    if (isResponse(session)) return session
-
-    const body = await request.json()
-    const validatedData = createMemberSchema.parse(body)
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: validatedData.email },
-    })
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "User with this email already exists" },
-        { status: 400 }
-      )
-    }
-
-    // Hash password
-    const bcrypt = await import("bcryptjs")
-    const hashedPassword = await bcrypt.hash(validatedData.password, 12)
-
-    // Email verification logic
-    let dbVerificationToken: string | null = null
-    let dbVerificationTokenExpiry: Date | null = null
-    let dbAccountStatus: "PENDING_VERIFICATION" | "ACTIVE" = "PENDING_VERIFICATION"
-    let isActive = false
-    if (validatedData.membershipPaymentConfirmed) {
-      dbVerificationToken = generateVerificationToken()
-      dbVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
-    }
-
-    // Create user and member in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Create user
-      const user = await tx.user.create({
-        data: {
-          firstName: validatedData.firstName,
-          lastName: validatedData.lastName,
-          email: validatedData.email,
-          hashedPassword,
-          role: validatedData.role,
-          isActive,
-          verificationToken: dbVerificationToken,
-          verificationTokenExpiry: dbVerificationTokenExpiry,
-        },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          verificationToken: true,
-        }
-      })
-
-      // Create member
-      const member = await tx.member.create({
-        data: {
-          userId: user.id,
-          businessName: validatedData.businessName,
-          businessType: validatedData.businessType,
-          industry: validatedData.industry || [],
-          businessEmail: validatedData.businessEmail,
-          businessPhone: validatedData.businessPhone,
-          businessAddress: validatedData.businessAddress,
-          city: validatedData.city,
-          state: validatedData.state,
-          zipCode: validatedData.zipCode,
-          website: validatedData.website,
-          membershipTier: validatedData.membershipTier,
-          membershipStatus: "ACTIVE",
-          joinedAt: new Date(),
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              role: true,
-              isActive: true,
-              createdAt: true,
-            },
-          },
-        },
-      })
-
-      // Create audit log
-      await tx.auditLog.create({
-        data: {
-          userId: session.user.id,
-          action: "CREATE_MEMBER",
-          entityType: "MEMBER",
-          entityId: member.id,
-          newValues: {
-            memberId: member.id,
-            userEmail: user.email,
-            businessName: member.businessName,
-            membershipTier: member.membershipTier,
-          },
-        },
-      })
-
-      return { user, member }
-    })
-
-    const { email, firstName, verificationToken } = result.user;
-
-    // Send verification email if payment is confirmed
-    if (validatedData.membershipPaymentConfirmed && verificationToken && firstName && email) {
-      try {
-        await sendEmailVerification(email, firstName, verificationToken)
-      } catch (emailError) {
-        console.error("Failed to send verification email:", emailError)
-      }
-    }
-
-    return NextResponse.json(result, { status: 201 })
-  } catch (error) {
-    console.error("Error creating member:", error)
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation error", details: error.errors },
-        { status: 400 }
-      )
-    }
-    return NextResponse.json(
-      { error: "Failed to create member" },
-      { status: 500 }
-    )
-  }
-} 

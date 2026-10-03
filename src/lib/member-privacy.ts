@@ -55,14 +55,39 @@ export const directoryMemberSelect = {
   user: {
     select: { id: true, firstName: true, lastName: true, email: true, role: true },
   },
+  // Another member sees only that someone attended public events: confirmed
+  // registrations of published or completed events, titles and dates only.
+  eventRegistrations: {
+    where: {
+      status: "CONFIRMED",
+      event: { status: { in: ["PUBLISHED", "COMPLETED"] } },
+    },
+    select: {
+      id: true,
+      event: { select: { id: true, title: true, startDate: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  },
+} satisfies Prisma.MemberSelect
+
+/**
+ * Which members appear in the directory for a non-admin: active memberships of
+ * non-guest accounts that opted in, excluding accounts staff suspended.
+ */
+export const directoryWhere = {
+  membershipStatus: "ACTIVE",
+  showInDirectory: true,
+  user: { role: { not: "GUEST" }, accountStatus: { not: "SUSPENDED" } },
+} satisfies Prisma.MemberWhereInput
+
+export const adminMemberSelect = {
+  ...directoryMemberSelect,
   eventRegistrations: {
     select: registrationSummarySelect,
     orderBy: { createdAt: "desc" },
   },
-} satisfies Prisma.MemberSelect
-
-export const adminMemberSelect = {
-  ...directoryMemberSelect,
+  cancelAtPeriodEnd: true,
   ein: true,
   annualRevenue: true,
   renewalDate: true,

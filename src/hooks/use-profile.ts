@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
-import type { MembershipTier } from "@prisma/client"
+import type { MembershipTier, Status } from "@prisma/client"
 
 export interface ProfileData {
   id: string
@@ -27,7 +27,7 @@ export interface ProfileData {
     zipCode?: string
     website?: string
     membershipTier?: MembershipTier
-    membershipStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+    membershipStatus: Status
     joinedAt: string
     description?: string
     tagline?: string
@@ -75,45 +75,50 @@ export interface ProfileData {
   }
 }
 
+/** Optional text fields take null to clear them. */
 export interface UpdateProfileData {
   firstName?: string
   lastName?: string
   email?: string
-  businessName?: string
-  businessType?: string
+  businessName?: string | null
+  businessType?: string | null
   industry?: string[]
-  businessEmail?: string
-  businessPhone?: string
-  personalPhone?: string
-  businessAddress?: string
-  city?: string
-  state?: string
-  zipCode?: string
-  website?: string
-  description?: string
-  tagline?: string
+  businessEmail?: string | null
+  businessPhone?: string | null
+  businessAddress?: string | null
+  city?: string | null
+  state?: string | null
+  zipCode?: string | null
+  website?: string | null
+  description?: string | null
+  tagline?: string | null
   specialties?: string[]
   certifications?: string[]
-  linkedin?: string
-  facebook?: string
-  instagram?: string
-  twitter?: string
-  youtube?: string
+  linkedin?: string | null
+  facebook?: string | null
+  instagram?: string | null
+  twitter?: string | null
+  youtube?: string | null
   showInDirectory?: boolean
   allowContact?: boolean
   showAddress?: boolean
 }
 
 export function useProfile() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
+  const userId = session?.user?.id
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
+  /** Loading the profile failed: the page has nothing to show. */
   const [error, setError] = useState<string | null>(null)
+  /** Saving failed: shown next to the form, which keeps the user's edits. */
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
   // Fetch profile data
   const fetchProfile = useCallback(async () => {
-    if (!session?.user) {
+    if (!userId) {
       setLoading(false)
       return
     }
@@ -124,7 +129,7 @@ export function useProfile() {
 
       const response = await fetch("/api/profile")
       if (!response.ok) {
-        const errorData = await response.json()
+        const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Failed to fetch profile")
       }
 
@@ -136,18 +141,19 @@ export function useProfile() {
     } finally {
       setLoading(false)
     }
-  }, [session?.user])
+  }, [userId])
 
   // Update profile data
-  const updateProfile = useCallback(async (data: UpdateProfileData): Promise<ProfileData | null> => {
-    if (!session?.user) {
-      setError("Not authenticated")
+  const updateProfile = useCallback(async (data: UpdateProfileData): Promise<{ emailChangePending?: string | null } | null> => {
+    if (!userId) {
+      setSaveError("Not signed in")
       return null
     }
 
     try {
       setSaving(true)
-      setError(null)
+      setSaveError(null)
+      setFieldErrors({})
 
       const response = await fetch("/api/profile", {
         method: "PUT",
@@ -158,33 +164,34 @@ export function useProfile() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to update profile")
+        const errorData = await response.json().catch(() => ({}))
+        setFieldErrors(errorData.fieldErrors ?? {})
+        setSaveError(errorData.error || "Failed to update profile")
+        return null
       }
 
       const result = await response.json()
-      
-      // Update local state with new data
-      if (profile) {
-        setProfile({
-          ...profile,
-          ...result.user,
-          member: result.member ? {
-            ...profile.member,
-            ...result.member,
-          } : profile.member,
-        })
-      }
+
+      setProfile(prev => prev ? {
+        ...prev,
+        ...(result.user ? {
+          firstName: result.user.firstName,
+          lastName: result.user.lastName,
+        } : {}),
+        member: result.member ? {
+          ...prev.member,
+          ...result.member,
+        } : prev.member,
+      } : prev)
 
       return result
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to update profile"
-      setError(errorMessage)
+    } catch {
+      setSaveError("Could not reach the server. Your changes have not been saved.")
       return null
     } finally {
       setSaving(false)
     }
-  }, [session?.user, profile])
+  }, [userId])
 
   // Calculate profile completion percentage
   const getProfileCompletion = useCallback(() => {
@@ -278,39 +285,23 @@ export function useProfile() {
     }
   }, [profile])
 
-  // Get networking stats
-  const getNetworkingStats = useCallback(() => {
-    if (!profile?.member) {
-      return {
-        connections: 0,
-        meetings: 0,
-        eventsAttended: 0,
-        referralsGiven: 0,
-      }
-    }
-
-    return {
-      connections: profile.member.referralsGiven.length + profile.member.referralsReceived.length,
-      meetings: profile.member.eventRegistrations.length,
-      eventsAttended: profile.member.eventRegistrations.filter(reg => reg.event.status === 'COMPLETED').length,
-      referralsGiven: profile.member.referralsGiven.length,
-    }
-  }, [profile])
-
-  // Fetch profile on mount and when session changes
+  // Fetch once per signed-in user (not on every session refresh, which
+  // would overwrite edits in progress).
   useEffect(() => {
+    if (status === "loading") return
     fetchProfile()
-  }, [fetchProfile])
+  }, [fetchProfile, status])
 
   return {
     profile,
     loading,
     error,
+    saveError,
+    fieldErrors,
     saving,
     fetchProfile,
     updateProfile,
     getProfileCompletion,
     getProfileCompletionDetails,
-    getNetworkingStats,
   }
 } 
