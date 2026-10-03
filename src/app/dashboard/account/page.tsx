@@ -1,300 +1,187 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
+import Link from "next/link"
+import { useSession, signIn, signOut } from "next-auth/react"
+import type { MembershipTier, Status } from "@prisma/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/use-toast"
-import { 
-  User, 
-  Shield, 
-  Bell, 
-  CreditCard, 
+import { tierLabel } from "@/lib/membership-tiers"
+import {
+  User,
+  Shield,
+  Bell,
   Save,
   Eye,
   EyeOff,
   Key,
   Mail,
-  Settings,
   Building2,
   Loader2,
-  AlertTriangle,
-  Download,
-  Trash2
 } from "lucide-react"
 
-interface UserData {
+const OFFICE_EMAIL = "info@businessassociationsa.com"
+
+interface Preferences {
+  newsletterSubscribed: boolean
+  showInDirectory: boolean
+  allowContact: boolean
+  showAddress: boolean
+}
+
+interface AccountData {
   id: string
-  firstName: string
-  lastName: string
-  email: string
+  firstName: string | null
+  lastName: string | null
+  email: string | null
   role: string
   isActive: boolean
-  lastLogin: string
+  lastLogin: string | null
   createdAt: string
-  updatedAt: string
-  member?: {
+  member: {
     id: string
-    membershipTier: string
-    membershipStatus: string
+    membershipTier: MembershipTier | null
+    membershipStatus: Status
     joinedAt: string
-    renewalDate: string
-  }
-  notificationSettings: {
-    emailNotifications: boolean
-    eventReminders: boolean
-    newsletter: boolean
-    marketingEmails: boolean
-    connectionRequests: boolean
-    membershipUpdates: boolean
-  }
-  privacySettings: {
-    showInDirectory: boolean
-    allowContact: boolean
-    showEmail: boolean
-    showPhone: boolean
-  }
+    renewalDate: string | null
+    cancelAtPeriodEnd: boolean
+  } | null
+  preferences: Preferences
 }
+
+const STATUS_LABEL: Record<Status, string> = {
+  ACTIVE: "Active",
+  PENDING: "Not active",
+  EXPIRED: "Expired",
+  INACTIVE: "Inactive",
+}
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { timeZone: "America/Chicago", dateStyle: "medium" })
 
 export default function AccountPage() {
   const { data: session, status } = useSession()
+  const userId = session?.user?.id
   const { toast } = useToast()
-  const [userData, setUserData] = useState<UserData | null>(null)
+  const [account, setAccount] = useState<AccountData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false
-  })
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: ""
-  })
-  const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    eventReminders: true,
-    newsletter: false,
-    marketingEmails: false,
-    connectionRequests: true,
-    membershipUpdates: true
-  })
-  const [privacySettings, setPrivacySettings] = useState({
-    showInDirectory: true,
-    allowContact: true,
-    showEmail: false,
-    showPhone: false
-  })
+  const [loadError, setLoadError] = useState(false)
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [savingPrefs, setSavingPrefs] = useState(false)
+  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false })
+  const [passwordData, setPasswordData] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" })
+  const [preferences, setPreferences] = useState<Preferences | null>(null)
 
-  // Fetch user data
+  // Load once per signed-in user. Depending on the session object would
+  // refetch on every window focus and overwrite unsaved toggles.
   useEffect(() => {
-    
-    if (status === 'loading') {
+    if (status === "loading") return
+    if (!userId) {
+      setLoading(false)
       return
     }
-    
-    if (session?.user) {
-      fetchUserData()
-    } else if (status === 'unauthenticated') {
-      setLoading(false)
-    }
-  }, [session, status])
-
-  const fetchUserData = async () => {
-    try {
-      
-      const response = await fetch('/api/account', {
-        credentials: 'include', // Ensure cookies are sent
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-      
-      
-      if (response.ok) {
-        const data = await response.json()
-        setUserData(data)
-        // Set initial settings from API response
-        setNotificationSettings(data.notificationSettings)
-        setPrivacySettings(data.privacySettings)
-      } else {
-        const errorText = await response.text()
-        console.error('API error response:', errorText)
-        toast({
-          title: "Error",
-          description: "Failed to fetch account data",
-          variant: "destructive"
-        })
+    let cancelled = false
+    ;(async () => {
+      try {
+        const response = await fetch("/api/account")
+        if (!response.ok) throw new Error(String(response.status))
+        const data: AccountData = await response.json()
+        if (cancelled) return
+        setAccount(data)
+        setPreferences(data.preferences)
+      } catch {
+        if (!cancelled) setLoadError(true)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-    } catch (error) {
-      console.error('Fetch error:', error)
-      toast({
-        title: "Error",
-        description: "Failed to fetch account data",
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
+    })()
+    return () => {
+      cancelled = true
     }
-  }
+  }, [userId, status])
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "New passwords do not match",
-        variant: "destructive"
-      })
+      toast({ title: "Error", description: "New passwords do not match", variant: "destructive" })
+      return
+    }
+    if (passwordData.newPassword.length < 8) {
+      toast({ title: "Error", description: "Password must be at least 8 characters", variant: "destructive" })
       return
     }
 
-    setSaving(true)
+    setSavingPassword(true)
     try {
-      const response = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword
-        })
+          newPassword: passwordData.newPassword,
+        }),
       })
 
-      if (response.ok) {
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
         toast({
-          title: "Success",
-          description: "Password updated successfully"
-        })
-        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
-      } else {
-        const error = await response.json()
-        toast({
-          title: "Error",
+          title: "Password not changed",
           description: error.error || "Failed to update password",
-          variant: "destructive"
+          variant: "destructive",
         })
+        return
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update password",
-        variant: "destructive"
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
 
-  const handleNotificationSettingsUpdate = async () => {
-    setSaving(true)
-    try {
-      const response = await fetch('/api/account', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(notificationSettings)
-      })
-
-      if (response.ok) {
+      // Changing the password ends every existing session, this one included.
+      // Sign this browser back in with the new password; if that fails, send
+      // the member to the sign-in page rather than leave a dead session.
+      const email = account?.email ?? session?.user?.email
+      const res = email
+        ? await signIn("credentials", { email, password: passwordData.newPassword, redirect: false })
+        : null
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
+      if (res?.ok && !res.error) {
         toast({
-          title: "Success",
-          description: "Notification settings updated successfully"
+          title: "Password changed",
+          description: "You have been signed out on your other devices.",
         })
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to update notification settings",
-          variant: "destructive"
-        })
+        await signOut({ callbackUrl: "/auth/sign-in" })
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update notification settings",
-        variant: "destructive"
-      })
+    } catch {
+      toast({ title: "Error", description: "Failed to update password", variant: "destructive" })
     } finally {
-      setSaving(false)
+      setSavingPassword(false)
     }
   }
 
-  const handlePrivacySettingsUpdate = async () => {
-    setSaving(true)
+  const handlePreferencesUpdate = async () => {
+    if (!preferences) return
+    setSavingPrefs(true)
     try {
-      const response = await fetch('/api/account', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(privacySettings)
+      const response = await fetch("/api/account", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(preferences),
       })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Privacy settings updated successfully"
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to update privacy settings",
-          variant: "destructive"
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update privacy settings",
-        variant: "destructive"
-      })
+      if (!response.ok) throw new Error(String(response.status))
+      const data = await response.json()
+      setPreferences(data.preferences)
+      toast({ title: "Saved", description: "Your preferences have been updated." })
+    } catch {
+      toast({ title: "Error", description: "Failed to save your preferences", variant: "destructive" })
     } finally {
-      setSaving(false)
+      setSavingPrefs(false)
     }
   }
 
-  const handleExportData = async () => {
-    try {
-      const response = await fetch('/api/account/export', {
-        method: 'GET'
-      })
-      
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const downloadLink = document.createElement('a')
-        downloadLink.href = url
-        downloadLink.download = 'basa-account-data.json'
-        document.body.appendChild(downloadLink)
-        downloadLink.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(downloadLink)
-        
-        toast({
-          title: "Success",
-          description: "Account data exported successfully"
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to export account data",
-          variant: "destructive"
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to export account data",
-        variant: "destructive"
-      })
-    }
-  }
-
-  if (loading || status === 'loading') {
+  if (loading || status === "loading") {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -302,123 +189,85 @@ export default function AccountPage() {
     )
   }
 
-  if (status === 'unauthenticated') {
+  if (!account || !preferences || loadError) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-600">Please sign in to access your account settings</p>
+        <p className="text-gray-600">Failed to load your account. Please refresh the page.</p>
       </div>
     )
   }
 
-  if (!userData) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-gray-600">Failed to load account data</p>
+  const isGuest = account.role === "GUEST"
+  const member = account.member
+  const membershipActive = member?.membershipStatus === "ACTIVE"
+
+  const toggle = (key: keyof Preferences, label: string, help: string) => (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <Label htmlFor={key}>{label}</Label>
+        <p className="text-sm text-gray-500">{help}</p>
       </div>
-    )
-  } else if (userData.role === "GUEST") {
-    return (
-      <div className="max-w-xl mx-auto mt-12 text-center">
-        <h2 className="text-2xl font-bold mb-2">Welcome, Guest!</h2>
-        <p className="mb-4">You have limited access. <a href="/membership/join" className="underline text-blue-600">Join as a member</a> to unlock full account features.</p>
-        {/* Show only basic info */}
-        <div className="bg-gray-50 p-4 rounded shadow-sm">
-          <p><strong>Email:</strong> {userData.email}</p>
-        </div>
-      </div>
-    );
-  }
+      <Switch
+        id={key}
+        checked={preferences[key]}
+        onCheckedChange={(checked) => setPreferences(prev => (prev ? { ...prev, [key]: checked } : prev))}
+      />
+    </div>
+  )
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
-        <p className="text-gray-600 mt-2">Manage your account preferences, security, and privacy settings</p>
+        <p className="text-gray-600 mt-2">Manage your password, email preferences and directory privacy</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Security Settings */}
+        {/* Security */}
         <Card>
           <CardHeader>
             <div className="flex items-center space-x-2">
               <Shield className="w-5 h-5 text-green-600" />
-              <CardTitle>Security Settings</CardTitle>
+              <CardTitle>Password</CardTitle>
             </div>
             <CardDescription>
-              Manage your password and account security
+              Changing your password signs you out on your other devices
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handlePasswordUpdate} className="space-y-4">
-              <div>
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <div className="relative">
-                  <Input 
-                    id="currentPassword" 
-                    type={showPasswords.current ? "text" : "password"}
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                    required
-                  />
-                  <Button 
-                    type="button"
-                    variant="ghost" 
-                    size="sm" 
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
-                  >
-                    {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
+              {([
+                ["currentPassword", "current", "Current Password", "current-password"],
+                ["newPassword", "new", "New Password", "new-password"],
+                ["confirmPassword", "confirm", "Confirm New Password", "new-password"],
+              ] as const).map(([field, visibility, label, autoComplete]) => (
+                <div key={field}>
+                  <Label htmlFor={field}>{label}</Label>
+                  <div className="relative">
+                    <Input
+                      id={field}
+                      type={showPasswords[visibility] ? "text" : "password"}
+                      value={passwordData[field]}
+                      autoComplete={autoComplete}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, [field]: e.target.value }))}
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3"
+                      aria-label={showPasswords[visibility] ? "Hide password" : "Show password"}
+                      onClick={() => setShowPasswords(prev => ({ ...prev, [visibility]: !prev[visibility] }))}
+                    >
+                      {showPasswords[visibility] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="newPassword">New Password</Label>
-                <div className="relative">
-                  <Input 
-                    id="newPassword" 
-                    type={showPasswords.new ? "text" : "password"}
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                    required
-                  />
-                  <Button 
-                    type="button"
-                    variant="ghost" 
-                    size="sm" 
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
-                  >
-                    {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <div className="relative">
-                  <Input 
-                    id="confirmPassword" 
-                    type={showPasswords.confirm ? "text" : "password"}
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                    required
-                  />
-                  <Button 
-                    type="button"
-                    variant="ghost" 
-                    size="sm" 
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
-                  >
-                    {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-              
-              <Button type="submit" className="w-full" disabled={saving}>
-                {saving ? (
+              ))}
+
+              <Button type="submit" className="w-full" disabled={savingPassword}>
+                {savingPassword ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Updating...
@@ -434,94 +283,30 @@ export default function AccountPage() {
           </CardContent>
         </Card>
 
-        {/* Notification Preferences */}
+        {/* Preferences */}
         <Card>
           <CardHeader>
             <div className="flex items-center space-x-2">
               <Bell className="w-5 h-5 text-purple-600" />
-              <CardTitle>Notification Preferences</CardTitle>
+              <CardTitle>Email &amp; Privacy</CardTitle>
             </div>
             <CardDescription>
-              Choose how and when you want to be notified
+              What we send you and what other members can see
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="emailNotifications">Email Notifications</Label>
-                  <p className="text-sm text-gray-500">Receive updates via email</p>
-                </div>
-                <Switch
-                  id="emailNotifications"
-                  checked={notificationSettings.emailNotifications}
-                  onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, emailNotifications: checked }))}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="eventReminders">Event Reminders</Label>
-                  <p className="text-sm text-gray-500">Get reminded about upcoming events</p>
-                </div>
-                <Switch
-                  id="eventReminders"
-                  checked={notificationSettings.eventReminders}
-                  onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, eventReminders: checked }))}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="connectionRequests">Connection Requests</Label>
-                  <p className="text-sm text-gray-500">Notify when someone wants to connect</p>
-                </div>
-                <Switch
-                  id="connectionRequests"
-                  checked={notificationSettings.connectionRequests}
-                  onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, connectionRequests: checked }))}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="membershipUpdates">Membership Updates</Label>
-                  <p className="text-sm text-gray-500">Important membership and billing updates</p>
-                </div>
-                <Switch
-                  id="membershipUpdates"
-                  checked={notificationSettings.membershipUpdates}
-                  onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, membershipUpdates: checked }))}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="newsletter">Newsletter</Label>
-                  <p className="text-sm text-gray-500">Receive monthly newsletter</p>
-                </div>
-                <Switch
-                  id="newsletter"
-                  checked={notificationSettings.newsletter}
-                  onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, newsletter: checked }))}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="marketingEmails">Marketing Emails</Label>
-                  <p className="text-sm text-gray-500">Receive promotional content</p>
-                </div>
-                <Switch
-                  id="marketingEmails"
-                  checked={notificationSettings.marketingEmails}
-                  onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, marketingEmails: checked }))}
-                />
-              </div>
-            </div>
-            
-            <Button onClick={handleNotificationSettingsUpdate} className="w-full" disabled={saving}>
-              {saving ? (
+            {toggle("newsletterSubscribed", "BASA Newsletter", "Receive the BASA email newsletter")}
+            {!isGuest && (
+              <>
+                <Separator />
+                {toggle("showInDirectory", "Show in Member Directory", "List your business in the members-only directory")}
+                {toggle("allowContact", "Share Contact Details", "Show your business email and phone to other members")}
+                {toggle("showAddress", "Share Business Address", "Show your street address and ZIP to other members")}
+              </>
+            )}
+
+            <Button onClick={handlePreferencesUpdate} className="w-full" disabled={savingPrefs}>
+              {savingPrefs ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Saving...
@@ -536,86 +321,8 @@ export default function AccountPage() {
           </CardContent>
         </Card>
 
-        {/* Privacy Settings */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <User className="w-5 h-5 text-blue-600" />
-              <CardTitle>Privacy Settings</CardTitle>
-            </div>
-            <CardDescription>
-              Control your privacy and visibility settings
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="showInDirectory">Show in Member Directory</Label>
-                  <p className="text-sm text-gray-500">Allow other members to find you</p>
-                </div>
-                <Switch
-                  id="showInDirectory"
-                  checked={privacySettings.showInDirectory}
-                  onCheckedChange={(checked) => setPrivacySettings(prev => ({ ...prev, showInDirectory: checked }))}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="allowContact">Allow Contact</Label>
-                  <p className="text-sm text-gray-500">Let members contact you directly</p>
-                </div>
-                <Switch
-                  id="allowContact"
-                  checked={privacySettings.allowContact}
-                  onCheckedChange={(checked) => setPrivacySettings(prev => ({ ...prev, allowContact: checked }))}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="showEmail">Show Email Address</Label>
-                  <p className="text-sm text-gray-500">Display your email publicly</p>
-                </div>
-                <Switch
-                  id="showEmail"
-                  checked={privacySettings.showEmail}
-                  onCheckedChange={(checked) => setPrivacySettings(prev => ({ ...prev, showEmail: checked }))}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="showPhone">Show Phone Number</Label>
-                  <p className="text-sm text-gray-500">Display your phone number publicly</p>
-                </div>
-                <Switch
-                  id="showPhone"
-                  checked={privacySettings.showPhone}
-                  onCheckedChange={(checked) => setPrivacySettings(prev => ({ ...prev, showPhone: checked }))}
-                />
-              </div>
-            </div>
-            
-            <Button onClick={handlePrivacySettingsUpdate} className="w-full" disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Privacy Settings
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
         {/* Account Information */}
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center space-x-2">
               <Building2 className="w-5 h-5 text-orange-600" />
@@ -628,119 +335,75 @@ export default function AccountPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div>
-                <p className="font-medium">Current Plan</p>
+                <p className="font-medium">Membership</p>
                 <p className="text-sm text-gray-600">
-                  {userData.member?.membershipTier || "Basic"} Membership
+                  {member && membershipActive ? tierLabel(member.membershipTier) : "No active membership"}
                 </p>
               </div>
-              <Badge 
-                variant="secondary" 
-                className={
-                  userData.member?.membershipStatus === "ACTIVE" 
-                    ? "bg-green-100 text-green-800" 
-                    : "bg-red-100 text-red-800"
-                }
+              <Badge
+                variant="secondary"
+                className={membershipActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
               >
-                {userData.member?.membershipStatus || "Unknown"}
+                {member ? STATUS_LABEL[member.membershipStatus] : "Not a member"}
               </Badge>
             </div>
-            
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Member Since</p>
+
+            {!membershipActive && (
               <p className="text-sm text-gray-600">
-                {userData.member?.joinedAt 
-                  ? new Date(userData.member.joinedAt).toLocaleDateString() 
-                  : "N/A"
-                }
+                <Link href="/membership" className="text-blue-600 underline">View membership levels</Link>
+                {" "}or contact the office to join or renew.
               </p>
-            </div>
-            
-            {userData.member?.renewalDate && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Next Renewal Date</p>
-                <p className="text-sm text-gray-600">
-                  {new Date(userData.member.renewalDate).toLocaleDateString()}
-                </p>
-              </div>
             )}
-            
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {member?.joinedAt && membershipActive && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Member Since</p>
+                  <p className="text-sm text-gray-600">{formatDate(member.joinedAt)}</p>
+                </div>
+              )}
+
+              {member?.renewalDate && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">
+                    {member.cancelAtPeriodEnd ? "Membership Ends" : "Renewal Date"}
+                  </p>
+                  <p className="text-sm text-gray-600">{formatDate(member.renewalDate)}</p>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Account Created</p>
+                <p className="text-sm text-gray-600">{formatDate(account.createdAt)}</p>
+              </div>
+
+              {account.lastLogin && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Last Sign-in</p>
+                  <p className="text-sm text-gray-600">
+                    {new Date(account.lastLogin).toLocaleString("en-US", { timeZone: "America/Chicago", dateStyle: "medium", timeStyle: "short" })}
+                  </p>
+                </div>
+              )}
+            </div>
+
             <Separator />
-            
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Account Created</p>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-gray-600">
-                {new Date(userData.createdAt).toLocaleDateString()}
+                <User className="inline w-4 h-4 mr-1 align-text-bottom" />
+                To close your account, contact the office.
               </p>
-            </div>
-            
-            {userData.lastLogin && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Last Login</p>
-                <p className="text-sm text-gray-600">
-                  {new Date(userData.lastLogin).toLocaleString()}
-                </p>
-              </div>
-            )}
-            
-            <Separator />
-            
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Account Actions</p>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" onClick={handleExportData}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export Data
-                </Button>
-                <Button variant="outline" size="sm">
+              <Button asChild variant="outline" size="sm">
+                <a href={`mailto:${OFFICE_EMAIL}`}>
                   <Mail className="w-4 h-4 mr-2" />
                   Contact Support
-                </Button>
-              </div>
+                </a>
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Danger Zone */}
-      <Card className="border-red-200">
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-            <CardTitle className="text-red-600">Danger Zone</CardTitle>
-          </div>
-          <CardDescription>
-            Irreversible and destructive actions
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Delete Account</p>
-                <p className="text-sm text-gray-500">
-                  Permanently delete your account and all associated data
-                </p>
-              </div>
-              <Button variant="destructive" disabled>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Account
-              </Button>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Cancel Membership</p>
-                <p className="text-sm text-gray-500">
-                  Cancel your membership at the end of the current billing period
-                </p>
-              </div>
-              <Button variant="outline" disabled>
-                Cancel Membership
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
-} 
+}

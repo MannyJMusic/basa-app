@@ -120,6 +120,8 @@ model Member {
   renewalDate                DateTime?
   stripeCustomerId           String?              @unique
   subscriptionId             String?              @unique
+  /// The member asked Stripe to stop renewing; the membership still runs to renewalDate.
+  cancelAtPeriodEnd          Boolean              @default(false)
   logo                       String?
   coverImage                 String?
   description                String?
@@ -644,11 +646,10 @@ model Payment {
 
 enum MembershipTier {
   MEETING_MEMBER
-  ASSOCIATE_MEMBER
-  TRIO_MEMBER
-  CLASS_RESOURCE_MEMBER
-  NAG_RESOURCE_MEMBER
-  TRAINING_RESOURCE_MEMBER
+  MARKET_MEMBER
+  ACTION_MEMBER
+  MIXER_MEMBER
+  SPONSORSHIP_MEMBER
 }
 
 enum Status {

@@ -1,12 +1,16 @@
 import { prisma } from "@/lib/db"
 
 /**
- * BASA memberships are a one-time annual charge, not a subscription: every PMPro
- * level carried `billing_amount = 0` with a 1-year expiry. Nothing recurring will
- * arrive from Stripe to end a membership, so expiry is driven from here.
+ * Two kinds of membership share these rules:
  *
- * There is no grace period - a membership lapses the moment its term ends.
+ * - Office-billed (imported from the master list, or added by staff): a yearly term
+ *   with no subscription. Expiry is driven from here; there is no grace period.
+ * - Online (2026 relaunch): a yearly Stripe subscription. Stripe renews it and the
+ *   webhook moves renewalDate on (src/lib/membership-billing.ts). If a renewal
+ *   charge is still being retried, these members get SUBSCRIPTION_GRACE_DAYS before
+ *   this sweep expires them; a subscription that ends is expired by the webhook.
  */
+export const SUBSCRIPTION_GRACE_DAYS = 21
 export const MEMBERSHIP_TERM_YEARS = 1
 
 // UTC throughout: local-time date arithmetic drifts by an hour across a DST
@@ -54,7 +58,10 @@ export async function expireLapsedMemberships(now: Date = new Date()): Promise<E
     prisma.member.updateMany({
       where: {
         membershipStatus: "ACTIVE",
-        renewalDate: { not: null, lt: now },
+        OR: [
+          { subscriptionId: null, renewalDate: { not: null, lt: now } },
+          { subscriptionId: { not: null }, renewalDate: { not: null, lt: new Date(now.getTime() - SUBSCRIPTION_GRACE_DAYS * 86_400_000) } },
+        ],
       },
       data: { membershipStatus: "EXPIRED" },
     }),

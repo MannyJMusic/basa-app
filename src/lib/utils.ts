@@ -71,9 +71,9 @@ export function isValidEmail(email: string): boolean {
 }
 
 export function isValidPassword(password: string): boolean {
-  // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/
-  return passwordRegex.test(password)
+  // Same rule as reset and change password: at least 8 characters with a
+  // lowercase letter, an uppercase letter and a digit. Any other characters are allowed.
+  return password.length >= 8 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password)
 }
 
 // Format utilities
@@ -118,7 +118,9 @@ export function getRedirectUrl(role: UserRole): string {
     case "ADMIN":
       return "/admin"
     case "MODERATOR":
-      return "/admin"
+      // /admin is ADMIN-only (middleware and the admin layout send everyone
+      // else to /dashboard), so a moderator starts on the dashboard.
+      return "/dashboard"
     case "MEMBER":
       return "/dashboard"
     case "GUEST":

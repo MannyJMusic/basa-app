@@ -1,3 +1,5 @@
-export default function JoinPage() {
-  return <div>Join Page Placeholder</div>;
-} 
+import { permanentRedirect } from 'next/navigation'
+
+export default function Page() {
+  permanentRedirect('/membership/join')
+}

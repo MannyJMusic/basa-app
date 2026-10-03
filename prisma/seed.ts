@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { randomBytes } from 'crypto'
-import { LAUNCH_CHAPTERS, tierRequiresChapter } from '../src/lib/membership-tiers'
+import { LAUNCH_CHAPTERS } from '../src/lib/membership-tiers'
 
 const prisma = new PrismaClient()
 
@@ -124,7 +124,7 @@ async function main() {
       industry: ['Technology', 'Software'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'ASSOCIATE_MEMBER' as const,
+      membershipTier: 'MARKET_MEMBER' as const,
       businessEmail: 'john@techcorp.com',
       businessPhone: '(210) 555-0101',
       businessAddress: '123 Tech Blvd, Suite 100',
@@ -147,7 +147,7 @@ async function main() {
       industry: ['Consulting', 'Business Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'TRIO_MEMBER' as const,
+      membershipTier: 'ACTION_MEMBER' as const,
       businessEmail: 'sarah@innovatebiz.com',
       businessPhone: '(210) 555-0202',
       businessAddress: '456 Business Ave, Floor 3',
@@ -193,7 +193,7 @@ async function main() {
       industry: ['Marketing', 'Digital Marketing'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'ASSOCIATE_MEMBER' as const,
+      membershipTier: 'MIXER_MEMBER' as const,
       businessEmail: 'jennifer@marketingpros.com',
       businessPhone: '(210) 555-0404',
       businessAddress: '321 Marketing Ave',
@@ -239,7 +239,7 @@ async function main() {
       industry: ['Real Estate', 'Property Management'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'ASSOCIATE_MEMBER' as const,
+      membershipTier: 'SPONSORSHIP_MEMBER' as const,
       businessEmail: 'lisa@garciarealty.com',
       businessPhone: '(210) 555-0606',
       businessAddress: '987 Real Estate Blvd',
@@ -308,7 +308,7 @@ async function main() {
       industry: ['Consulting', 'Business Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'TRIO_MEMBER' as const,
+      membershipTier: 'MARKET_MEMBER' as const,
       businessEmail: 'james@andersonconsulting.com',
       businessPhone: '(210) 555-0909',
       businessAddress: '369 Consulting Drive',
@@ -331,7 +331,7 @@ async function main() {
       industry: ['Insurance', 'Financial Services'],
       city: 'San Antonio',
       state: 'TX',
-      membershipTier: 'ASSOCIATE_MEMBER' as const,
+      membershipTier: 'ACTION_MEMBER' as const,
       businessEmail: 'maria@lopezinsurance.com',
       businessPhone: '(210) 555-1010',
       businessAddress: '741 Insurance Lane',
@@ -380,9 +380,6 @@ async function main() {
           zipCode: memberData.zipCode,
           website: memberData.website,
           membershipTier: memberData.membershipTier,
-          chapterId: tierRequiresChapter(memberData.membershipTier)
-            ? chapters[index % chapters.length]?.id
-            : null,
           membershipStatus: 'ACTIVE',
           joinedAt: new Date(),
           renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now

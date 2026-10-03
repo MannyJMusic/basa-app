@@ -39,7 +39,11 @@ jest.mock('@/lib/stripe', () => ({
       create: (...a: unknown[]) => mockCreateIntent(...a),
     },
   },
-  MEMBERSHIP_PRICES: { 'meeting-member': 14900, 'trio-member': 29500 },
+}))
+
+const mockCreateCheckout = jest.fn()
+jest.mock('@/lib/membership-billing', () => ({
+  createMembershipCheckout: (...a: unknown[]) => mockCreateCheckout(...a),
 }))
 
 let mockSession: any = null
@@ -168,14 +172,19 @@ describe('membership checkout grants nothing (H-A2)', () => {
     )
   }
 
-  const order = (email: string) => ({
-    cart: [{ tierId: 'trio-member', quantity: 1 }],
-    customerInfo: { name: 'Ana Diaz', email },
+  const order = (email: string, extra: Record<string, unknown> = {}) => ({
+    tier: 'action',
+    firstName: 'Ana',
+    lastName: 'Diaz',
+    email,
+    businessName: 'Diaz Co',
+    acceptTerms: true,
+    ...extra,
   })
 
   beforeEach(() => {
-    mockCreateIntent.mockReset()
-    mockCreateIntent.mockResolvedValue({ id: 'pi_test', client_secret: 'pi_test_secret' })
+    mockCreateCheckout.mockReset()
+    mockCreateCheckout.mockResolvedValue('https://checkout.stripe.com/c/pay/cs_test_x')
     mockSession = null
   })
 
@@ -184,50 +193,58 @@ describe('membership checkout grants nothing (H-A2)', () => {
   })
 
   it(
-    'leaves a signed-in buyer exactly as they were until the webhook fires',
+    'leaves a signed-in buyer exactly as they were, and charges the account they are signed in as',
     withEmptyTestDatabase(async ({ database }: any) => {
       testPrisma = database.prisma
       const user = await makeUser(testPrisma, { role: 'GUEST' })
       mockSession = { user: { id: user.id, role: 'GUEST' } }
 
-      const res = await checkout(order(user.email))
+      const res = await checkout(order('someone-else@test.test'))
       expect(res.status).toBe(200)
+      expect((await res.json()).url).toContain('checkout.stripe.com')
 
       const after = await testPrisma.user.findUnique({ where: { id: user.id }, include: { member: true } })
       expect(after.role).toBe('GUEST')
       expect(after.member).toBeNull()
-      expect(await testPrisma.membershipInvitation.count()).toBe(0)
-      // The price is the server's, whatever the cart said.
-      expect(mockCreateIntent.mock.calls[0][0].amount).toBe(29500)
+      const [applicant, userId] = mockCreateCheckout.mock.calls[0]
+      expect(applicant.tier).toBe('ACTION_MEMBER')
+      expect(applicant.email).toBe(user.email)
+      expect(userId).toBe(user.id)
     })
   )
 
   it(
-    'creates a guest buyer as PENDING, and never renames an existing account',
+    'creates no account for a guest buyer before payment',
     withEmptyTestDatabase(async ({ database }: any) => {
       testPrisma = database.prisma
-
-      await checkout(order('new-buyer@test.test'))
-      const created = await testPrisma.user.findUnique({ where: { email: 'new-buyer@test.test' }, include: { member: true } })
-      expect(created.role).toBe('GUEST')
-      expect(created.member.membershipStatus).toBe('PENDING')
-      expect(mockCreateIntent.mock.calls[0][0].metadata.isNewUser).toBe('true')
-
-      const admin = await makeUser(testPrisma, { firstName: 'Real', lastName: 'Admin' })
-      await checkout(order(admin.email))
-      expect(mockCreateIntent.mock.calls[1][0].metadata.isNewUser).toBe('false')
+      const res = await checkout(order('new-buyer@test.test'))
+      expect(res.status).toBe(200)
+      expect(await testPrisma.user.count()).toBe(0)
+      expect(mockCreateCheckout.mock.calls[0][1]).toBeNull()
     })
   )
 
   it(
-    'rejects unknown tiers and unexpected fields',
+    'refuses a second purchase while a subscription is running',
     withEmptyTestDatabase(async ({ database }: any) => {
       testPrisma = database.prisma
-      const unknownTier = await checkout({ ...order('x@test.test'), cart: [{ tierId: 'toString', quantity: 1 }] })
-      expect(unknownTier.status).toBe(400)
-      const extra = await checkout({ ...order('x@test.test'), role: 'ADMIN' })
-      expect(extra.status).toBe(400)
-      expect(mockCreateIntent).not.toHaveBeenCalled()
+      const user = await makeUser(testPrisma, { role: 'MEMBER' })
+      await testPrisma.member.create({ data: { userId: user.id, membershipStatus: 'ACTIVE', subscriptionId: 'sub_1', renewalDate: new Date(Date.now() + 300 * 86_400_000) } })
+      mockSession = { user: { id: user.id, role: 'MEMBER' } }
+      const res = await checkout(order(user.email))
+      expect(res.status).toBe(409)
+      expect(mockCreateCheckout).not.toHaveBeenCalled()
+    })
+  )
+
+  it(
+    'rejects unknown tiers, unexpected fields and unaccepted terms',
+    withEmptyTestDatabase(async ({ database }: any) => {
+      testPrisma = database.prisma
+      expect((await checkout(order('x@test.test', { tier: 'toString' }))).status).toBe(400)
+      expect((await checkout(order('x@test.test', { role: 'ADMIN' }))).status).toBe(400)
+      expect((await checkout(order('x@test.test', { acceptTerms: false }))).status).toBe(400)
+      expect(mockCreateCheckout).not.toHaveBeenCalled()
     })
   )
 })

@@ -3,43 +3,67 @@ import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireSession, isResponse } from "@/lib/api-auth"
 
-// Validation schema for account settings updates
-const accountSettingsSchema = z.object({
-  // Notification settings
-  emailNotifications: z.boolean().optional(),
-  eventReminders: z.boolean().optional(),
-  newsletter: z.boolean().optional(),
-  marketingEmails: z.boolean().optional(),
-  connectionRequests: z.boolean().optional(),
-  membershipUpdates: z.boolean().optional(),
-  
-  // Privacy settings
-  showInDirectory: z.boolean().optional(),
-  allowContact: z.boolean().optional(),
-  showEmail: z.boolean().optional(),
-  showPhone: z.boolean().optional(),
-})
+/**
+ * Account preferences. Only fields that exist on `Member` and that something
+ * actually reads are accepted; anything else is rejected rather than silently
+ * dropped, so the account page cannot show a toggle that saves nothing.
+ */
+const accountSettingsSchema = z
+  .object({
+    newsletterSubscribed: z.boolean().optional(),
+    showInDirectory: z.boolean().optional(),
+    allowContact: z.boolean().optional(),
+    showAddress: z.boolean().optional(),
+  })
+  .strict()
+
+const memberSelect = {
+  id: true,
+  membershipTier: true,
+  membershipStatus: true,
+  joinedAt: true,
+  renewalDate: true,
+  cancelAtPeriodEnd: true,
+  newsletterSubscribed: true,
+  showInDirectory: true,
+  allowContact: true,
+  showAddress: true,
+} as const
+
+function preferencesOf(member: {
+  newsletterSubscribed: boolean
+  showInDirectory: boolean
+  allowContact: boolean
+  showAddress: boolean
+} | null) {
+  return {
+    newsletterSubscribed: member?.newsletterSubscribed ?? false,
+    showInDirectory: member?.showInDirectory ?? false,
+    allowContact: member?.allowContact ?? false,
+    showAddress: member?.showAddress ?? false,
+  }
+}
 
 export async function GET() {
   try {
     const session = await requireSession()
     if (isResponse(session)) return session
 
-    // Get user with account-level data
+    // Read-only: a GET never creates a Member row (#166). A user without one
+    // simply has no membership and default (private) preferences.
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      include: {
-        member: {
-          select: {
-            id: true,
-            membershipTier: true,
-            membershipStatus: true,
-            joinedAt: true,
-            renewalDate: true,
-            showInDirectory: true,
-            allowContact: true,
-          },
-        },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        isActive: true,
+        lastLogin: true,
+        createdAt: true,
+        updatedAt: true,
+        member: { select: memberSelect },
       },
     })
 
@@ -47,64 +71,10 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // If user exists but doesn't have a member record, create one
-    let member = user.member
-    if (!member) {
-      // Not a member until the office or a paid membership says so (#166):
-      // member pricing keys off membershipStatus === "ACTIVE".
-      member = await prisma.member.create({
-        data: {
-          userId: user.id,
-          membershipStatus: "PENDING",
-          joinedAt: new Date(),
-          showInDirectory: true,
-          allowContact: true,
-          industry: [],
-          specialties: [],
-          certifications: [],
-        },
-        select: {
-          id: true,
-          membershipTier: true,
-          membershipStatus: true,
-          joinedAt: true,
-          renewalDate: true,
-          showInDirectory: true,
-          allowContact: true,
-        },
-      })
-    }
-
-    // Return account settings data
-    const accountData = {
-      id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      lastLogin: user.lastLogin,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      member: member,
-      // Default notification settings (these would typically be stored in a separate settings table)
-      notificationSettings: {
-        emailNotifications: member?.allowContact ?? true,
-        eventReminders: true,
-        newsletter: false,
-        marketingEmails: false,
-        connectionRequests: true,
-        membershipUpdates: true,
-      },
-      privacySettings: {
-        showInDirectory: member?.showInDirectory ?? true,
-        allowContact: member?.allowContact ?? true,
-        showEmail: false,
-        showPhone: false,
-      }
-    }
-
-    return NextResponse.json(accountData)
+    return NextResponse.json({
+      ...user,
+      preferences: preferencesOf(user.member),
+    })
   } catch (error) {
     console.error("Error fetching account settings:", error)
     return NextResponse.json(
@@ -120,60 +90,50 @@ export async function PUT(request: NextRequest) {
     if (isResponse(session)) return session
 
     const body = await request.json()
-    const validatedData = accountSettingsSchema.parse(body)
+    const data = accountSettingsSchema.parse(body)
 
-    // Update account settings in a transaction
-    const result = await prisma.$transaction(async (tx: any) => {
-      // Update member privacy settings if provided
-      if (validatedData.showInDirectory !== undefined || validatedData.allowContact !== undefined) {
-        await tx.member.upsert({
-          where: { userId: session.user.id },
-          update: {
-            ...(validatedData.showInDirectory !== undefined && { showInDirectory: validatedData.showInDirectory }),
-            ...(validatedData.allowContact !== undefined && { allowContact: validatedData.allowContact }),
-          },
-          create: {
-            userId: session.user.id,
-            showInDirectory: validatedData.showInDirectory ?? true,
-            allowContact: validatedData.allowContact ?? true,
-            membershipStatus: "ACTIVE",
-            joinedAt: new Date(),
-          },
-        })
-      }
+    const member = await prisma.$transaction(async (tx) => {
+      // Nothing here may grant a membership. An existing row keeps its status;
+      // a user with no row gets a PENDING one that is private by default, so
+      // saving a newsletter preference never lists anyone in the directory.
+      const updated = await tx.member.upsert({
+        where: { userId: session.user.id },
+        update: data,
+        create: {
+          userId: session.user.id,
+          membershipStatus: "PENDING",
+          showInDirectory: false,
+          allowContact: false,
+          ...data,
+        },
+        select: memberSelect,
+      })
 
-      // Note: In a real application, notification settings would be stored in a separate settings table
-      // For now, we'll just update the member's allowContact field as a proxy for email notifications
-
-      // Create audit log
       await tx.auditLog.create({
         data: {
           userId: session.user.id,
           action: "UPDATE_ACCOUNT_SETTINGS",
-          entityType: "USER",
-          entityId: session.user.id,
-          newValues: {
-            ...validatedData,
-            timestamp: new Date().toISOString()
-          },
+          entityType: "MEMBER",
+          entityId: updated.id,
+          newValues: { ...data, timestamp: new Date().toISOString() },
         },
       })
 
-      return { success: true }
+      return updated
     })
 
-    return NextResponse.json(result)
+    return NextResponse.json({ success: true, preferences: preferencesOf(member), member })
   } catch (error) {
-    console.error("Error updating account settings:", error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
         { status: 400 }
       )
     }
+    console.error("Error updating account settings:", error)
     return NextResponse.json(
       { error: "Failed to update account settings" },
       { status: 500 }
     )
   }
-} 
+}

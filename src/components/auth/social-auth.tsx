@@ -5,7 +5,6 @@ import { safeCallbackPath } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { FcGoogle } from "react-icons/fc"
-import { FaLinkedin } from "react-icons/fa"
 
 interface SocialAuthProps {
   mode?: "signin" | "signup"
@@ -55,21 +54,7 @@ export default function SocialAuth({ mode = "signin" }: SocialAuthProps) {
               : "Sign in with Google"
           }
         </Button>
-        
-        <Button
-          variant="outline"
-          className="w-full flex items-center gap-3 h-12 text-base"
-          onClick={() => handleSocialSignIn("linkedin")}
-          disabled={loading === "linkedin"}
-        >
-          <FaLinkedin className="h-5 w-5 text-blue-600" />
-          {loading === "linkedin" 
-            ? "Processing..." 
-            : isSignUp 
-              ? "Continue with LinkedIn" 
-              : "Sign in with LinkedIn"
-          }
-        </Button>
+        {/* LinkedIn is not offered: its provider is disabled in src/lib/auth.ts. */}
       </div>
 
       {isSignUp && (

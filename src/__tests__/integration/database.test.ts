@@ -116,12 +116,12 @@ describe('Database Integration Tests', () => {
         const upgradedMember = await prisma.member.update({
           where: { id: member.id },
           data: { 
-            membershipTier: 'ASSOCIATE_MEMBER',
+            membershipTier: 'ACTION_MEMBER',
             membershipStatus: 'ACTIVE',
           },
         });
 
-        expect(upgradedMember.membershipTier).toBe('ASSOCIATE_MEMBER');
+        expect(upgradedMember.membershipTier).toBe('ACTION_MEMBER');
         expect(upgradedMember.membershipStatus).toBe('ACTIVE');
       })
     );

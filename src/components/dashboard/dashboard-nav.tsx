@@ -30,8 +30,6 @@ export default function DashboardNav({ mobile = false }: { mobile?: boolean }) {
   const pathname = usePathname()
   const { data: session, status } = useSession()
 
-  // Debug logging
-
   // Determine what navigation items to show based on user status
   const getVisibleNavigation = () => {
     // If session is loading, show all items temporarily
@@ -46,9 +44,10 @@ export default function DashboardNav({ mobile = false }: { mobile?: boolean }) {
       return navigation.filter(item => !item.requiresMember)
     }
 
-    // If user is a guest, show Profile, Account, Resources, Events, and Directory
+    // A guest has no active membership: no directory (the API refuses it), but
+    // their own tickets and events are still theirs.
     if (session.user.role === "GUEST") {
-      return navigation.filter(item => !item.requiresMember || item.name === "Events" || item.name === "Directory")
+      return navigation.filter(item => !item.requiresMember || item.name === "Overview" || item.name === "Events")
     }
 
     // For active members, show all navigation items
@@ -73,7 +72,9 @@ export default function DashboardNav({ mobile = false }: { mobile?: boolean }) {
   const NavItems = () => (
     <ul className="space-y-2">
       {visibleNavigation.map((item) => {
-        const isActive = pathname === item.href
+        const isActive = item.href === "/dashboard"
+          ? pathname === item.href
+          : pathname === item.href || pathname?.startsWith(item.href + "/")
         return (
           <li key={item.name}>
             <Link

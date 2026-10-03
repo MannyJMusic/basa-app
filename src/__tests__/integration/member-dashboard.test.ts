@@ -36,10 +36,10 @@ describe('Member dashboard data', () => {
     });
 
   it(
-    'uses the tier when set, else the latest legacy level, with its price',
+    'uses the tier and its current price, else the latest legacy level name without an old price',
     withEmptyTestDatabase(async ({ database: { prisma } }: any) => {
-      const a = await member(prisma, 'tier@test.test', { membershipTier: 'TRIO_MEMBER' });
-      expect(await getMembershipSummary(a.user.id)).toMatchObject({ planLabel: 'TRIO Member', priceCents: 29500 });
+      const a = await member(prisma, 'tier@test.test', { membershipTier: 'MIXER_MEMBER' });
+      expect(await getMembershipSummary(a.user.id)).toMatchObject({ planLabel: 'Mixer Member', priceCents: 199000, billing: 'office', canManageBilling: false });
 
       const b = await member(prisma, 'legacy@test.test', { membershipStatus: 'EXPIRED' });
       await prisma.legacyMembership.createMany({
@@ -49,7 +49,7 @@ describe('Member dashboard data', () => {
         ],
       });
       const s = await getMembershipSummary(b.user.id);
-      expect(s).toMatchObject({ status: 'EXPIRED', planLabel: 'SS TRIO Membership - Annual', priceCents: 29500 });
+      expect(s).toMatchObject({ status: 'EXPIRED', planLabel: 'SS TRIO Membership - Annual', priceCents: null, benefits: [] });
       expect(s!.history.map(h => h.levelName)).toEqual(['SS TRIO Membership - Annual', 'SS Meeting Membership - Annual']);
 
       const guest = await prisma.user.create({ data: { email: 'guest@test.test', role: 'GUEST' } });

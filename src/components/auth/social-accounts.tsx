@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
+import { useSession, signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,10 +15,16 @@ interface SocialAccount {
   email?: string
 }
 
+/**
+ * Google is the only social sign-in BASA offers (LinkedIn's provider is disabled in
+ * src/lib/auth.ts). Connecting runs a Google sign-in: the signIn callback links the
+ * Google identity when its address is the same as this account's.
+ */
 export default function SocialAccounts() {
   const { data: session } = useSession()
   const [accounts, setAccounts] = useState<SocialAccount[]>([])
   const [loading, setLoading] = useState(true)
+  const [connecting, setConnecting] = useState(false)
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -40,9 +46,14 @@ export default function SocialAccounts() {
     }
   }
 
-  const handleConnect = async (provider: string) => {
-    // This would typically redirect to the OAuth provider
-    // For now, we'll just show a message
+  const handleConnect = async () => {
+    setConnecting(true)
+    try {
+      await signIn('google', { callbackUrl: window.location.pathname, redirect: true })
+    } catch (error) {
+      console.error('Error connecting Google:', error)
+      setConnecting(false)
+    }
   }
 
   const handleDisconnect = async (accountId: string) => {
@@ -58,31 +69,7 @@ export default function SocialAccounts() {
     }
   }
 
-  const getProviderInfo = (provider: string) => {
-    switch (provider) {
-      case 'google':
-        return {
-          name: 'Google',
-          icon: 'G',
-          color: 'bg-red-500',
-          email: accounts.find(acc => acc.provider === 'google')?.email
-        }
-      case 'linkedin':
-        return {
-          name: 'LinkedIn',
-          icon: 'L',
-          color: 'bg-blue-600',
-          email: accounts.find(acc => acc.provider === 'linkedin')?.email
-        }
-      default:
-        return {
-          name: provider.charAt(0).toUpperCase() + provider.slice(1),
-          icon: provider.charAt(0).toUpperCase(),
-          color: 'bg-gray-500',
-          email: undefined
-        }
-    }
-  }
+  const google = accounts.find(acc => acc.provider === 'google')
 
   if (loading) {
     return (
@@ -93,12 +80,11 @@ export default function SocialAccounts() {
             <CardTitle>Social Accounts</CardTitle>
           </div>
           <CardDescription>
-            Manage your linked social media accounts for easy sign-in
+            Manage your linked accounts for easy sign-in
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-3">
-            <div className="h-16 bg-gray-200 rounded-lg"></div>
             <div className="h-16 bg-gray-200 rounded-lg"></div>
           </div>
         </CardContent>
@@ -114,12 +100,11 @@ export default function SocialAccounts() {
           <CardTitle>Social Accounts</CardTitle>
         </div>
         <CardDescription>
-          Manage your linked social media accounts for easy sign-in
+          Manage your linked accounts for easy sign-in
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
-          {/* Google */}
           <div className="flex items-center justify-between p-3 border rounded-lg">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
@@ -128,78 +113,39 @@ export default function SocialAccounts() {
               <div>
                 <p className="font-medium">Google</p>
                 <p className="text-sm text-gray-500">
-                  {accounts.find(acc => acc.provider === 'google') 
-                    ? accounts.find(acc => acc.provider === 'google')?.email || 'Connected'
-                    : 'Not connected'
-                  }
+                  {google ? google.email || 'Connected' : 'Not connected'}
                 </p>
               </div>
             </div>
-            {accounts.find(acc => acc.provider === 'google') ? (
+            {google ? (
               <div className="flex items-center space-x-2">
                 <Badge variant="secondary">Connected</Badge>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => handleDisconnect(accounts.find(acc => acc.provider === 'google')!.id)}
+                  onClick={() => handleDisconnect(google.id)}
                 >
                   <Unlink className="w-4 h-4 mr-2" />
                   Disconnect
                 </Button>
               </div>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => handleConnect('google')}>
+              <Button variant="outline" size="sm" onClick={handleConnect} disabled={connecting}>
                 <Link className="w-4 h-4 mr-2" />
-                Connect
-              </Button>
-            )}
-          </div>
-          
-          {/* LinkedIn */}
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">L</span>
-              </div>
-              <div>
-                <p className="font-medium">LinkedIn</p>
-                <p className="text-sm text-gray-500">
-                  {accounts.find(acc => acc.provider === 'linkedin') 
-                    ? accounts.find(acc => acc.provider === 'linkedin')?.email || 'Connected'
-                    : 'Not connected'
-                  }
-                </p>
-              </div>
-            </div>
-            {accounts.find(acc => acc.provider === 'linkedin') ? (
-              <div className="flex items-center space-x-2">
-                <Badge variant="secondary">Connected</Badge>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleDisconnect(accounts.find(acc => acc.provider === 'linkedin')!.id)}
-                >
-                  <Unlink className="w-4 h-4 mr-2" />
-                  Disconnect
-                </Button>
-              </div>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => handleConnect('linkedin')}>
-                <Link className="w-4 h-4 mr-2" />
-                Connect
+                {connecting ? 'Connecting...' : 'Connect'}
               </Button>
             )}
           </div>
         </div>
-        
+
         <Separator />
-        
+
         <div className="text-sm text-gray-600">
-          <p>• Connected accounts allow you to sign in quickly</p>
-          <p>• You can disconnect accounts at any time</p>
-          <p>• Your email and basic profile info will be shared</p>
+          <p>• Use a Google account with the same email address as your BASA account</p>
+          <p>• Once connected, you can sign in with Google instead of your password</p>
+          <p>• You can disconnect it at any time</p>
         </div>
       </CardContent>
     </Card>
   )
-} 
+}

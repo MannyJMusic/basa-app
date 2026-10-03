@@ -71,7 +71,7 @@ export default function MissionValuesPage() {
                 </p>
 
                 <p>
-                  This mission guides every decision we make, from how we select new members to 
+                  This mission guides every decision we make, including 
                   how we design our events and programs. It's not just a statement on our website—it's 
                   the foundation of everything we do.
                 </p>
@@ -114,11 +114,6 @@ export default function MissionValuesPage() {
                     someone and being willing to refer them to someone who does. It means celebrating 
                     others' successes genuinely and offering support during challenges without 
                     expecting anything in return.
-                  </p>
-                  <p>
-                    This value is reflected in our selective membership process, which ensures that 
-                    every BASA member shares our commitment to authenticity and genuine relationship 
-                    building.
                   </p>
                 </CardContent>
               </Card>
@@ -206,8 +201,8 @@ export default function MissionValuesPage() {
                   <p>
                     We are committed to excellence in everything we do, from the quality of our 
                     events to the caliber of our membership to the impact we create in our community. 
-                    This commitment to excellence is reflected in our selective membership process, 
-                    our rigorous event planning, and our continuous improvement efforts.
+                    This commitment to excellence is reflected in how we plan our events and in our
+                    continuous improvement efforts.
                   </p>
                   <p>
                     Excellence doesn't mean perfection—it means consistently striving to be better. 
@@ -243,8 +238,7 @@ export default function MissionValuesPage() {
                     our promises, and treating everyone with respect and fairness.
                   </p>
                   <p>
-                    Our commitment to integrity is reflected in our transparent membership process, 
-                    our honest communication about what BASA can and cannot provide, and our 
+                    Our commitment to integrity is reflected in our honest communication about what BASA can and cannot provide, and our 
                     willingness to address issues openly and constructively.
                   </p>
                   <p>
@@ -274,9 +268,8 @@ export default function MissionValuesPage() {
                   In Our Membership Process
                 </h3>
                 <p className="text-gray-700 leading-relaxed">
-                  We carefully select members who share our values and commitment to authentic 
-                  relationship building. Our application process includes interviews and references 
-                  to ensure alignment with our mission and values.
+                  We welcome members who share our values and our commitment to authentic
+                  relationship building.
                 </p>
               </div>
 
@@ -286,8 +279,7 @@ export default function MissionValuesPage() {
                   In Our Events & Programs
                 </h3>
                 <p className="text-gray-700 leading-relaxed">
-                  Every event and program is designed to reflect our values. From our "Networking 
-                  and Giving" initiative to our educational workshops, everything we do is 
+                  Every event and program is designed to reflect our values. Everything we do is
                   intentional and aligned with our mission.
                 </p>
               </div>
