@@ -225,9 +225,9 @@ export default function MembersPage() {
                     <li>• Download the template below to see the required format</li>
                     <li>• Maximum 1000 members per upload</li>
                     <li>• File size must be less than 5MB</li>
-                    <li>• Passwords are optional - random passwords will be generated</li>
+                    <li>• No passwords are set: new members get an account to claim from the Invitations page</li>
                     <li>• Industry should be comma-separated values</li>
-                    <li>• Existing members will be updated, new ones will be created</li>
+                    <li>• Existing members keep their password and role; only filled-in business fields are updated</li>
                   </ul>
                 </div>
                 

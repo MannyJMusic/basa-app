@@ -117,7 +117,7 @@ export async function PUT(
       where: { id },
       include: {
         user: {
-          select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true },
+          select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true, hashedPassword: true },
         },
       },
     })
@@ -163,6 +163,15 @@ export async function PUT(
     if (data.email !== undefined) userData.email = data.email
     if (data.role !== undefined) userData.role = data.role
     if (data.isActive !== undefined) userData.isActive = data.isActive
+
+    // Re-activating a membership staff had deactivated turns sign-in back on and
+    // gives a guest member access, unless staff set those fields themselves.
+    // An account that was never set up (no password) is left to the invitation
+    // flow, which does the same when the member chooses a password.
+    if (becomingActive && existingMember.user.hashedPassword) {
+      if (data.isActive === undefined && !existingMember.user.isActive) userData.isActive = true
+      if (data.role === undefined && existingMember.user.role === "GUEST") userData.role = "MEMBER"
+    }
 
     const memberData: Prisma.MemberUpdateInput = {}
     const memberFields = [

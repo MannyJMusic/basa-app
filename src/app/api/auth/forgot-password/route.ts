@@ -53,8 +53,10 @@ export async function POST(request: NextRequest) {
     const now = Date.now()
     const newExpiry = new Date(now + RESET_LINK_MS)
     let resetToken: string
+    let expiresAt = newExpiry
     if (user.resetToken && user.resetTokenExpiry && user.resetTokenExpiry > newExpiry) {
       resetToken = user.resetToken
+      expiresAt = user.resetTokenExpiry
     } else {
       resetToken = crypto.randomBytes(32).toString('hex')
       await prisma.user.update({
@@ -93,8 +95,8 @@ export async function POST(request: NextRequest) {
     // an unknown one. Failures are reported to Sentry; the caller still gets the
     // generic answer either way.
     const delivery = claiming
-      ? sendAccountClaimEmail(user.email, user.firstName || 'there', resetUrl)
-      : sendPasswordResetEmail(user.email, user.firstName || 'User', resetUrl)
+      ? sendAccountClaimEmail(user.email, user.firstName || 'there', resetUrl, { expiresAt })
+      : sendPasswordResetEmail(user.email, user.firstName || 'User', resetUrl, { expiresAt })
     void Promise.resolve(delivery)
       .then(result => {
         if (result && result.success === false) {

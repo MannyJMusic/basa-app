@@ -367,6 +367,35 @@ describe('admin member update', () => {
   )
 
   it(
+    're-activating a deactivated member restores sign-in, but leaves an unclaimed account to its invitation',
+    withEmptyTestDatabase(async ({ database }: any) => {
+      testPrisma = database.prisma
+      signInAs(await makeUser({ role: 'ADMIN' }))
+      const deactivated = await makeMember({ role: 'GUEST', isActive: false }, { membershipStatus: 'INACTIVE' })
+      const unclaimed = await makeMember(
+        { role: 'GUEST', isActive: false, accountStatus: 'INACTIVE', hashedPassword: null },
+        { membershipStatus: 'EXPIRED' }
+      )
+
+      for (const { member } of [deactivated, unclaimed]) {
+        const res = await putMember(
+          req('/api/members/x', { method: 'PUT', body: JSON.stringify({ membershipStatus: 'ACTIVE' }) }),
+          idParams(member.id)
+        )
+        expect(res.status).toBe(200)
+      }
+
+      expect(await testPrisma.user.findUnique({ where: { id: deactivated.user.id } })).toMatchObject({ isActive: true, role: 'MEMBER' })
+      expect(await testPrisma.user.findUnique({ where: { id: unclaimed.user.id } })).toMatchObject({
+        isActive: false,
+        accountStatus: 'INACTIVE',
+        role: 'GUEST',
+        hashedPassword: null,
+      })
+    })
+  )
+
+  it(
     'stops an admin demoting or deactivating themselves',
     withEmptyTestDatabase(async ({ database }: any) => {
       testPrisma = database.prisma

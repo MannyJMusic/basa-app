@@ -239,41 +239,6 @@ export function useMembers() {
     }
   }, [])
 
-  const createMember = useCallback(async (data: any) => {
-    setLoading(true)
-    try {
-      const response = await fetch('/api/members', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create member')
-      }
-
-      const member: Member = await response.json()
-      toast({
-        title: "Success",
-        description: "Member created successfully",
-      })
-      return member
-    } catch (error) {
-      console.error('Error creating member:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create member",
-        variant: "destructive",
-      })
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
   const updateMember = useCallback(async (id: string, data: any) => {
     setLoading(true)
     try {
@@ -442,7 +407,6 @@ export function useMembers() {
     currentMember,
     fetchMembers,
     fetchMember,
-    createMember,
     updateMember,
     deleteMember,
     exportMembers,
