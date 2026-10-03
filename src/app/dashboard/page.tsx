@@ -13,8 +13,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, TrendingUp, Calendar, Heart, Star, Globe, ArrowRight, Ticket, History } from "lucide-react"
-import { GuestOverlay } from "@/components/ui/guest-overlay"
+import { Users, Calendar, ArrowRight, Ticket, History } from "lucide-react"
+import { tierLabel } from "@/lib/membership-tiers"
 import { WelcomeBanner } from "./welcome-banner"
 
 export const dynamic = "force-dynamic"
@@ -24,8 +24,13 @@ const eventWhen = (d: Date) =>
     weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: EVENT_TIME_ZONE,
   })
 
-function daysUntil(d: Date): string {
-  const days = Math.ceil((d.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+/** Calendar date (YYYY-MM-DD) of an instant in the events' time zone. */
+const chicagoDay = (d: Date) =>
+  d.toLocaleDateString("en-CA", { timeZone: EVENT_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" })
+
+/** Whole calendar days between today and the event, both in San Antonio time. */
+function daysUntil(d: Date, now = new Date()): string {
+  const days = Math.round((Date.parse(chicagoDay(d)) - Date.parse(chicagoDay(now))) / (24 * 60 * 60 * 1000))
   if (days <= 0) return "Next event today"
   if (days === 1) return "Next event tomorrow"
   return `Next event in ${days} days`
@@ -41,12 +46,19 @@ export default async function DashboardPage() {
   const isGuest = user.role === "GUEST"
 
   const [account, activeMembers, upcomingCount, nextEvents, tickets, recentMembers] = await Promise.all([
-    prisma.user.findUnique({ where: { id: user.id }, select: { emailVerified: true, accountStatus: true } }),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        emailVerified: true,
+        accountStatus: true,
+        member: { select: { membershipStatus: true, membershipTier: true } },
+      },
+    }),
     countActiveMembers(),
     countUpcomingEvents(),
     getUpcomingEvents(3),
     getMyRegistrations(user.id, user.email),
-    // Guests see this page behind an overlay; do not send them member names.
+    // The directory is for members; do not send guests member names.
     isGuest ? Promise.resolve([]) : getRecentDirectoryMembers(3),
   ])
   const bookedIds = new Set(tickets.upcoming.map(r => r.event.slug))
@@ -67,9 +79,11 @@ export default async function DashboardPage() {
             Here&apos;s what&apos;s happening in your BASA community
           </p>
         </div>
-        <Badge variant="secondary" className="text-sm">
-          {user.role || "MEMBER"}
-        </Badge>
+        {account?.member?.membershipStatus === "ACTIVE" && (
+          <Badge variant="secondary" className="text-sm">
+            {tierLabel(account.member.membershipTier)}
+          </Badge>
+        )}
       </div>
 
       {/* Quick Stats */}
@@ -188,57 +202,25 @@ export default async function DashboardPage() {
                 </p>
               )}
             </div>
-            <Button asChild className="w-full" variant="outline">
-              <Link href="/dashboard/directory">
-                Browse Directory
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            {isGuest ? (
+              <Button asChild className="w-full" variant="outline">
+                <Link href="/membership">
+                  View Membership Levels
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            ) : (
+              <Button asChild className="w-full" variant="outline">
+                <Link href="/dashboard/directory">
+                  Browse Directory
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Community Highlights */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5" />
-            Community Highlights
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Heart className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="font-semibold mb-2">Community Service</h3>
-              <p className="text-sm text-gray-600">
-                Join our monthly community service initiatives
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="h-8 w-8 text-green-600" />
-              </div>
-              <h3 className="font-semibold mb-2">Business Growth</h3>
-              <p className="text-sm text-gray-600">
-                Access resources and mentorship for your business
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Globe className="h-8 w-8 text-purple-600" />
-              </div>
-              <h3 className="font-semibold mb-2">Networking</h3>
-              <p className="text-sm text-gray-600">
-                Connect with San Antonio&apos;s business leaders
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      {isGuest && <GuestOverlay />}
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { toast } from "@/components/ui/use-toast"
-import type { MembershipTier } from "@prisma/client"
+import type { MembershipTier, Status } from "@prisma/client"
 
 export interface Member {
   id: string
@@ -22,7 +22,7 @@ export interface Member {
   zipCode?: string
   website?: string
   membershipTier?: MembershipTier
-  membershipStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+  membershipStatus: Status
   joinedAt: string
   renewalDate?: string
   stripeCustomerId?: string
@@ -119,14 +119,15 @@ export interface UpdateMemberData {
   zipCode?: string
   website?: string
   membershipTier?: MembershipTier
-  membershipStatus?: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+  // "SUSPENDED" kept only for the admin dialog's type; the API accepts Status values.
+  membershipStatus?: Status | "SUSPENDED"
   role?: "MEMBER" | "MODERATOR" | "ADMIN"
   isActive?: boolean
 }
 
 export interface MemberFilters {
   search?: string
-  status?: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+  status?: Status
   membershipTier?: MembershipTier
   industry?: string
   city?: string
