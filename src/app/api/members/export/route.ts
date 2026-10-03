@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireAdmin, isResponse } from "@/lib/api-auth"
-import { MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
+import { MEMBERSHIP_TIER_VALUES, tierLabel } from '@/lib/membership-tiers'
+import { csvCell } from '@/lib/csv'
 
 const exportParamsSchema = z.object({
   search: z.string().optional(),
-  status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
+  status: z.enum(["PENDING", "ACTIVE", "EXPIRED", "INACTIVE"]).optional(),
+  account: z.enum(["active", "unclaimed"]).optional(),
   membershipTier: z.enum(MEMBERSHIP_TIER_VALUES).optional(),
   industry: z.string().optional(),
   format: z.enum(["csv", "json"]).default("csv"),
@@ -20,11 +22,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const params = exportParamsSchema.parse(Object.fromEntries(searchParams))
 
-    // Build where clause for filtering
-    const where: any = {
-      user: {
-        isActive: true,
-      },
+    // Staff export everyone, including imported members who have not yet
+    // claimed their login; `account` narrows it like the admin list does.
+    const where: any = {}
+    if (params.account === "active") {
+      where.user = { isActive: true }
+    } else if (params.account === "unclaimed") {
+      where.user = { hashedPassword: null, accountStatus: "INACTIVE" }
     }
 
     // Search functionality
@@ -65,6 +69,7 @@ export async function GET(request: NextRequest) {
             email: true,
             role: true,
             isActive: true,
+            accountStatus: true,
             lastLogin: true,
             createdAt: true,
           },
@@ -93,7 +98,9 @@ export async function GET(request: NextRequest) {
       "Membership Tier",
       "Membership Status",
       "Role",
+      "Login Active",
       "Joined Date",
+      "Renewal Date",
       "Last Login",
     ]
 
@@ -109,16 +116,18 @@ export async function GET(request: NextRequest) {
       member.businessPhone || "",
       member.city || "",
       member.state || "",
-      member.membershipTier || "",
+      member.membershipTier ? tierLabel(member.membershipTier) : "",
       member.membershipStatus,
       member.user.role,
+      member.user.isActive ? "yes" : "no",
       member.joinedAt.toISOString().split("T")[0],
+      member.renewalDate ? member.renewalDate.toISOString().split("T")[0] : "",
       member.user.lastLogin ? member.user.lastLogin.toISOString().split("T")[0] : "",
     ])
 
     const csvContent = [
       csvHeaders.join(","),
-      ...csvRows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+      ...csvRows.map((row) => row.map(csvCell).join(",")),
     ].join("\n")
 
     const response = new NextResponse(csvContent)
@@ -130,6 +139,9 @@ export async function GET(request: NextRequest) {
 
     return response
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Invalid filters", details: error.errors }, { status: 400 })
+    }
     console.error("Error exporting members:", error)
     return NextResponse.json(
       { error: "Failed to export members" },
