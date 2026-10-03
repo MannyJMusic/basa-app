@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/nextjs'
 import { prisma } from '@/lib/db'
 import { SITE_URL } from '@/lib/site-url'
 import { INVITATION_LINK_DAYS, sendMemberInvitationEmail } from '@/lib/basa-emails'
+import { tierLabel } from '@/lib/membership-tiers'
 
 /**
  * Inviting active members to set up their account.
@@ -23,6 +24,8 @@ export interface InvitableMember {
   name: string
   email: string
   businessName: string | null
+  /** Tier label ("Market Member"), or null when no tier is set. */
+  tier: string | null
   renewalDate: Date | null
   lastInvitedAt: Date | null
   invitations: number
@@ -34,6 +37,7 @@ export async function listInvitableMembers(): Promise<{ pending: InvitableMember
     where: { membershipStatus: 'ACTIVE' },
     select: {
       businessName: true,
+      membershipTier: true,
       renewalDate: true,
       user: { select: { id: true, email: true, firstName: true, lastName: true, name: true, hashedPassword: true, accountStatus: true } },
     },
@@ -55,6 +59,7 @@ export async function listInvitableMembers(): Promise<{ pending: InvitableMember
       name: [m.user.firstName, m.user.lastName].filter(Boolean).join(' ') || m.user.name || m.user.email!,
       email: m.user.email!,
       businessName: m.businessName,
+      tier: m.membershipTier ? tierLabel(m.membershipTier) : null,
       renewalDate: m.renewalDate,
       lastInvitedAt: byUser.get(m.user.id)?._max.timestamp ?? null,
       invitations: byUser.get(m.user.id)?._count._all ?? 0,

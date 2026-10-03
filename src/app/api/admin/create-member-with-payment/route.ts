@@ -1,323 +1,184 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { SITE_URL } from '@/lib/site-url'
-import { stripe } from '@/lib/stripe'
-import { prisma } from '@/lib/db'
-import { sendAdminCreatedWelcomeEmail, sendPaymentReceiptEmail } from '@/lib/basa-emails'
-import { hash } from 'bcryptjs'
-import { randomBytes } from 'crypto'
-import { requireAdmin, isResponse } from '@/lib/api-auth'
-import { tierFromSlug, tierPriceCents } from '@/lib/membership-tiers'
+import { Prisma } from '@prisma/client'
+import * as Sentry from '@sentry/nextjs'
 import { z } from 'zod'
+import { prisma } from '@/lib/db'
+import { requireAdmin, isResponse } from '@/lib/api-auth'
+import { MEMBERSHIP_TIERS, MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
 
-// Unknown keys are dropped rather than rejected: the admin form posts its whole
-// state (phone, billing info) and only these fields are used.
+/**
+ * Staff add a member they already have on their books (office-billed, paid by
+ * cash/check/card at the office, or renewing outside the website).
+ *
+ * The account is created in the same claim state imported members are in: no
+ * password, `isActive: false`, `accountStatus: INACTIVE`. Nothing is emailed here;
+ * the member gets a set-password link when staff send it from
+ * /admin/members/invitations. A payment row is written only when staff say a
+ * payment was received, and no card is charged from this route.
+ */
+const optionalText = (max: number) =>
+  z.string().trim().max(max).optional().transform(v => (v ? v : undefined))
+
 const bodySchema = z.object({
-  memberData: z.object({
-    firstName: z.string().trim().min(1).max(100),
-    lastName: z.string().trim().min(1).max(100),
-    email: z.string().trim().toLowerCase().email().max(254),
-    businessName: z.string().trim().max(200).optional(),
-    membershipTier: z.string().refine(slug => tierFromSlug(slug) !== undefined, 'Unknown membership tier'),
-    role: z.enum(['MEMBER', 'MODERATOR', 'ADMIN']).default('MEMBER'),
-  }),
-  paymentData: z.object({
-    method: z.enum(['credit_card', 'cash', 'check']),
-    clientSecret: z.string().max(300).optional(),
-    checkNumber: z.string().trim().max(50).optional(),
-    cashAmount: z.number().min(0).max(100000).optional(),
-  }),
+  firstName: z.string().trim().min(1, 'First name is required').max(100),
+  lastName: z.string().trim().min(1, 'Last name is required').max(100),
+  email: z.string().trim().toLowerCase().email('Enter a valid email address').max(254),
+  businessName: optionalText(200),
+  phone: optionalText(50),
+  membershipTier: z.enum(MEMBERSHIP_TIER_VALUES, { errorMap: () => ({ message: 'Choose a membership tier' }) }),
+  membershipStatus: z.enum(['PENDING', 'ACTIVE', 'EXPIRED', 'INACTIVE']).default('ACTIVE'),
+  /** ISO date or yyyy-mm-dd; defaults to one year from today. */
+  renewalDate: z.string().trim().optional().refine(v => !v || !Number.isNaN(new Date(v).getTime()), 'Invalid renewal date'),
+  payment: z
+    .object({
+      amountCents: z.number().int().min(1, 'Payment amount must be more than zero').max(10_000_000),
+      method: z.enum(['CASH', 'CHECK', 'CREDIT_CARD', 'BANK_TRANSFER']),
+      reference: optionalText(100),
+    })
+    .optional(),
 })
 
-export async function POST(request: NextRequest) {
-  try {
-    // Check admin authentication
-    const session = await requireAdmin()
-    if (isResponse(session)) return session
 
-    const parsed = bodySchema.safeParse(await request.json().catch(() => null))
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.errors[0]?.message ?? 'Missing required member information' },
-        { status: 400 }
-      )
-    }
-    const { memberData, paymentData } = parsed.data
-    // What the tier costs, from the server's table. Recorded payments use this,
-    // not an amount from the request (2026-09-22 audit, M-A4).
-    const tierPrice = tierPriceCents(memberData.membershipTier)
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: memberData.email }
-    })
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 400 }
-      )
-    }
-    
-
-    // A card payment is checked before anything is written, so a bad one leaves
-    // no half-created account behind. Only an admin-created intent, paid in full
-    // for this tier, and not already recorded against another member, counts.
-    let paymentIntent: Awaited<ReturnType<typeof stripe.paymentIntents.retrieve>> | null = null
-    if (paymentData.method === 'credit_card' && paymentData.clientSecret) {
-      paymentIntent = await stripe.paymentIntents.retrieve(paymentData.clientSecret.split('_secret_')[0])
-      const alreadyRecorded = await prisma.payment.findFirst({
-        where: { stripePaymentIntentId: paymentIntent.id },
-        select: { id: true },
-      })
-      if (
-        paymentIntent.metadata?.admin_created !== 'true' ||
-        paymentIntent.amount < tierPrice ||
-        alreadyRecorded
-      ) {
-        return NextResponse.json(
-          { error: 'That payment cannot be used for this membership' },
-          { status: 400 }
-        )
-      }
-    }
-
-    // Generate random password and verification token
-    const randomPassword = randomBytes(12).toString('base64').replace(/[^a-zA-Z0-9]/g, '').substring(0, 12)
-    const hashedPassword = await hash(randomPassword, 12)
-    const verificationToken = randomBytes(32).toString('hex')
-
-    // Create user and member records
-    const user = await prisma.user.create({
-      data: {
-        email: memberData.email,
-        firstName: memberData.firstName,
-        lastName: memberData.lastName,
-        role: memberData.role,
-        hashedPassword: hashedPassword,
-        emailVerified: null,
-        verificationToken: verificationToken,
-        resetToken: null,
-        resetTokenExpiry: null,
-        // phone field removed - not in User model
-        isActive: true, // Admin-created members should be active immediately
-        member: {
-          create: {
-            businessName: memberData.businessName || '',
-            membershipTier: tierFromSlug(memberData.membershipTier) ?? 'MEETING_MEMBER',
-            membershipStatus: 'PENDING',
-            joinedAt: new Date()
-          }
-        }
-      },
-      include: {
-        member: true
-      }
-    })
-
-    // Handle payment processing
-    let paymentRecord = null
-    let stripeCustomerId = null
-
-    if (paymentIntent) {
-      try {
-        if (paymentIntent && paymentIntent.status === 'succeeded') {
-          // Update member status to active
-          await prisma.member.update({
-            where: { userId: user.id },
-            data: {
-              membershipStatus: 'ACTIVE',
-              stripeCustomerId: paymentIntent.customer as string
-            }
-          })
-
-          // Create payment record
-          paymentRecord = await prisma.payment.create({
-            data: {
-              userId: user.id,
-              amount: paymentIntent.amount,
-              currency: paymentIntent.currency,
-              status: 'COMPLETED',
-              paymentMethod: 'CREDIT_CARD',
-              stripePaymentIntentId: paymentIntent.id,
-              stripeCustomerId: paymentIntent.customer as string,
-              metadata: {
-                admin_created: true,
-                admin_id: session.user.id,
-                membership_tier: memberData.membershipTier
-              }
-            }
-          })
-
-          stripeCustomerId = paymentIntent.customer as string
-        }
-      } catch (error) {
-        console.error('Error processing credit card payment:', error)
-        return NextResponse.json(
-          { error: 'Failed to process credit card payment' },
-          { status: 500 }
-        )
-      }
-    } else if (paymentData.method === 'cash' || paymentData.method === 'check') {
-      // For cash/check payments, create payment record directly
-      const amount = tierPrice
-
-      paymentRecord = await prisma.payment.create({
-        data: {
-          userId: user.id,
-          amount: amount,
-          currency: 'usd',
-          status: 'COMPLETED',
-          paymentMethod: paymentData.method === 'cash' ? 'CASH' : 'CHECK',
-          metadata: {
-            admin_created: true,
-            admin_id: session.user.id,
-            membership_tier: memberData.membershipTier,
-            check_number: paymentData.checkNumber,
-            cash_amount_received: paymentData.cashAmount
-          }
-        }
-      })
-
-      // Update member status to active for cash/check payments
-      await prisma.member.update({
-        where: { userId: user.id },
-        data: {
-          membershipStatus: 'ACTIVE'
-        }
-      })
-    }
-
-    // Create audit log
-    await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: 'MEMBER_CREATED_BY_ADMIN',
-        entityType: 'MEMBER',
-        entityId: user.id || '',
-        oldValues: {},
-        newValues: {
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          membershipTier: memberData.membershipTier,
-          paymentMethod: paymentData.method,
-          admin_id: session.user.id
-        }
-      }
-    })
-
-    // Send welcome email with generated password
-    try {
-      // Get the correct site URL based on environment
-      const siteUrl = SITE_URL
-      const activationUrl = `${siteUrl}/auth/verify-email?token=${verificationToken}&email=${user.email}`
-      
-      await sendAdminCreatedWelcomeEmail(
-        user.email!,
-        user.firstName || 'Member',
-        randomPassword,
-        activationUrl,
-        {
-          siteUrl: siteUrl,
-          logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
-          fromName: 'BASA Admin'
-        }
-      )
-    } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError)
-      // Don't fail the entire operation if email fails
-    }
-
-    // Send payment receipt email
-    if (paymentRecord) {
-      try {
-        const membershipTier = MEMBERSHIP_TIERS[memberData.membershipTier as keyof typeof MEMBERSHIP_TIERS]
-        // Get the correct site URL based on environment
-        const siteUrl = SITE_URL
-        
-        await sendPaymentReceiptEmail(
-          user.email!,
-          user.firstName || 'Member',
-          {
-            paymentId: paymentRecord.id,
-            amount: paymentRecord.amount / 100, // Convert from cents
-            currency: paymentRecord.currency,
-            cart: [{
-              tierId: memberData.membershipTier,
-              quantity: 1,
-              price: membershipTier.price,
-              name: membershipTier.name
-            }],
-            customerInfo: {
-              name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'BASA Member',
-              email: user.email!
-            },
-            businessInfo: {
-              businessName: user.member?.businessName || ''
-            },
-            paymentDate: new Date().toISOString()
-          },
-          {
-            siteUrl: siteUrl,
-            logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
-            fromName: 'BASA Admin'
-          }
-        )
-      } catch (receiptError) {
-        console.error('Failed to send payment receipt email:', receiptError)
-        // Don't fail the entire operation if email fails
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        membershipStatus: user.member?.membershipStatus
-      },
-      payment: paymentRecord ? {
-        id: paymentRecord.id,
-        amount: paymentRecord.amount / 100,
-        method: paymentRecord.paymentMethod
-      } : null
-    })
-
-  } catch (error) {
-    console.error('Error creating member with payment:', error)
-    return NextResponse.json(
-      { error: 'Failed to create member' },
-      { status: 500 }
-    )
-  }
+function oneYearFromToday(): Date {
+  const d = new Date()
+  d.setUTCFullYear(d.getUTCFullYear() + 1)
+  d.setUTCHours(12, 0, 0, 0)
+  return d
 }
 
-// Membership pricing structure (for reference)
-const MEMBERSHIP_TIERS = {
-  'meeting-member': {
-    name: 'Meeting Member',
-    price: 149
-  },
-  'associate-member': {
-    name: 'Associate Member',
-    price: 245
-  },
-  'trio-member': {
-    name: 'TRIO Member',
-    price: 295
-  },
-  'class-resource-member': {
-    name: 'Class Resource Member',
-    price: 120
-  },
-  'nag-resource-member': {
-    name: 'NAG Resource Member',
-    price: 0
-  },
-  'training-resource-member': {
-    name: 'Training Resource Member',
-    price: 225
+function parseRenewalDate(value: string | undefined): Date {
+  if (!value) return oneYearFromToday()
+  // A bare date from a date input means that calendar day; noon UTC keeps it there in US zones.
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00.000Z`) : new Date(value)
+}
+
+export async function POST(request: NextRequest) {
+  const session = await requireAdmin()
+  if (isResponse(session)) return session
+
+  const parsed = bodySchema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.errors[0]?.message ?? 'Missing required member information' },
+      { status: 400 }
+    )
   }
-} 
+  const data = parsed.data
+  const renewalDate = parseRenewalDate(data.renewalDate)
+  const tier = MEMBERSHIP_TIERS[data.membershipTier]
+
+  try {
+    const duplicate = await prisma.user.findFirst({
+      where: { email: { equals: data.email, mode: 'insensitive' } },
+      select: { id: true },
+    })
+    if (duplicate) {
+      return NextResponse.json(
+        { error: 'An account with this email already exists. Search the member list for it and edit that member instead.' },
+        { status: 409 }
+      )
+    }
+
+    const created = await prisma.$transaction(async tx => {
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          name: `${data.firstName} ${data.lastName}`,
+          // Same claim state as imported members: they set their own password
+          // from an invitation, which also activates the account.
+          hashedPassword: null,
+          role: data.membershipStatus === 'ACTIVE' ? 'MEMBER' : 'GUEST',
+          isActive: false,
+          accountStatus: 'INACTIVE',
+          member: {
+            create: {
+              businessName: data.businessName ?? null,
+              businessPhone: data.phone ?? null,
+              membershipTier: data.membershipTier,
+              membershipStatus: data.membershipStatus,
+              renewalDate,
+              joinedAt: new Date(),
+              membershipPaymentConfirmed: !!data.payment,
+            },
+          },
+        },
+        include: { member: true },
+      })
+
+      const payment = data.payment
+        ? await tx.payment.create({
+            data: {
+              userId: user.id,
+              amount: data.payment.amountCents,
+              currency: 'usd',
+              status: 'COMPLETED',
+              paymentMethod: data.payment.method,
+              metadata: {
+                source: 'admin_recorded',
+                recordedBy: session.user.id,
+                membershipTier: data.membershipTier,
+                tierPriceCents: tier.priceCents,
+                ...(data.payment.reference ? { reference: data.payment.reference } : {}),
+              },
+            },
+          })
+        : null
+
+      await tx.auditLog.create({
+        data: {
+          userId: session.user.id,
+          action: 'MEMBER_CREATED_BY_ADMIN',
+          entityType: 'MEMBER',
+          entityId: user.member!.id,
+          newValues: {
+            userId: user.id,
+            memberId: user.member!.id,
+            membershipTier: data.membershipTier,
+            membershipStatus: data.membershipStatus,
+            renewalDate: renewalDate.toISOString(),
+            role: user.role,
+            paymentId: payment?.id ?? null,
+            paymentAmountCents: payment?.amount ?? null,
+            paymentMethod: payment?.paymentMethod ?? null,
+          },
+        },
+      })
+
+      return { user, payment }
+    })
+
+    return NextResponse.json(
+      {
+        success: true,
+        member: {
+          id: created.user.member!.id,
+          userId: created.user.id,
+          email: created.user.email,
+          firstName: created.user.firstName,
+          lastName: created.user.lastName,
+          role: created.user.role,
+          membershipTier: created.user.member!.membershipTier,
+          membershipStatus: created.user.member!.membershipStatus,
+          renewalDate: created.user.member!.renewalDate,
+        },
+        payment: created.payment
+          ? { id: created.payment.id, amountCents: created.payment.amount, method: created.payment.paymentMethod }
+          : null,
+      },
+      { status: 201 }
+    )
+  } catch (error) {
+    // Two admins adding the same address at once: the unique index catches the second.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'An account with this email already exists. Search the member list for it and edit that member instead.' },
+        { status: 409 }
+      )
+    }
+    Sentry.captureException(error)
+    console.error('Error adding member:', error)
+    return NextResponse.json({ error: 'Failed to add member' }, { status: 500 })
+  }
+}

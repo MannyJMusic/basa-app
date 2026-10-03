@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 export function TokenResult({ endpoint, titles, success }: {
   endpoint: string
   titles: { working: string; done: string; failed: string }
-  success: (data: { email?: string }) => string
+  success: (data: { email?: string; message?: string }) => string
 }) {
   const token = useSearchParams().get('token')
   const [state, setState] = useState<{ kind: 'working' } | { kind: 'done'; message: string } | { kind: 'failed'; message: string }>({ kind: 'working' })

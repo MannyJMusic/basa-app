@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition, useEffect } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signIn, getSession } from "next-auth/react"
 import { Input } from "@/components/ui/input"
@@ -30,13 +31,23 @@ export default function SignInForm({ prefillEmail }: SignInFormProps) {
   }, [prefillEmail])
 
   // NextAuth lands here with ?error=AccessDenied when the signIn callback refuses
-  // a Google account: unknown address (no self-registration, #166) or a
-  // deactivated account. Say so instead of showing a blank form.
+  // a Google account: unknown address (no self-registration, #166), an account
+  // that has not been set up yet (invited members), or a deactivated one. Other
+  // codes (Configuration, OAuthCallbackError, ...) get a generic message rather
+  // than a blank form. The sign-in page itself explains email_exists and
+  // CredentialsSignin.
   useEffect(() => {
-    if (searchParams.get("error") === "AccessDenied") {
+    const code = searchParams.get("error")
+    if (!code || code === "email_exists" || code === "CredentialsSignin") return
+    if (code === "AccessDenied") {
       setError(
-        "That Google account is not linked to a BASA membership. BASA accounts are set up by our office; " +
-          "contact info@businessassociationsa.com or sign in with the email address on your membership."
+        "We couldn't sign you in with Google. If you are a BASA member, set up your account with the link in " +
+          "your invitation email or use Forgot password, then you can sign in with Google using the same email."
+      )
+    } else {
+      setError(
+        "Something went wrong signing you in. Please try again, or sign in with your email and password. " +
+          "If it keeps happening, contact info@businessassociationsa.com."
       )
     }
   }, [searchParams])
@@ -100,6 +111,14 @@ export default function SignInForm({ prefillEmail }: SignInFormProps) {
           onChange={e => setPassword(e.target.value)}
           required
         />
+        <div className="mt-1 text-right">
+          <Link href="/auth/forgot-password" className="text-sm font-medium text-[#1B365D] underline-offset-4 hover:underline">
+            Forgot password?
+          </Link>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          First time signing in? Use the link in your invitation email, or Forgot password to set up your account.
+        </p>
       </div>
       <Button type="submit" className="w-full text-white" disabled={isPending}>
         {isPending ? "Signing in..." : "Sign In"}

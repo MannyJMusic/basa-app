@@ -240,12 +240,12 @@ describe('Member-rate verification', () => {
         const { reg, pi, request, admin } = await pending(prisma);
         retrieve.mockResolvedValue(authorized(pi));
 
-        const result = await decideMemberRateRequest(request.id, 'approve', admin.id, undefined, { tier: 'MEETING_MEMBER' });
+        const result = await decideMemberRateRequest(request.id, 'approve', admin.id, undefined, { tier: 'MARKET_MEMBER' });
 
         expect(result.membership).toMatchObject({ status: 'created' });
         const user = await prisma.user.findFirst({ where: { email: reg.email }, include: { member: true } });
-        expect(user).toMatchObject({ hashedPassword: null, accountStatus: 'INACTIVE', isActive: false, firstName: 'Maybe', lastName: 'Member' });
-        expect(user.member).toMatchObject({ membershipStatus: 'ACTIVE', membershipTier: 'MEETING_MEMBER' });
+        expect(user).toMatchObject({ hashedPassword: null, accountStatus: 'INACTIVE', isActive: false, firstName: 'Maybe', lastName: 'Member', role: 'MEMBER' });
+        expect(user.member).toMatchObject({ membershipStatus: 'ACTIVE', membershipTier: 'MARKET_MEMBER' });
         expect(user.member.renewalDate.getTime()).toBeGreaterThan(Date.now() + 360 * DAY);
         expect((await prisma.eventRegistration.findUnique({ where: { id: reg.id } })).memberId).toBe(user.member.id);
         expect(await prisma.auditLog.count({ where: { action: 'MEMBERSHIP_ACTIVATED_MANUALLY', entityId: user.member.id } })).toBe(1);
@@ -265,6 +265,7 @@ describe('Member-rate verification', () => {
         const m = await prisma.member.findUnique({ where: { id: existing.member.id } });
         expect(m.membershipStatus).toBe('ACTIVE');
         expect(m.renewalDate.toISOString()).toBe('2027-06-30T12:00:00.000Z');
+        expect((await prisma.user.findUnique({ where: { id: existing.id } })).role).toBe('MEMBER');
         expect(await prisma.user.count({ where: { email: { equals: reg.email, mode: 'insensitive' } } })).toBe(1);
       })
     );
@@ -274,14 +275,14 @@ describe('Member-rate verification', () => {
       withEmptyTestDatabase(async ({ database: { prisma } }: any) => {
         const { reg, pi, request, admin } = await pending(prisma);
         const renewal = new Date('2028-01-01T00:00:00Z');
-        const existing = await prisma.user.create({ data: { email: reg.email, role: 'GUEST', member: { create: { membershipStatus: 'ACTIVE', renewalDate: renewal, membershipTier: 'ACTION_MEMBER' } } }, include: { member: true } });
+        const existing = await prisma.user.create({ data: { email: reg.email, role: 'GUEST', member: { create: { membershipStatus: 'ACTIVE', renewalDate: renewal, membershipTier: 'MIXER_MEMBER' } } }, include: { member: true } });
         retrieve.mockResolvedValue(authorized(pi));
 
         const result = await decideMemberRateRequest(request.id, 'approve', admin.id, undefined, { tier: 'MEETING_MEMBER' });
 
         expect(result.membership).toMatchObject({ status: 'already_active' });
         const m = await prisma.member.findUnique({ where: { id: existing.member.id } });
-        expect(m).toMatchObject({ membershipTier: 'ACTION_MEMBER' });
+        expect(m).toMatchObject({ membershipTier: 'MIXER_MEMBER' });
         expect(m.renewalDate.toISOString()).toBe(renewal.toISOString());
       })
     );
@@ -292,7 +293,7 @@ describe('Member-rate verification', () => {
         const { reg, pi, request, admin } = await pending(prisma);
         retrieve.mockResolvedValue(authorized(pi));
 
-        const result = await decideMemberRateRequest(request.id, 'deny', admin.id, undefined, { tier: 'MEETING_MEMBER' });
+        const result = await decideMemberRateRequest(request.id, 'deny', admin.id, undefined, { tier: 'MARKET_MEMBER' });
 
         expect(result.membership).toBeNull();
         expect(await prisma.user.count({ where: { email: reg.email } })).toBe(0);

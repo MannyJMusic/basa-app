@@ -3,7 +3,7 @@
 import { Suspense } from 'react'
 import { TokenResult } from '../token-result'
 
-const success = () => 'Your email address is verified and your account is active. You can sign in now.'
+const success = (data: { message?: string }) => data.message || 'Your email address is verified.'
 
 export default function VerifyEmailPage() {
   return (

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { passwordResetSchema } from "@/lib/validations"
 import { hashPassword } from "@/lib/password"
 import { prisma } from "@/lib/db"
-import { isUnclaimedLegacyAccount, CLAIM_ACTIVATION } from "@/lib/account-claim"
+import { isUnclaimedLegacyAccount, claimActivation } from "@/lib/account-claim"
 
 /**
  * Complete a password reset.
@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
         resetToken: token,
         resetTokenExpiry: { gt: new Date() },
       },
+      include: { member: { select: { membershipStatus: true } } },
     })
 
     if (!user) {
@@ -36,9 +37,9 @@ export async function POST(request: NextRequest) {
     // An imported member setting a password for the first time is claiming their
     // account, so this is also where it becomes usable: without clearing isActive and
     // accountStatus they would set a password and still be silently refused at
-    // sign-in, which is exactly the behaviour #104 was filed about. Role is
-    // deliberately untouched - a lapsed member gets back into their account, not back
-    // into a membership. The Stripe webhook makes them a MEMBER when they renew.
+    // sign-in, which is exactly the behaviour #104 was filed about. A GUEST whose
+    // membership is ACTIVE (an invited member) becomes a MEMBER in the same update;
+    // a lapsed member stays GUEST until they renew (see claimActivation).
     const claiming = isUnclaimedLegacyAccount(user)
 
     // Clearing the token in the same update is what makes it single-use. Scoping
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
         // A reset is what someone does when they think their password is out:
         // every session signed in before it ends (see the jwt callback in auth.ts).
         sessionsInvalidBefore: new Date(),
-        ...(claiming ? CLAIM_ACTIVATION : {}),
+        ...(claiming ? claimActivation(user) : {}),
       },
     })
 
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     
     if (error.name === "ZodError") {
       return NextResponse.json(
-        { error: "Validation failed", details: error.errors },
+        { error: error.errors?.[0]?.message ?? "Validation failed", details: error.errors },
         { status: 400 }
       )
     }

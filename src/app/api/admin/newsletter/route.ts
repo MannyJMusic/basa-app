@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db"
 import { sendBulkEmail } from "@/lib/basa-emails"
 import { sanitizeRichText } from "@/lib/sanitize-html"
 import { requireAdmin, isResponse } from "@/lib/api-auth"
+import { SYSTEM_USER_EMAIL } from "@/lib/system-user"
 
 /**
  * POST /api/admin/newsletter — send a newsletter to a member segment.
@@ -29,13 +30,22 @@ export async function POST(request: NextRequest) {
   try {
     const { subject, content, segment } = bulkNewsletterSchema.parse(await request.json())
 
-    const userFilter: Record<string, unknown> = { email: { not: null } }
+    // Every segment starts from subscribers whose account has not been switched off
+    // by staff: an account that can sign in, or one in the never-set-up state
+    // (public newsletter sign-ups and imported members are both INACTIVE with no
+    // password, and asked for the newsletter). A deactivated account (sign-in off
+    // after being set up, or SUSPENDED) or a member staff deactivated gets nothing.
+    const userFilter: Record<string, unknown> = {
+      email: { not: null, notIn: [SYSTEM_USER_EMAIL] },
+      OR: [{ isActive: true }, { accountStatus: "INACTIVE" }],
+    }
     if (segment === "active") userFilter.lastLogin = { gte: new Date(Date.now() - 30 * DAY) }
     if (segment === "new") userFilter.createdAt = { gte: new Date(Date.now() - 7 * DAY) }
 
     const members = await prisma.member.findMany({
       where: {
         newsletterSubscribed: true,
+        membershipStatus: { not: "INACTIVE" },
         ...(segment === "premium" ? { membershipTier: { in: ["MIXER_MEMBER", "SPONSORSHIP_MEMBER"] as const } } : {}),
         user: userFilter,
       },
