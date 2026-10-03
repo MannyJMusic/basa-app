@@ -1,6 +1,7 @@
 import type { Status } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { MEMBERSHIP_TIERS } from "@/lib/membership-tiers"
+import { directoryWhere } from "@/lib/member-privacy"
 
 /**
  * Server-side reads behind the member dashboard, the My Membership page and the
@@ -130,7 +131,7 @@ export async function countUpcomingEvents(now = new Date()) {
 /** Directory-visible active members, newest first. Only for signed-in members. */
 export async function getRecentDirectoryMembers(limit: number) {
   return prisma.member.findMany({
-    where: { membershipStatus: "ACTIVE", showInDirectory: true },
+    where: directoryWhere,
     select: {
       id: true,
       businessName: true,

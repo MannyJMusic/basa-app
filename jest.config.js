@@ -20,8 +20,10 @@ const customJestConfig = {
     '!src/**/*.d.ts',
     '!src/**/*.stories.{js,jsx,ts,tsx}',
   ],
+  modulePathIgnorePatterns: ['<rootDir>/.claude/'],
   testPathIgnorePatterns: [
     '<rootDir>/.next/',
+    '<rootDir>/.claude/',
     '<rootDir>/node_modules/',
     '<rootDir>/cypress/',
     '<rootDir>/e2e/',
