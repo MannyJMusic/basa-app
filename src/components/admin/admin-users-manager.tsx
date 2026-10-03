@@ -70,20 +70,20 @@ export function AdminUsersManager() {
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this admin user?')) {
+    if (!confirm('Remove this staff account? They will no longer be able to sign in or use the admin area. The record is kept for the audit history.')) {
       return
     }
 
     try {
       await deleteUser(userId)
       toast({
-        title: "User deleted",
-        description: "Admin user has been deleted successfully.",
+        title: "Staff account removed",
+        description: "They can no longer sign in.",
       })
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete admin user. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to remove admin user. Please try again.",
         variant: "destructive",
       })
     }

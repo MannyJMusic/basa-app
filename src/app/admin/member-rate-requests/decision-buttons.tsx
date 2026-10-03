@@ -6,7 +6,7 @@ import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { MEMBERSHIP_TIERS, MEMBERSHIP_TIER_VALUES } from '@/lib/membership-tiers'
+import { TIERS_IN_ORDER } from '@/lib/membership-tiers'
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`
 
@@ -73,7 +73,7 @@ export function DecisionButtons({ requestId, memberCents, heldCents, buyerName, 
               <label className="text-sm text-gray-700">Tier
                 <select className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={tier} onChange={e => setTier(e.target.value)}>
                   <option value="">No tier yet</option>
-                  {MEMBERSHIP_TIER_VALUES.map(t => <option key={t} value={t}>{MEMBERSHIP_TIERS[t].label}</option>)}
+                  {TIERS_IN_ORDER.map(t => <option key={t.tier} value={t.tier}>{t.label}</option>)}
                 </select>
               </label>
               <label className="text-sm text-gray-700">Renews on

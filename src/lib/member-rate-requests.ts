@@ -228,7 +228,7 @@ export async function makeBuyerAMember(requestId: string, adminUserId: string, o
   if (!request) return { status: 'failed', reason: 'Request not found' }
   const reg = request.registration
   const email = reg.email.trim().toLowerCase()
-  const renewalDate = opts.renewalDate ?? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+  const oneYearOut = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
 
   return prisma.$transaction(async tx => {
     let user = await tx.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } }, include: { member: true } })
@@ -242,10 +242,19 @@ export async function makeBuyerAMember(requestId: string, adminUserId: string, o
       status = 'created'
     }
 
+    // The date staff picked; otherwise keep a renewal date still in the future, else a year out.
+    const existingRenewal = user.member?.renewalDate
+    const renewalDate = opts.renewalDate
+      ?? (existingRenewal && existingRenewal.getTime() > Date.now() ? existingRenewal : oneYearOut)
+
     let memberId: string
     if (user.member?.membershipStatus === 'ACTIVE') {
       memberId = user.member.id
       status = 'already_active'
+      // An active membership with no renewal date would never come up for renewal.
+      if (!user.member.renewalDate) {
+        await tx.member.update({ where: { id: memberId }, data: { renewalDate } })
+      }
     } else if (user.member) {
       memberId = (await tx.member.update({
         where: { id: user.member.id },
@@ -259,6 +268,10 @@ export async function makeBuyerAMember(requestId: string, adminUserId: string, o
         },
       })).id
     }
+
+    // An active membership means member access: a GUEST becomes a MEMBER. Any other
+    // role (MEMBER, MODERATOR, ADMIN) is left alone.
+    await tx.user.updateMany({ where: { id: user.id, role: 'GUEST' }, data: { role: 'MEMBER' } })
 
     await tx.eventRegistration.update({ where: { id: reg.id }, data: { memberId } })
     if (status !== 'already_active') {

@@ -146,3 +146,27 @@ describe('Admin add member', () => {
     })
   )
 })
+
+import { DELETE as removeStaff } from '@/app/api/admin/users/[id]/route'
+
+describe('Admin users DELETE', () => {
+  const del = (id: string) => removeStaff(new Request('http://localhost/api/admin/users/' + id, { method: 'DELETE' }) as any, { params: Promise.resolve({ id }) })
+
+  it(
+    'switches a staff account off instead of deleting it, and refuses members and yourself',
+    withEmptyTestDatabase(async ({ database: { prisma } }: any) => {
+      const admin = await asAdmin(prisma)
+      const other = await TestUtils.createTestUser(prisma, 'other-admin@test.test', 'ADMIN')
+      const memberAdmin = await TestUtils.createTestUser(prisma, 'member-admin@test.test', 'ADMIN')
+      await prisma.member.create({ data: { userId: memberAdmin.id, membershipStatus: 'ACTIVE' } })
+
+      expect((await del(admin.id)).status).toBe(400)
+      expect((await del(memberAdmin.id)).status).toBe(409)
+      expect((await del(other.id)).status).toBe(200)
+
+      const after = await prisma.user.findUnique({ where: { id: other.id } })
+      expect(after).toMatchObject({ isActive: false, role: 'GUEST' })
+      expect((await prisma.user.findUnique({ where: { id: memberAdmin.id } })).role).toBe('ADMIN')
+    })
+  )
+})

@@ -11,6 +11,7 @@ interface Row {
   name: string
   email: string
   businessName: string | null
+  tier: string | null
   renewalDate: string | null
   lastInvitedAt: string | null
   invitations: number
@@ -74,6 +75,7 @@ export function InvitationsTable({ members }: { members: Row[] }) {
               <th className="p-3 w-10"></th>
               <th className="p-3">Member</th>
               <th className="p-3">Business</th>
+              <th className="p-3">Tier</th>
               <th className="p-3">Renews</th>
               <th className="p-3">Last invited</th>
             </tr>
@@ -86,6 +88,7 @@ export function InvitationsTable({ members }: { members: Row[] }) {
                 </td>
                 <td className="p-3"><div className="font-medium text-gray-900">{m.name}</div><div className="text-gray-600 break-all">{m.email}</div></td>
                 <td className="p-3 text-gray-700">{m.businessName ?? '—'}</td>
+                <td className="p-3 text-gray-700">{m.tier ?? 'No tier'}</td>
                 <td className="p-3 text-gray-700">{day(m.renewalDate)}</td>
                 <td className="p-3 text-gray-700">{m.invitations ? `${day(m.lastInvitedAt)}${m.invitations > 1 ? ` (${m.invitations}×)` : ''}` : 'Never'}</td>
               </tr>
