@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,152 +12,148 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  User, 
-  Building, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Globe, 
-  Calendar,
-  Edit,
-  Save,
-  X,
-  Eye,
-  EyeOff
-} from "lucide-react"
+import { User, Building, Calendar, Edit, X } from "lucide-react"
 import { type Member, type UpdateMemberData } from "@/hooks/use-members"
 import { formatDate } from "@/lib/utils"
 import type { MembershipTier } from "@prisma/client"
-import { MEMBERSHIP_TIERS, MEMBERSHIP_TIER_VALUES } from "@/lib/membership-tiers"
+import { MEMBERSHIP_TIERS, TIERS_IN_ORDER } from "@/lib/membership-tiers"
+import {
+  MEMBER_ROLES,
+  MEMBER_STATUSES,
+  NO_TIER,
+  diffMemberForm,
+  formStateFromMember,
+  type MemberFormState,
+} from "@/components/members/member-edit"
+
+const INDUSTRY_TYPES = [
+  "Technology", "Consulting", "Marketing", "Construction", "Real Estate", "Accounting",
+  "Design", "Healthcare", "Education", "Legal", "Financial Services", "Insurance",
+  "Manufacturing", "Retail", "Hospitality", "Transportation", "Non-Profit", "Government",
+  "Media", "Food & Beverage", "Fitness & Wellness", "Other",
+]
+/** Select value for "no industry type" (Radix Select does not allow ""). */
+const NO_INDUSTRY = "__none__"
+
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pending",
+  ACTIVE: "Active",
+  EXPIRED: "Expired",
+  INACTIVE: "Inactive",
+}
+const ROLE_LABELS: Record<string, string> = {
+  GUEST: "Guest (no member access)",
+  MEMBER: "Member",
+  MODERATOR: "Moderator",
+  ADMIN: "Admin",
+}
+
+export function memberStatusBadge(status: string) {
+  switch (status) {
+    case "ACTIVE":
+      return <Badge className="bg-green-100 text-green-800">Active</Badge>
+    case "PENDING":
+      return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+    case "EXPIRED":
+      return <Badge className="bg-orange-100 text-orange-800">Expired</Badge>
+    case "INACTIVE":
+      return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>
+    default:
+      return <Badge variant="secondary">{status}</Badge>
+  }
+}
+
+export function memberTierBadge(tier?: string | null) {
+  const def = tier ? MEMBERSHIP_TIERS[tier as MembershipTier] : undefined
+  if (!def) return <Badge variant="outline">No Tier</Badge>
+  return <Badge className="bg-blue-100 text-blue-800">{def.label}</Badge>
+}
 
 interface MemberDetailDialogProps {
   member: Member | null
   isOpen: boolean
+  /** Open straight into edit mode (the list's Edit icon). */
+  startEditing?: boolean
   onClose: () => void
-  onUpdate: (id: string, data: UpdateMemberData) => Promise<boolean>
-  onDelete: (id: string) => Promise<boolean>
+  /** Saves the changes; throws with the API's message on failure. */
+  onUpdate: (id: string, data: UpdateMemberData) => Promise<void>
+  /** Asks for confirmation and deactivates; the page owns the confirm dialog. */
+  onDeactivate: (member: Member) => void
   isLoading?: boolean
 }
 
 export function MemberDetailDialog({
   member,
   isOpen,
+  startEditing = false,
   onClose,
   onUpdate,
-  onDelete,
+  onDeactivate,
   isLoading = false
 }: MemberDetailDialogProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showPassword, setShowPassword] = useState(false)
-  const [formData, setFormData] = useState<UpdateMemberData>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    businessName: "",
-    businessType: "",
-    industry: [],
-    businessEmail: "",
-    businessPhone: "",
-    businessAddress: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    website: "",
-    membershipTier: "MEETING_MEMBER",
-    membershipStatus: "ACTIVE",
-    role: "MEMBER"
-  })
+  const initial = useMemo(() => (member ? formStateFromMember(member) : null), [member])
+  const [formData, setFormData] = useState<MemberFormState | null>(initial)
 
-  // Reset form when member changes
+  // Reset the form whenever a different (or refreshed) member is shown.
   useEffect(() => {
-    if (member) {
-      setFormData({
-        firstName: member.user.firstName || "",
-        lastName: member.user.lastName || "",
-        email: member.user.email || "",
-        password: "",
-        businessName: member.businessName || "",
-        businessType: member.businessType || "",
-        industry: member.industry || [],
-        businessEmail: member.businessEmail || "",
-        businessPhone: member.businessPhone || "",
-        businessAddress: member.businessAddress || "",
-        city: member.city || "",
-        state: member.state || "",
-        zipCode: member.zipCode || "",
-        website: member.website || "",
-        membershipTier: member.membershipTier ?? "MEETING_MEMBER",
-        membershipStatus: member.membershipStatus || "ACTIVE",
-        role: (member.user.role === "ADMIN" || member.user.role === "MODERATOR" || member.user.role === "MEMBER") 
-          ? member.user.role 
-          : "MEMBER"
-      })
-      setError(null)
-    }
-  }, [member])
+    setFormData(initial)
+    setError(null)
+  }, [initial])
+
+  useEffect(() => {
+    if (isOpen) setIsEditing(startEditing)
+  }, [isOpen, startEditing, member?.id])
+
+  if (!member || !formData || !initial) return null
+
+  const set = <K extends keyof MemberFormState>(key: K, value: MemberFormState[K]) =>
+    setFormData(prev => (prev ? { ...prev, [key]: value } : prev))
+
+  const changes = diffMemberForm(initial, formData)
+  const hasChanges = Object.keys(changes).length > 0
+  const disabled = !isEditing || isLoading || isSaving
 
   const handleSave = async () => {
-    if (!member) return
-
-    try {
-      setError(null)
-      const success = await onUpdate(member.id, formData)
-      if (success) {
-        setIsEditing(false)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update member")
-    }
-  }
-
-  const handleDelete = async () => {
-    if (!member) return
-
-    if (!confirm(`Are you sure you want to delete ${member.user.firstName} ${member.user.lastName}? This action cannot be undone.`)) {
+    if (!hasChanges) {
+      setIsEditing(false)
       return
     }
-
+    if ("email" in changes && !changes.email) {
+      setError("Email can't be empty.")
+      return
+    }
     try {
-      setIsDeleting(true)
+      setIsSaving(true)
       setError(null)
-      const success = await onDelete(member.id)
-      if (success) {
-        onClose()
-      }
+      await onUpdate(member.id, changes as UpdateMemberData)
+      setIsEditing(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete member")
+      setError(err instanceof Error ? err.message : "Failed to update member")
     } finally {
-      setIsDeleting(false)
+      setIsSaving(false)
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>
-      case "INACTIVE":
-        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>
-      case "SUSPENDED":
-        return <Badge className="bg-red-100 text-red-800">Suspended</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
-    }
+  const handleCancel = () => {
+    setFormData(initial)
+    setError(null)
+    setIsEditing(false)
   }
 
-  const getTierBadge = (tier?: string) => {
-    const def = tier ? MEMBERSHIP_TIERS[tier as MembershipTier] : undefined
-    if (!def) return <Badge variant="outline">No Tier</Badge>
-    return <Badge className="bg-blue-100 text-blue-800">{def.label}</Badge>
-  }
-
-  if (!member) return null
+  // A stored industry type outside the fixed list is still shown and kept.
+  const industryOptions = formData.businessType && !INDUSTRY_TYPES.includes(formData.businessType)
+    ? [formData.businessType, ...INDUSTRY_TYPES]
+    : INDUSTRY_TYPES
+  // Same for a role outside the known four, so it is shown rather than blanked.
+  const roleOptions: string[] = (MEMBER_ROLES as readonly string[]).includes(formData.role)
+    ? [...MEMBER_ROLES]
+    : [formData.role, ...MEMBER_ROLES]
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={open => { if (!open) onClose() }}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex justify-between items-start">
@@ -185,7 +181,7 @@ export function MemberDetailDialog({
                 variant="outline"
                 size="sm"
                 onClick={onClose}
-                disabled={isLoading}
+                disabled={isSaving}
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -217,76 +213,61 @@ export function MemberDetailDialog({
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="firstName">First Name *</Label>
+                    <Label htmlFor="firstName">First Name</Label>
                     <Input
                       id="firstName"
                       value={formData.firstName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                      disabled={!isEditing || isLoading}
+                      onChange={(e) => set("firstName", e.target.value)}
+                      disabled={disabled}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Label htmlFor="lastName">Last Name</Label>
                     <Input
                       id="lastName"
                       value={formData.lastName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                      disabled={!isEditing || isLoading}
+                      onChange={(e) => set("lastName", e.target.value)}
+                      disabled={disabled}
                     />
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">Email (sign-in address)</Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    disabled={!isEditing || isLoading}
+                    onChange={(e) => set("email", e.target.value)}
+                    disabled={disabled}
                   />
                 </div>
-                {isEditing && (
-                  <div>
-                    <Label htmlFor="password">New Password (leave blank to keep current)</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        value={formData.password}
-                        onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                        disabled={isLoading}
-                        placeholder="Enter new password"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                )}
                 <div>
                   <Label htmlFor="role">Role</Label>
                   <Select
                     value={formData.role}
-                    onValueChange={(value: "MEMBER" | "MODERATOR" | "ADMIN") => 
-                      setFormData(prev => ({ ...prev, role: value }))
-                    }
-                    disabled={!isEditing || isLoading}
+                    onValueChange={(value) => set("role", value)}
+                    disabled={disabled}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="MEMBER">Member</SelectItem>
-                      <SelectItem value="MODERATOR">Moderator</SelectItem>
-                      <SelectItem value="ADMIN">Admin</SelectItem>
+                      {roleOptions.map(r => (
+                        <SelectItem key={r} value={r}>{ROLE_LABELS[r] ?? r}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Changed only if you pick a different role. Passwords are set by the member through
+                    their invitation or Forgot password; staff cannot set them here.
+                  </p>
+                </div>
+                <div className="text-sm text-gray-600">
+                  Account: {member.user.isActive
+                    ? "can sign in"
+                    : member.user.accountStatus === "INACTIVE"
+                      ? "not set up yet (send an invitation from Members → Invitations)"
+                      : "sign-in turned off"}
                 </div>
               </CardContent>
             </Card>
@@ -306,44 +287,26 @@ export function MemberDetailDialog({
                   <Input
                     id="businessName"
                     value={formData.businessName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, businessName: e.target.value }))}
-                    disabled={!isEditing || isLoading}
+                    onChange={(e) => set("businessName", e.target.value)}
+                    disabled={disabled}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="businessType">Industry Type</Label>
                     <Select
-                      value={formData.businessType}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, businessType: value }))}
-                      disabled={!isEditing || isLoading}
+                      value={formData.businessType || NO_INDUSTRY}
+                      onValueChange={(value) => set("businessType", value === NO_INDUSTRY ? "" : value)}
+                      disabled={disabled}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select industry type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Technology">Technology</SelectItem>
-                        <SelectItem value="Consulting">Consulting</SelectItem>
-                        <SelectItem value="Marketing">Marketing</SelectItem>
-                        <SelectItem value="Construction">Construction</SelectItem>
-                        <SelectItem value="Real Estate">Real Estate</SelectItem>
-                        <SelectItem value="Accounting">Accounting</SelectItem>
-                        <SelectItem value="Design">Design</SelectItem>
-                        <SelectItem value="Healthcare">Healthcare</SelectItem>
-                        <SelectItem value="Education">Education</SelectItem>
-                        <SelectItem value="Legal">Legal</SelectItem>
-                        <SelectItem value="Financial Services">Financial Services</SelectItem>
-                        <SelectItem value="Insurance">Insurance</SelectItem>
-                        <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                        <SelectItem value="Retail">Retail</SelectItem>
-                        <SelectItem value="Hospitality">Hospitality</SelectItem>
-                        <SelectItem value="Transportation">Transportation</SelectItem>
-                        <SelectItem value="Non-Profit">Non-Profit</SelectItem>
-                        <SelectItem value="Government">Government</SelectItem>
-                        <SelectItem value="Media">Media</SelectItem>
-                        <SelectItem value="Food & Beverage">Food & Beverage</SelectItem>
-                        <SelectItem value="Fitness & Wellness">Fitness & Wellness</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value={NO_INDUSTRY}>Not set</SelectItem>
+                        {industryOptions.map(i => (
+                          <SelectItem key={i} value={i}>{i}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -351,12 +314,9 @@ export function MemberDetailDialog({
                     <Label htmlFor="industry">Industry (comma-separated)</Label>
                     <Input
                       id="industry"
-                      value={formData.industry?.join(", ") || ""}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        industry: e.target.value.split(",").map(i => i.trim()).filter(Boolean)
-                      }))}
-                      disabled={!isEditing || isLoading}
+                      value={formData.industry}
+                      onChange={(e) => set("industry", e.target.value)}
+                      disabled={disabled}
                     />
                   </div>
                 </div>
@@ -367,8 +327,8 @@ export function MemberDetailDialog({
                       id="businessEmail"
                       type="email"
                       value={formData.businessEmail}
-                      onChange={(e) => setFormData(prev => ({ ...prev, businessEmail: e.target.value }))}
-                      disabled={!isEditing || isLoading}
+                      onChange={(e) => set("businessEmail", e.target.value)}
+                      disabled={disabled}
                     />
                   </div>
                   <div>
@@ -376,8 +336,8 @@ export function MemberDetailDialog({
                     <Input
                       id="businessPhone"
                       value={formData.businessPhone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, businessPhone: e.target.value }))}
-                      disabled={!isEditing || isLoading}
+                      onChange={(e) => set("businessPhone", e.target.value)}
+                      disabled={disabled}
                     />
                   </div>
                 </div>
@@ -386,8 +346,8 @@ export function MemberDetailDialog({
                   <Textarea
                     id="businessAddress"
                     value={formData.businessAddress}
-                    onChange={(e) => setFormData(prev => ({ ...prev, businessAddress: e.target.value }))}
-                    disabled={!isEditing || isLoading}
+                    onChange={(e) => set("businessAddress", e.target.value)}
+                    disabled={disabled}
                     rows={2}
                   />
                 </div>
@@ -397,8 +357,8 @@ export function MemberDetailDialog({
                     <Input
                       id="city"
                       value={formData.city}
-                      onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                      disabled={!isEditing || isLoading}
+                      onChange={(e) => set("city", e.target.value)}
+                      disabled={disabled}
                     />
                   </div>
                   <div>
@@ -406,8 +366,8 @@ export function MemberDetailDialog({
                     <Input
                       id="state"
                       value={formData.state}
-                      onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                      disabled={!isEditing || isLoading}
+                      onChange={(e) => set("state", e.target.value)}
+                      disabled={disabled}
                     />
                   </div>
                   <div>
@@ -415,8 +375,8 @@ export function MemberDetailDialog({
                     <Input
                       id="zipCode"
                       value={formData.zipCode}
-                      onChange={(e) => setFormData(prev => ({ ...prev, zipCode: e.target.value }))}
-                      disabled={!isEditing || isLoading}
+                      onChange={(e) => set("zipCode", e.target.value)}
+                      disabled={disabled}
                     />
                   </div>
                 </div>
@@ -425,9 +385,10 @@ export function MemberDetailDialog({
                   <Input
                     id="website"
                     type="url"
+                    placeholder="https://"
                     value={formData.website}
-                    onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
-                    disabled={!isEditing || isLoading}
+                    onChange={(e) => set("website", e.target.value)}
+                    disabled={disabled}
                   />
                 </div>
               </CardContent>
@@ -443,22 +404,21 @@ export function MemberDetailDialog({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="membershipTier">Membership Tier</Label>
                     <Select
                       value={formData.membershipTier}
-                      onValueChange={(value: MembershipTier) => 
-                        setFormData(prev => ({ ...prev, membershipTier: value }))
-                      }
-                      disabled={!isEditing || isLoading}
+                      onValueChange={(value) => set("membershipTier", value)}
+                      disabled={disabled}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {MEMBERSHIP_TIER_VALUES.map(t => (
-                          <SelectItem key={t} value={t}>{MEMBERSHIP_TIERS[t].label}</SelectItem>
+                        <SelectItem value={NO_TIER}>No tier</SelectItem>
+                        {TIERS_IN_ORDER.map(t => (
+                          <SelectItem key={t.tier} value={t.tier}>{t.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -467,33 +427,47 @@ export function MemberDetailDialog({
                     <Label htmlFor="membershipStatus">Membership Status</Label>
                     <Select
                       value={formData.membershipStatus}
-                      onValueChange={(value: "ACTIVE" | "INACTIVE" | "SUSPENDED") => 
-                        setFormData(prev => ({ ...prev, membershipStatus: value }))
-                      }
-                      disabled={!isEditing || isLoading}
+                      onValueChange={(value) => set("membershipStatus", value)}
+                      disabled={disabled}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ACTIVE">Active</SelectItem>
-                        <SelectItem value="INACTIVE">Inactive</SelectItem>
-                        <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                        {MEMBER_STATUSES.map(s => (
+                          <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+                  <div>
+                    <Label htmlFor="renewalDate">Renewal Date</Label>
+                    <Input
+                      id="renewalDate"
+                      type="date"
+                      value={formData.renewalDate}
+                      onChange={(e) => set("renewalDate", e.target.value)}
+                      disabled={disabled}
+                    />
+                  </div>
                 </div>
-                
+                {isEditing && formData.membershipStatus === "ACTIVE" && initial.membershipStatus !== "ACTIVE" && !formData.renewalDate && (
+                  <p className="text-xs text-muted-foreground">
+                    With no renewal date, activating sets it to one year from today.
+                  </p>
+                )}
+
                 <Separator />
-                
+
                 <div className="space-y-2">
                   <h4 className="font-medium">Current Status</h4>
                   <div className="flex gap-2">
-                    {getTierBadge(member.membershipTier)}
-                    {getStatusBadge(member.membershipStatus)}
+                    {memberTierBadge(member.membershipTier)}
+                    {memberStatusBadge(member.membershipStatus)}
                   </div>
                   <div className="text-sm text-gray-600">
                     <p>Joined: {formatDate(member.joinedAt)}</p>
+                    <p>Renews: {member.renewalDate ? formatDate(member.renewalDate) : "not set"}</p>
                     <p>Member ID: {member.id}</p>
                   </div>
                 </div>
@@ -506,24 +480,24 @@ export function MemberDetailDialog({
           <div className="flex justify-between pt-4 border-t">
             <Button
               variant="destructive"
-              onClick={handleDelete}
-              disabled={isDeleting || isLoading}
+              onClick={() => onDeactivate(member)}
+              disabled={isSaving || isLoading}
             >
-              {isDeleting ? "Deleting..." : "Delete Member"}
+              Deactivate Member
             </Button>
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={() => setIsEditing(false)}
-                disabled={isLoading}
+                onClick={handleCancel}
+                disabled={isSaving}
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={isLoading}
+                disabled={isSaving || isLoading || !hasChanges}
               >
-                {isLoading ? "Saving..." : "Save Changes"}
+                {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </div>
@@ -531,4 +505,4 @@ export function MemberDetailDialog({
       </DialogContent>
     </Dialog>
   )
-} 
+}

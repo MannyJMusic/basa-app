@@ -21,10 +21,10 @@ export interface Member {
   state?: string
   zipCode?: string
   website?: string
-  membershipTier?: MembershipTier
-  membershipStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+  membershipTier?: MembershipTier | null
+  membershipStatus: "PENDING" | "ACTIVE" | "EXPIRED" | "INACTIVE"
   joinedAt: string
-  renewalDate?: string
+  renewalDate?: string | null
   stripeCustomerId?: string
   subscriptionId?: string
   logo?: string
@@ -48,6 +48,7 @@ export interface Member {
     email?: string
     role: string
     isActive: boolean
+    accountStatus?: string
     lastLogin?: string
     createdAt: string
   }
@@ -99,35 +100,39 @@ export interface CreateMemberData {
   state?: string
   zipCode?: string
   website?: string
-  membershipTier?: MembershipTier
+  membershipTier?: MembershipTier | null
   role?: "MEMBER" | "MODERATOR" | "ADMIN"
 }
 
+/** A PUT body: only changed fields; null clears an optional one. */
 export interface UpdateMemberData {
-  firstName?: string
-  lastName?: string
-  email?: string
-  password?: string
-  businessName?: string
-  businessType?: string
+  firstName?: string | null
+  lastName?: string | null
+  email?: string | null
+  businessName?: string | null
+  businessType?: string | null
   industry?: string[]
-  businessEmail?: string
-  businessPhone?: string
-  businessAddress?: string
-  city?: string
-  state?: string
-  zipCode?: string
-  website?: string
-  membershipTier?: MembershipTier
-  membershipStatus?: "ACTIVE" | "INACTIVE" | "SUSPENDED"
-  role?: "MEMBER" | "MODERATOR" | "ADMIN"
+  businessEmail?: string | null
+  businessPhone?: string | null
+  businessAddress?: string | null
+  city?: string | null
+  state?: string | null
+  zipCode?: string | null
+  website?: string | null
+  membershipTier?: MembershipTier | null
+  membershipStatus?: string
+  /** ISO timestamp, or null to clear. */
+  renewalDate?: string | null
+  role?: string
   isActive?: boolean
 }
 
 export interface MemberFilters {
   search?: string
-  status?: "ACTIVE" | "INACTIVE" | "SUSPENDED"
-  membershipTier?: MembershipTier
+  status?: "PENDING" | "ACTIVE" | "EXPIRED" | "INACTIVE"
+  /** Sign-in state: "active" accounts, or "unclaimed" ones never set up. */
+  account?: "active" | "unclaimed"
+  membershipTier?: MembershipTier | null
   industry?: string
   city?: string
   showInDirectory?: boolean
@@ -157,6 +162,14 @@ export interface BulkUploadResult {
   errors: Array<{ row: number; email: string; error: string }>
   createdMembers: Array<{ email: string; businessName?: string }>
   updatedMembers: Array<{ email: string; businessName?: string }>
+}
+
+/** The API's error, with the first validation detail when there is one. */
+function apiErrorMessage(body: any, fallback: string): string {
+  const detail = Array.isArray(body?.details) ? body.details[0] : undefined
+  const field = Array.isArray(detail?.path) && detail.path.length ? `${detail.path.join(".")}: ` : ""
+  if (detail?.message) return `${body?.error || fallback} (${field}${detail.message})`
+  return body?.error || fallback
 }
 
 export function useMembers() {
@@ -286,7 +299,7 @@ export function useMembers() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update member')
+        throw new Error(apiErrorMessage(errorData, 'Failed to update member'))
       }
 
       const member: Member = await response.json()

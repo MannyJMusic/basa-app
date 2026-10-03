@@ -8,15 +8,17 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Users, Search, Edit, Trash2, Eye, Download, Filter, X, Upload, FileText, CheckCircle, AlertCircle, UserPlus } from "lucide-react"
-import { useMembers, type Member, type MemberFilters, type BulkUploadResult } from "@/hooks/use-members"
-import { MemberDetailDialog } from "@/components/members/member-detail-dialog"
+import { useMembers, type Member, type MemberFilters, type BulkUploadResult, type UpdateMemberData } from "@/hooks/use-members"
+import { MemberDetailDialog, memberStatusBadge, memberTierBadge } from "@/components/members/member-detail-dialog"
 import { EnhancedMemberForm } from "@/components/admin/enhanced-member-form"
 import { formatDate } from "@/lib/utils"
-import type { MembershipTier } from "@prisma/client"
-import { MEMBERSHIP_TIERS, MEMBERSHIP_TIER_VALUES } from "@/lib/membership-tiers"
+import { TIERS_IN_ORDER } from "@/lib/membership-tiers"
+
+/** Select value for "no filter" (Radix Select does not allow an empty value). */
+const ALL = "all"
 
 export default function MembersPage() {
-  const { fetchMembers, createMember, deleteMember, updateMember, exportMembers, bulkUploadMembers, loading } = useMembers()
+  const { fetchMembers, fetchMember, deleteMember, updateMember, exportMembers, bulkUploadMembers, loading } = useMembers()
   const [members, setMembers] = useState<Member[]>([])
   const [pagination, setPagination] = useState({
     page: 1,
@@ -40,6 +42,9 @@ export default function MembersPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
+  const [startEditing, setStartEditing] = useState(false)
+  const [deactivateTarget, setDeactivateTarget] = useState<Member | null>(null)
+  const [deactivating, setDeactivating] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
 
@@ -49,10 +54,14 @@ export default function MembersPage() {
   }, [filters])
 
   const loadMembers = async () => {
-    const result = await fetchMembers(filters)
-    if (result) {
-      setMembers(result.members)
-      setPagination(result.pagination)
+    try {
+      const result = await fetchMembers(filters)
+      if (result) {
+        setMembers(result.members)
+        setPagination(result.pagination)
+      }
+    } catch {
+      // useMembers already showed the error.
     }
   }
 
@@ -78,28 +87,40 @@ export default function MembersPage() {
 
 
 
-  const handleUpdateMember = async (id: string, data: any) => {
+  // Throws with the API's message so the dialog can show it.
+  const handleUpdateMember = async (id: string, data: UpdateMemberData) => {
+    await updateMember(id, data)
+    // Show what was actually stored (the API may fill in e.g. a renewal date).
     try {
-      await updateMember(id, data)
-      loadMembers() // Refresh the list
-      return true
-    } catch (error) {
-      return false
+      const fresh = await fetchMember(id)
+      setSelectedMember(fresh)
+    } catch {
+      // The save worked; the list refresh below still shows it.
+    }
+    loadMembers()
+  }
+
+  const confirmDeactivate = async () => {
+    if (!deactivateTarget) return
+    setDeactivating(true)
+    try {
+      await deleteMember(deactivateTarget.id)
+      if (selectedMember?.id === deactivateTarget.id) {
+        setIsDetailDialogOpen(false)
+        setSelectedMember(null)
+      }
+      setDeactivateTarget(null)
+      loadMembers()
+    } catch {
+      // useMembers already showed the error; keep the dialog open.
+    } finally {
+      setDeactivating(false)
     }
   }
 
-  const handleDeleteMember = async (id: string) => {
-    try {
-      await deleteMember(id)
-      loadMembers() // Refresh the list
-      return true
-    } catch (error) {
-      return false
-    }
-  }
-
-  const handleViewMember = (member: Member) => {
+  const handleViewMember = (member: Member, edit = false) => {
     setSelectedMember(member)
+    setStartEditing(edit)
     setIsDetailDialogOpen(true)
   }
 
@@ -144,26 +165,6 @@ export default function MembersPage() {
     link.click()
     document.body.removeChild(link)
   }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>
-      case "INACTIVE":
-        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>
-      case "SUSPENDED":
-        return <Badge className="bg-red-100 text-red-800">Suspended</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
-    }
-  }
-
-  const getTierBadge = (tier?: string) => {
-    const def = tier ? MEMBERSHIP_TIERS[tier as MembershipTier] : undefined
-    if (!def) return <Badge variant="outline">No Tier</Badge>
-    return <Badge className="bg-blue-100 text-blue-800">{def.label}</Badge>
-  }
-
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -376,10 +377,15 @@ export default function MembersPage() {
                           {member.businessName || "—"}
                         </td>
                         <td className="py-3 px-4">
-                          {getTierBadge(member.membershipTier)}
+                          {memberTierBadge(member.membershipTier)}
                         </td>
                         <td className="py-3 px-4">
-                          {getStatusBadge(member.membershipStatus)}
+                          {memberStatusBadge(member.membershipStatus)}
+                          {!member.user.isActive && (
+                            <div className="mt-1 text-xs text-gray-500">
+                              {member.user.accountStatus === "INACTIVE" ? "Account not set up" : "Sign-in turned off"}
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-500">
                           {formatDate(member.joinedAt)}
@@ -390,20 +396,23 @@ export default function MembersPage() {
                               size="sm" 
                               variant="ghost"
                               onClick={() => handleViewMember(member)}
+                              title="View member"
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button 
                               size="sm" 
                               variant="ghost"
-                              onClick={() => handleViewMember(member)}
+                              onClick={() => handleViewMember(member, true)}
+                              title="Edit member"
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => handleDeleteMember(member.id)}
+                              onClick={() => setDeactivateTarget(member)}
+                              title="Deactivate member"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -469,10 +478,42 @@ export default function MembersPage() {
           setIsDetailDialogOpen(false)
           setSelectedMember(null)
         }}
+        startEditing={startEditing}
         onUpdate={handleUpdateMember}
-        onDelete={handleDeleteMember}
+        onDeactivate={setDeactivateTarget}
         isLoading={loading}
       />
+
+      {/* Deactivate confirmation */}
+      <Dialog open={!!deactivateTarget} onOpenChange={open => { if (!open && !deactivating) setDeactivateTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Deactivate this member?</DialogTitle>
+          </DialogHeader>
+          {deactivateTarget && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-700">
+                <strong>
+                  {[deactivateTarget.user.firstName, deactivateTarget.user.lastName].filter(Boolean).join(" ") || deactivateTarget.user.email}
+                </strong>
+                {deactivateTarget.businessName ? ` (${deactivateTarget.businessName})` : ""} will no longer be able to
+                sign in, and their membership status becomes Inactive. Nothing is deleted, and no email is sent.
+              </p>
+              <p className="text-sm text-gray-600">
+                To find them again, filter by Status: Inactive.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDeactivateTarget(null)} disabled={deactivating}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={confirmDeactivate} disabled={deactivating}>
+                  {deactivating ? "Deactivating..." : "Deactivate"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Filter Dialog */}
       <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
@@ -484,33 +525,50 @@ export default function MembersPage() {
             <div>
               <label className="block text-sm font-medium mb-1">Status</label>
               <Select
-                value={filters.status || ""}
-                onValueChange={(value) => handleFilterChange("status", value || undefined)}
+                value={filters.status || ALL}
+                onValueChange={(value) => handleFilterChange("status", value === ALL ? undefined : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value={ALL}>All statuses</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
                   <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="EXPIRED">Expired</SelectItem>
                   <SelectItem value="INACTIVE">Inactive</SelectItem>
-                  <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Account</label>
+              <Select
+                value={filters.account || ALL}
+                onValueChange={(value) => handleFilterChange("account", value === ALL ? undefined : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All</SelectItem>
+                  <SelectItem value="active">Active accounts</SelectItem>
+                  <SelectItem value="unclaimed">Not set up</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Membership Tier</label>
               <Select
-                value={filters.membershipTier || ""}
-                onValueChange={(value) => handleFilterChange("membershipTier", value || undefined)}
+                value={filters.membershipTier || ALL}
+                onValueChange={(value) => handleFilterChange("membershipTier", value === ALL ? undefined : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All tiers" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All tiers</SelectItem>
-                  {MEMBERSHIP_TIER_VALUES.map(t => (
-                    <SelectItem key={t} value={t}>{MEMBERSHIP_TIERS[t].label}</SelectItem>
+                  <SelectItem value={ALL}>All tiers</SelectItem>
+                  {TIERS_IN_ORDER.map(t => (
+                    <SelectItem key={t.tier} value={t.tier}>{t.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
