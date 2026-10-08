@@ -21,6 +21,7 @@ jobs:
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -90,6 +91,7 @@ jobs:
   docker-build:
     name: Docker image builds
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -137,6 +139,7 @@ jobs:
   e2e:
     name: End-to-end (money path)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # Runs alongside build-and-test, not after it: it installs and builds on its
     # own, and every deploy job still waits on all three gates.
     if: github.actor != 'dependabot[bot]'
@@ -223,6 +226,7 @@ jobs:
     name: Deploy to Production
     needs: [build-and-test, docker-build, e2e]
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     environment: production
     # Two quick pushes to main must not run two deploys at once: both would
@@ -348,6 +352,7 @@ jobs:
   sandbox-image:
     name: Build sandbox image
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
     steps:
       - name: Checkout code
@@ -373,6 +378,7 @@ jobs:
     name: Deploy to Review Sandbox
     needs: [build-and-test, docker-build, e2e, sandbox-image]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
     concurrency:
       group: basa-vps-deploy
