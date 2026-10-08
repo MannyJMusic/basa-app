@@ -137,7 +137,8 @@ jobs:
   e2e:
     name: End-to-end (money path)
     runs-on: ubuntu-latest
-    needs: build-and-test
+    # Runs alongside build-and-test, not after it: it installs and builds on its
+    # own, and every deploy job still waits on all three gates.
     if: github.actor != 'dependabot[bot]'
     services:
       postgres:
