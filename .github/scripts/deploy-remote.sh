@@ -49,7 +49,8 @@ echo "=== Starting Deployment ==="
 RUNNING_IMAGE="$(docker inspect --format '{{.Image}}' basa-app-prod 2>/dev/null || true)"
 TAGGED_IMAGE="$(docker image inspect --format '{{.Id}}' "$APP_IMAGE" 2>/dev/null || true)"
 HEAD_BEFORE="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-if [ -n "$RUNNING_IMAGE" ] && [ -n "$TAGGED_IMAGE" ] && [ "$RUNNING_IMAGE" != "$TAGGED_IMAGE" ]; then
+# Not in prebuilt mode: CI has already loaded the new image under this tag.
+if [ "${1:-}" != prebuilt ] && [ -n "$RUNNING_IMAGE" ] && [ -n "$TAGGED_IMAGE" ] && [ "$RUNNING_IMAGE" != "$TAGGED_IMAGE" ]; then
   echo "NOTE: the running container is not built from $APP_IMAGE."
   echo "      A previous deploy was probably interrupted. This run supersedes it."
 fi
@@ -88,9 +89,19 @@ git reset --hard "$DEPLOY_REF"
 # Note the build cannot be made to die with the ssh session: the work happens in
 # the daemon, not the client. Hence the reconcile step at the top of this script,
 # which is what actually makes an interrupted deploy safe to re-run.
-echo "Building image..."
-if ! $COMPOSE build --progress=plain basa-app; then
-  rollback "image build failed"
+# CI builds the image and loads it as $APP_IMAGE before this runs ("prebuilt"), so
+# the 2-CPU host does not spend ~10 minutes compiling. A manual run on the host,
+# without the argument, still builds here.
+if [ "${1:-}" = prebuilt ]; then
+  if ! docker image inspect "$APP_IMAGE" >/dev/null 2>&1; then
+    rollback "the prebuilt image is missing"
+  fi
+  echo "Using the image built by CI."
+else
+  echo "Building image..."
+  if ! $COMPOSE build --progress=plain basa-app; then
+    rollback "image build failed"
+  fi
 fi
 
 # Zero-downtime switch (#94). Recreating the app container in place left nothing
