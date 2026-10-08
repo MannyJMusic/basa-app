@@ -340,9 +340,37 @@ jobs:
         run: |
           echo "Deployment failed! Check the logs above for details."
 
+  # The sandbox image is built here, on a 4-vCPU runner and in parallel with the
+  # tests, then streamed to the VPS. The 2-CPU host only loads it instead of
+  # spending ~9 minutes compiling the same code. The build uses the example env
+  # file; compose passes no secrets into the image (see the docker-build canary).
+  sandbox-image:
+    name: Build sandbox image
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Build and export the image
+        run: |
+          set -euo pipefail
+          cp .env.sandbox.example .env.sandbox
+          docker compose --env-file .env.sandbox -f docker-compose.sandbox.yml build --progress=plain basa-app
+          docker save basa-app:sandbox-current | gzip -1 > sandbox-image.tar.gz
+          ls -lh sandbox-image.tar.gz
+
+      - name: Upload the image
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sandbox-image
+          path: sandbox-image.tar.gz
+          retention-days: 1
+          compression-level: 0
+
   deploy-sandbox:
     name: Deploy to Review Sandbox
-    needs: [build-and-test, docker-build, e2e]
+    needs: [build-and-test, docker-build, e2e, sandbox-image]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
     concurrency:
@@ -379,12 +407,26 @@ jobs:
           echo "SSH_HOST=$host" >> "$GITHUB_ENV"
           echo "SSH_USER=$user" >> "$GITHUB_ENV"
 
+      - name: Download the prebuilt image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: sandbox-image
+
+      # Loaded before the deploy script runs. The script tags the container that
+      # is still serving as sandbox-rollback first, so the old image stays usable.
+      - name: Load the image on the VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "$SSH_USER@$SSH_HOST" 'gunzip | docker load' < sandbox-image.tar.gz
+
       - name: Deploy sandbox
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
-            "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/deploy-sandbox.sh
+            "$SSH_USER@$SSH_HOST" 'bash -s -- prebuilt' < .github/scripts/deploy-sandbox.sh
 
       - name: Verify sandbox
         run: |

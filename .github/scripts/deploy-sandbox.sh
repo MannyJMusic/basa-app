@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stream from Actions over SSH. The sandbox has its own checkout and Compose
+# Stream from Actions over SSH (`bash -s -- prebuilt` when CI loaded the image). The sandbox has its own checkout and Compose
 # project, so production's deploy can safely use --remove-orphans.
 set -euo pipefail
 
@@ -36,8 +36,15 @@ if [ ! -s .sandbox-sanitized ]; then
   compose stop basa-app
 fi
 
-echo 'Building the sandbox image...'
-compose build --progress=plain basa-app
+# CI builds the image and loads it as basa-app:sandbox-current before this runs
+# ("prebuilt"). A manual run on the host, without the argument, builds it here.
+if [ "${1:-}" = prebuilt ]; then
+  docker image inspect basa-app:sandbox-current >/dev/null
+  echo 'Using the image built by CI.'
+else
+  echo 'Building the sandbox image...'
+  compose build --progress=plain basa-app
+fi
 
 if [ ! -s .sandbox-sanitized ]; then
   echo 'No sanitized data marker; refreshing before the first app start...'
@@ -49,6 +56,7 @@ if compose up -d --no-deps --force-recreate basa-app; then
   for i in $(seq 1 24); do
     if curl -fsS -o /dev/null http://127.0.0.1:3002/api/health; then
       echo 'Sandbox is healthy.'
+      docker image prune -f >/dev/null || true
       exit 0
     fi
     sleep 5
