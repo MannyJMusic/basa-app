@@ -22,7 +22,8 @@ WHERE table_schema = 'public';
 SQL
 }
 
-expected_schema_hash=547f8abfb160ec72494ecfce19f8b9cc
+# Reviewed 2026-10-08: added Member.cancelAtPeriodEnd (boolean, no PII).
+expected_schema_hash=96d59b29fc8159cd034ed3ae8398e952
 actual_schema_hash="$(schema_hash basa-postgres-prod)"
 if [ "$actual_schema_hash" != "$expected_schema_hash" ]; then
   echo 'Production schema changed; review and update the sanitizer before refreshing.'
