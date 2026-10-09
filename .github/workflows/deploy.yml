@@ -21,6 +21,7 @@ jobs:
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -90,6 +91,7 @@ jobs:
   docker-build:
     name: Docker image builds
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -137,7 +139,9 @@ jobs:
   e2e:
     name: End-to-end (money path)
     runs-on: ubuntu-latest
-    needs: build-and-test
+    timeout-minutes: 20
+    # Runs alongside build-and-test, not after it: it installs and builds on its
+    # own, and every deploy job still waits on all three gates.
     if: github.actor != 'dependabot[bot]'
     services:
       postgres:
@@ -218,10 +222,91 @@ jobs:
             test-results/
           retention-days: 14
 
+  # The production image is built here, on a 4-vCPU runner and in parallel with the
+  # tests, then streamed to the VPS by the deploy job, which then only loads it
+  # (the 2-CPU host used to spend ~10 minutes compiling). Built on dev pushes too,
+  # as a rehearsal of the build, the live public values and the leak checks; only
+  # a main push saves and uploads it. The Sentry token reaches the build as a
+  # BuildKit secret, exactly as on the host, and the checks below prove it is not
+  # in the image or its history.
+  prod-image:
+    name: Build production image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Build the production image
+        env:
+          APP_URL: ${{ vars.PROD_NEXT_PUBLIC_APP_URL }}
+          SENTRY_DSN: ${{ vars.PROD_NEXT_PUBLIC_SENTRY_DSN }}
+          STRIPE_PK: ${{ vars.PROD_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          SENTRY_ORG_VAR: ${{ vars.PROD_SENTRY_ORG }}
+          SENTRY_PROJECT_VAR: ${{ vars.PROD_SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          for v in APP_URL SENTRY_DSN STRIPE_PK SENTRY_ORG_VAR SENTRY_PROJECT_VAR SENTRY_AUTH_TOKEN; do
+            if [ -z "${!v:-}" ]; then echo "::error::$v is not set in repository variables/secrets"; exit 1; fi
+          done
+          # Compose interpolates the build args from this file, as on the host. It
+          # stays out of the build context (.dockerignore). POSTGRES_PASSWORD is a
+          # throwaway so the file interpolates; nothing connects with it.
+          {
+            echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)"
+            echo "NEXT_PUBLIC_APP_URL=$APP_URL"
+            echo "NEXT_PUBLIC_SENTRY_DSN=$SENTRY_DSN"
+            echo "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$STRIPE_PK"
+            echo "SENTRY_ORG=$SENTRY_ORG_VAR"
+            echo "SENTRY_PROJECT=$SENTRY_PROJECT_VAR"
+          } > .env.production
+          docker compose --env-file .env.production -f docker-compose.prod.yml build --progress=plain basa-app
+
+      - name: Image carries the live build args and no secrets
+        env:
+          APP_URL: ${{ vars.PROD_NEXT_PUBLIC_APP_URL }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          docker run --rm -e APP_URL --entrypoint sh basa-app:current -c '
+            fail=0
+            if find /app -path /app/node_modules -prune -o -name ".env*" -print | grep .; then
+              echo "::error::an env file is in the image"; fail=1
+            fi
+            if ! grep -rqF "$APP_URL" /app/.next; then
+              echo "::error::NEXT_PUBLIC_APP_URL did not reach the build"; fail=1
+            fi
+            exit $fail'
+          # The token must be in neither a layer's contents nor the build history.
+          if docker history --no-trunc basa-app:current | grep -qF -- "$SENTRY_AUTH_TOKEN"; then
+            echo "::error::the Sentry token is in the image history"; exit 1
+          fi
+          docker run --rm -e SENTRY_AUTH_TOKEN --entrypoint sh basa-app:current -c \
+            'if grep -rqF "$SENTRY_AUTH_TOKEN" /app --exclude-dir=node_modules; then echo "::error::the Sentry token is in the image"; exit 1; fi'
+
+      - name: Export the image
+        if: github.ref != 'refs/heads/dev'
+        run: |
+          set -euo pipefail
+          docker save basa-app:current | gzip -1 > prod-image.tar.gz
+          ls -lh prod-image.tar.gz
+
+      - name: Upload the image
+        if: github.ref != 'refs/heads/dev'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: prod-image
+          path: prod-image.tar.gz
+          retention-days: 1
+          compression-level: 0
+
   deploy:
     name: Deploy to Production
-    needs: [build-and-test, docker-build, e2e]
+    needs: [build-and-test, docker-build, e2e, prod-image]
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     environment: production
     # Two quick pushes to main must not run two deploys at once: both would
@@ -325,9 +410,22 @@ jobs:
         run: |
           ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" echo "SSH connection successful"
 
+      - name: Download the prebuilt image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: prod-image
+
+      # Loaded before the deploy script runs. The script records the container that
+      # is still serving as basa-app:rollback first, so a failed deploy can go back.
+      - name: Load the image on the server
+        run: |
+          ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" 'gunzip | docker load' < prod-image.tar.gz
+
+      # DEPLOY_REF pins the checkout to the commit the image was built from, so a
+      # newer main cannot change the compose file or scripts under it.
       - name: Deploy to Server
         run: |
-          ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/deploy-remote.sh
+          ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" "DEPLOY_REF=$GITHUB_SHA bash -s -- prebuilt" < .github/scripts/deploy-remote.sh
 
       - name: Verify Deployment
         run: |
@@ -340,10 +438,40 @@ jobs:
         run: |
           echo "Deployment failed! Check the logs above for details."
 
+  # The sandbox image is built here, on a 4-vCPU runner and in parallel with the
+  # tests, then streamed to the VPS. The 2-CPU host only loads it instead of
+  # spending ~9 minutes compiling the same code. The build uses the example env
+  # file; compose passes no secrets into the image (see the docker-build canary).
+  sandbox-image:
+    name: Build sandbox image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Build and export the image
+        run: |
+          set -euo pipefail
+          cp .env.sandbox.example .env.sandbox
+          docker compose --env-file .env.sandbox -f docker-compose.sandbox.yml build --progress=plain basa-app
+          docker save basa-app:sandbox-current | gzip -1 > sandbox-image.tar.gz
+          ls -lh sandbox-image.tar.gz
+
+      - name: Upload the image
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sandbox-image
+          path: sandbox-image.tar.gz
+          retention-days: 1
+          compression-level: 0
+
   deploy-sandbox:
     name: Deploy to Review Sandbox
-    needs: [build-and-test, docker-build, e2e]
+    needs: [build-and-test, docker-build, e2e, sandbox-image]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
     concurrency:
       group: basa-vps-deploy
@@ -379,12 +507,26 @@ jobs:
           echo "SSH_HOST=$host" >> "$GITHUB_ENV"
           echo "SSH_USER=$user" >> "$GITHUB_ENV"
 
+      - name: Download the prebuilt image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: sandbox-image
+
+      # Loaded before the deploy script runs. The script tags the container that
+      # is still serving as sandbox-rollback first, so the old image stays usable.
+      - name: Load the image on the VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "$SSH_USER@$SSH_HOST" 'gunzip | docker load' < sandbox-image.tar.gz
+
       - name: Deploy sandbox
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
-            "$SSH_USER@$SSH_HOST" 'bash -s' < .github/scripts/deploy-sandbox.sh
+            "$SSH_USER@$SSH_HOST" 'bash -s -- prebuilt' < .github/scripts/deploy-sandbox.sh
 
       - name: Verify sandbox
         run: |
