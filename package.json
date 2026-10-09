@@ -72,7 +72,7 @@
     "framer-motion": "^12.43.0",
     "lucide-react": "^0.577.0",
     "mailgun.js": "^14.0.1",
-    "next": "15.5.26",
+    "next": "15.5.27",
     "next-auth": "5.0.0-beta.32",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
