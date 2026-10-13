@@ -5,6 +5,7 @@ import { SITE_URL } from '@/lib/site-url'
 import { MEMBERSHIP_SALES_ENABLED, OFFICE_CONTACT } from '@/lib/feature-flags'
 import Mailgun from 'mailgun.js'
 import * as Sentry from '@sentry/nextjs'
+import type { OfficeDigest } from '@/lib/office-digest'
 
 const { logger } = Sentry
 // Mailgun client type
@@ -2681,3 +2682,102 @@ export async function sendEmailChangeNoticeEmail(currentEmail: string, firstName
   await sendEmail(currentEmail, 'Email change requested on your BASA account', html)
 }
 
+
+// ---------------------------------------------------------------------------
+// Office daily digest
+// ---------------------------------------------------------------------------
+
+const digestDay = (d: Date) =>
+  new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/Chicago' }).format(d)
+const digestWhen = (d: Date) =>
+  new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' }).format(d)
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+
+export function officeDigestSubject(d: OfficeDigest): string {
+  const bits: string[] = []
+  if (d.newRegistrationCount) bits.push(`${plural(d.newRegistrationCount, 'new registration')}`)
+  if (d.pendingRequests.length) bits.push(`${d.pendingRequests.length} to verify`)
+  if (d.failedPayments.length) bits.push(`${plural(d.failedPayments.length, 'declined payment')}`)
+  return `BASA daily digest, ${digestDay(d.until)}${bits.length ? `: ${bits.join(', ')}` : ''}`
+}
+
+export function generateOfficeDigestEmailHtml(d: OfficeDigest, options: { nameCap?: number } = {}): string {
+  const siteUrl = getSiteUrl()
+  const cap = options.nameCap ?? 10
+  const p = 'margin:0 0 10px;font-size:15px;line-height:1.6;color:#374151;'
+  const h2 = (text: string) => `<h2 style="margin:26px 0 8px;font-size:16px;line-height:1.3;color:#1B365D;border-bottom:1px solid #e5e7eb;padding-bottom:6px;">${text}</h2>`
+  const ul = (items: string[]) => `<ul style="margin:0 0 6px;padding-left:20px;font-size:15px;line-height:1.6;color:#374151;">${items.map(i => `<li style="margin-bottom:3px;">${i}</li>`).join('')}</ul>`
+  const link = (href: string, text: string) => `<a href="${href}" style="color:#17A2B8;">${text}</a>`
+  const more = (shown: number, total: number) => (total > shown ? `<li style="margin-bottom:3px;color:#6b7280;">and ${total - shown} more</li>` : '')
+  const sections: string[] = []
+
+  // 1. Things the office has to act on come first.
+  if (d.pendingRequests.length) {
+    sections.push(h2(`Needs you: ${plural(d.pendingRequests.length, 'member rate request')} waiting`))
+    sections.push(`<p style="${p}">These guests asked for the member price. Their cards are on hold; each needs a yes or no.</p>`)
+    sections.push(ul(d.pendingRequests.map(r =>
+      `${link(`${siteUrl}/admin/member-rate-requests/${r.id}`, `<strong>${escapeHtml(r.buyerName)}</strong>`)} for ${escapeHtml(r.eventTitle)} (${plural(r.tickets, 'ticket')})` +
+      (r.deadlineAt ? `, decide by ${digestWhen(r.deadlineAt)}` : ''))))
+  }
+  if (d.failedPayments.length) {
+    sections.push(h2(`${plural(d.failedPayments.length, 'declined payment')}`))
+    sections.push(ul(d.failedPayments.slice(0, cap).map(f =>
+      `${escapeHtml(f.customerName)}: ${escapeHtml(f.title)}, ${dollars(f.amountCents)}${f.reason ? ` (${escapeHtml(f.reason)})` : ''}`)))
+  }
+
+  // 2. What happened in the last day.
+  if (d.newRegistrationCount) {
+    sections.push(h2(`New registrations: ${d.newRegistrationCount} (${plural(d.newTicketCount, 'ticket')})`))
+    for (const e of d.newRegistrations) {
+      const shown = e.registrations.slice(0, cap)
+      sections.push(`<p style="margin:0 0 4px;font-size:15px;color:#111827;"><strong>${escapeHtml(e.title)}</strong> <span style="color:#6b7280;">· ${digestWhen(e.startDate)}</span></p>`)
+      sections.push(`<ul style="margin:0 0 10px;padding-left:20px;font-size:15px;line-height:1.6;color:#374151;">${
+        shown.map(r => `<li style="margin-bottom:3px;">${escapeHtml(r.name)}${r.company ? `, ${escapeHtml(r.company)}` : ''}${r.tickets > 1 ? ` (${r.tickets} tickets)` : ''}${r.memberRatePending ? ' <span style="color:#92400e;">· member rate pending</span>' : ''}</li>`).join('')
+      }${more(shown.length, e.registrations.length)}</ul>`)
+    }
+  }
+  if (d.payments.completedCount) {
+    sections.push(h2('Payments'))
+    sections.push(`<p style="${p}">${plural(d.payments.completedCount, 'payment')} came in, <strong>${dollars(d.payments.completedCents)}</strong> in total. ${link(`${siteUrl}/admin/payments`, 'See the transaction list')}.</p>`)
+  }
+  if (d.lapsedMembers.length) {
+    sections.push(h2(`Memberships that lapsed: ${d.lapsedMembers.length}`))
+    sections.push(`<ul style="margin:0 0 6px;padding-left:20px;font-size:15px;line-height:1.6;color:#374151;">${
+      d.lapsedMembers.slice(0, cap).map(m => `<li style="margin-bottom:3px;">${escapeHtml(m.name)} <span style="color:#6b7280;">· ended ${digestDay(m.renewalDate)}</span></li>`).join('')
+    }${more(Math.min(cap, d.lapsedMembers.length), d.lapsedMembers.length)}</ul>`)
+  }
+
+  // 3. A look ahead, so the digest is useful even on a day with little news.
+  if (d.upcomingEvents.length) {
+    sections.push(h2('Coming up in the next 2 weeks'))
+    sections.push(ul(d.upcomingEvents.map(e =>
+      `${link(`${siteUrl}/admin/events`, escapeHtml(e.title))} <span style="color:#6b7280;">· ${digestWhen(e.startDate)}</span> · ` +
+      `<strong>${e.confirmedTickets}</strong>${e.capacity ? ` of ${e.capacity}` : ''} ${e.confirmedTickets === 1 ? 'ticket' : 'tickets'}`)))
+  }
+  if (d.renewingSoon.length) {
+    sections.push(h2(`Renewing in the next 2 weeks: ${d.renewingSoon.length}`))
+    sections.push(`<ul style="margin:0 0 6px;padding-left:20px;font-size:15px;line-height:1.6;color:#374151;">${
+      d.renewingSoon.slice(0, cap).map(m => `<li style="margin-bottom:3px;">${escapeHtml(m.name)} <span style="color:#6b7280;">· ${digestDay(m.renewalDate)}</span></li>`).join('')
+    }${more(Math.min(cap, d.renewingSoon.length), d.renewingSoon.length)}</ul>`)
+  }
+
+  return renderNoticeEmail({
+    title: officeDigestSubject(d),
+    preheader: `Covers the 24 hours up to ${digestWhen(d.until)}.`,
+    heading: `BASA daily digest, ${digestDay(d.until)}`,
+    accent: '#17A2B8',
+    siteUrl,
+    logoUrl: `${siteUrl}/images/BASA-LOGO.png`,
+    ctaLabel: 'Open the admin portal',
+    ctaUrl: `${siteUrl}/admin`,
+    bodyHtml: `
+              <p style="${p}">Here is what happened since ${digestWhen(d.since)}.</p>
+              ${sections.join('\n              ')}
+              <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#9ca3af;">This arrives once a day, and only on days when something happened or something is waiting for you. The admin portal is separate from the member portal; sign in with your staff account.</p>`,
+  })
+}
+
+/** To one office address. One message per recipient so replies are not copied to the rest. */
+export async function sendOfficeDigestEmail(to: string, d: OfficeDigest): Promise<void> {
+  await sendEmail(to, officeDigestSubject(d), generateOfficeDigestEmailHtml(d))
+}
