@@ -15,7 +15,7 @@ jest.mock("@/lib/db", () => ({ prisma: {} }))
 
 const user = {
   name: null, firstName: "Larry", lastName: "Silva", email: "larry@example.com",
-  member: { businessName: "Heineken USA", membershipTier: "MIXER_MEMBER" as const },
+  member: { businessName: "Heineken USA", membershipTier: "MIXER_MEMBER" as const, membershipStatus: "ACTIVE", renewalDate: new Date("2027-10-03T05:00:00Z") },
 }
 const payment = (over: Partial<PaymentRow> = {}): PaymentRow => ({
   id: "p1", amount: 199000, status: "COMPLETED", paymentMethod: "CREDIT_CARD",
@@ -25,7 +25,9 @@ const payment = (over: Partial<PaymentRow> = {}): PaymentRow => ({
 const registration = (over: Partial<RegistrationRow> = {}): RegistrationRow => ({
   id: "r1", name: "Pat Buyer", email: "pat@example.com", company: "Acme", ticketCount: 2,
   totalAmount: "35.00", status: "CONFIRMED", paymentIntentId: "pi_456",
-  createdAt: new Date("2026-10-01T15:00:00Z"), event: { title: "Taco Tuesday" }, memberRateRequest: null, ...over,
+  createdAt: new Date("2026-10-01T15:00:00Z"), checkedInAt: null, attendees: null,
+  event: { title: "Taco Tuesday", slug: "taco-tuesday", startDate: new Date("2026-11-17T14:00:00Z") },
+  items: [], memberRateRequest: null, ...over,
 })
 
 describe("paymentToTransaction", () => {
@@ -54,7 +56,71 @@ describe("registrationToTransaction", () => {
     expect(registrationToTransaction(registration({ status: "CANCELLED", ticketCount: 1, company: null })).detail).toBe("1 ticket")
   })
   it("uses what a member-rate hold was actually charged", () => {
-    expect(registrationToTransaction(registration({ memberRateRequest: { chargedCents: 2500 } })).amountCents).toBe(2500)
+    expect(registrationToTransaction(registration({ memberRateRequest: { status: "APPROVED", heldCents: 3500, memberCents: 2500, chargedCents: 2500 } })).amountCents).toBe(2500)
+  })
+})
+
+describe("breakdown (what was paid for)", () => {
+  it("shows a new online membership as its level, with business, renewal date and a Stripe link", () => {
+    const b = paymentToTransaction(payment({ metadata: { kind: "membership", tier: "MIXER_MEMBER", subscriptionId: "sub_1" } })).breakdown
+    expect(b.lines).toEqual([{ label: "Mixer Member", note: "Yearly membership", quantity: 1, amountCents: 199000 }])
+    expect(b.facts).toEqual(expect.arrayContaining([
+      { label: "Business", value: "Heineken USA" },
+      { label: "Membership now", value: "Active" },
+      { label: "Renews / expires", value: "Oct 3, 2027" },
+      { label: "Billing", value: "Online subscription, renews automatically" },
+      { label: "Paid by", value: "Card" },
+    ]))
+    expect(b.links).toEqual([{ label: "View in Stripe", href: "https://dashboard.stripe.com/payments/pi_123" }])
+  })
+  it("a staff-recorded check shows its reference and no Stripe link", () => {
+    const b = paymentToTransaction(payment({ paymentMethod: "CHECK", stripePaymentIntentId: null, metadata: { source: "admin_recorded", reference: "chk 1042" } })).breakdown
+    expect(b.links).toEqual([])
+    expect(b.facts).toEqual(expect.arrayContaining([
+      { label: "Billing", value: "Payment recorded by staff" },
+      { label: "Paid by", value: "Check" },
+      { label: "Reference", value: "chk 1042" },
+    ]))
+  })
+  it("a ticket sale lists each tier with quantity and price, the attendees, and the event page", () => {
+    const b = registrationToTransaction(registration({
+      ticketCount: 3,
+      totalAmount: "55.00",
+      items: [
+        { quantity: 2, unitPrice: "20.00", ticketTier: { name: "Member" } },
+        { quantity: 1, unitPrice: "15.00", ticketTier: { name: "Future Member" } },
+      ],
+      attendees: [{ name: "Pat Buyer" }, { name: "Lee Guest", email: "lee@example.com" }, { name: "  " }],
+      checkedInAt: new Date("2026-11-17T15:30:00Z"),
+    })).breakdown
+    expect(b.lines).toEqual([
+      { label: "Member", note: "$20.00 each", quantity: 2, amountCents: 4000 },
+      { label: "Future Member", note: "$15.00 each", quantity: 1, amountCents: 1500 },
+    ])
+    expect(b.facts).toEqual(expect.arrayContaining([
+      { label: "Company", value: "Acme" },
+      { label: "Attendees", value: "Pat Buyer, Lee Guest" },
+    ]))
+    expect(b.facts.find(f => f.label === "Checked in")).toBeDefined()
+    expect(b.links).toEqual([
+      { label: "View event page", href: "/events/taco-tuesday" },
+      { label: "View in Stripe", href: "https://dashboard.stripe.com/payments/pi_456" },
+    ])
+  })
+  it("a registration with no ticket lines falls back to one Tickets line", () => {
+    expect(registrationToTransaction(registration()).breakdown.lines).toEqual([{ label: "Tickets", note: null, quantity: 2, amountCents: 3500 }])
+  })
+  it("explains a member-rate hold, what was held and what was charged", () => {
+    const b = registrationToTransaction(registration({ memberRateRequest: { status: "APPROVED", heldCents: 3500, memberCents: 2500, chargedCents: 2500 } })).breakdown
+    expect(b.facts.find(f => f.label === "Member rate")?.value).toBe("Approved. Card held for $35.00; member total $25.00; charged $25.00")
+  })
+  it("a failed payment carries the decline reason", () => {
+    const b = failureToTransaction({ id: "a1", entityId: "pi_9", timestamp: new Date(), newValues: { amount: 35000, lastPaymentError: "Card declined" }, user: null }).breakdown
+    expect(b.facts).toEqual([{ label: "Decline reason", value: "Card declined" }])
+    expect(b.links[0].href).toBe("https://dashboard.stripe.com/payments/pi_9")
+  })
+  it("never links to Stripe for something that is not a payment intent id", () => {
+    expect(paymentToTransaction(payment({ stripePaymentIntentId: "not a pi/../x", metadata: {} })).breakdown.links).toEqual([])
   })
 })
 
