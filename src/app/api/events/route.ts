@@ -102,7 +102,8 @@ export async function GET(request: NextRequest) {
     // visible to admins (2026-09-22 audit, M-A4). Asking for a non-public status
     // without being an admin matches nothing.
     const session = await auth()
-    if (session?.user?.role === "ADMIN") {
+    const isAdmin = session?.user?.role === "ADMIN"
+    if (isAdmin) {
       if (params.status) where.status = params.status
       else if (params.hideCancelled) where.status = { not: "CANCELLED" }
     } else {
@@ -163,6 +164,12 @@ export async function GET(request: NextRequest) {
       events = await prisma.event.findMany({
         where,
         select: {
+          // Admins get a per-event registration summary (no names or emails) so the
+          // list can show real counts; the event dialog loads the full registrants
+          // from /api/events/[id]. The public list never carries registrations.
+          ...(isAdmin
+            ? { registrations: { select: { id: true, status: true, ticketCount: true } } }
+            : {}),
           id: true,
           title: true,
           slug: true,
@@ -205,7 +212,7 @@ export async function GET(request: NextRequest) {
     const eventsWithOrganizer = events.map((event: any) => {
       return {
         ...event,
-        registrations: [],
+        registrations: event.registrations ?? [],
         speakers: [],
         sponsors: [],
       };
