@@ -2,9 +2,8 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { DollarSign, Search, Download } from "lucide-react"
-import { EVENT_TIME_ZONE } from "@/lib/event-time"
+import { TransactionRow } from "./transaction-row"
 import {
   PAGE_SIZE,
   STATUS_LABEL,
@@ -18,16 +17,6 @@ export const dynamic = "force-dynamic"
 
 const dollars = (cents: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100)
-const when = (d: Date) =>
-  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: EVENT_TIME_ZONE }).format(d)
-
-const BADGE: Record<TransactionStatus, string> = {
-  COMPLETED: "bg-green-100 text-green-800",
-  PENDING: "bg-yellow-100 text-yellow-800",
-  FAILED: "bg-red-100 text-red-800",
-  REFUNDED: "bg-blue-100 text-blue-800",
-  CANCELLED: "bg-gray-100 text-gray-700",
-}
 
 type Search = { q?: string; status?: string; page?: string }
 
@@ -169,23 +158,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 </thead>
                 <tbody>
                   {rows.map(t => (
-                    <tr key={t.id} className="border-b hover:bg-gray-50 align-top">
-                      <td className="py-3 px-4">
-                        <div className="font-medium">{t.title}</div>
-                        {t.detail && <div className="text-sm text-gray-500">{t.detail}</div>}
-                        {t.reference && <div className="text-xs text-gray-400 break-all">{t.reference}</div>}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-medium">{t.customerName}</div>
-                        <div className="text-sm text-gray-500 break-all">{t.customerEmail}</div>
-                      </td>
-                      <td className="py-3 px-4 font-medium">{dollars(t.amountCents)}</td>
-                      <td className="py-3 px-4 text-sm">{t.method}</td>
-                      <td className="py-3 px-4">
-                        <Badge className={BADGE[t.status]}>{STATUS_LABEL[t.status]}</Badge>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-500 whitespace-nowrap">{when(t.at)}</td>
-                    </tr>
+                    <TransactionRow key={t.id} t={t} />
                   ))}
                 </tbody>
               </table>
