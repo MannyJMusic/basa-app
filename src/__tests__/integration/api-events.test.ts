@@ -252,6 +252,50 @@ describe('Events API Integration Tests', () => {
     );
   });
 
+  describe('GET /api/events: registrations', () => {
+    async function seedWithRegistrations(prisma: any) {
+      const user = await TestUtils.createTestUser(prisma, 'organizer@test.com', 'MEMBER');
+      const member = await TestUtils.createTestMember(prisma, user.id, 'Test Organizer');
+      const event = await TestUtils.createTestEventForMember(prisma, member.id, 'Registrations Event');
+      const reg = (name: string, status: string, ticketCount: number) =>
+        prisma.eventRegistration.create({
+          data: { eventId: event.id, name, email: `${name.toLowerCase()}@example.com`, ticketCount, totalAmount: 10 * ticketCount, status },
+        });
+      await reg('Ada', 'CONFIRMED', 2);
+      await reg('Bob', 'PENDING', 1);
+      return event;
+    }
+    const list = async (prisma: any, role: 'ADMIN' | 'MEMBER') => {
+      (auth as jest.Mock).mockResolvedValue({ user: { id: 'u', role } });
+      const req = TestUtils.createMockRequest({ method: 'GET', url: 'http://localhost:3000/api/events', query: { limit: '100' } });
+      const { GET } = createTestAPI(prisma);
+      const data = await (await GET(req as any)).json();
+      return data.events.find((e: any) => e.title === 'Registrations Event');
+    };
+
+    it(
+      'gives admins each event\'s registration summary, without names or emails',
+      withTestDatabase(async ({ database }) => {
+        await seedWithRegistrations(database.prisma);
+        const event = await list(database.prisma, 'ADMIN');
+        expect(event.registrations).toHaveLength(2);
+        expect(event.registrations.map((r: any) => r.status).sort()).toEqual(['CONFIRMED', 'PENDING']);
+        for (const r of event.registrations) {
+          expect(Object.keys(r).sort()).toEqual(['id', 'status', 'ticketCount']);
+        }
+      })
+    );
+
+    it(
+      'never puts registrations on the public list',
+      withTestDatabase(async ({ database }) => {
+        await seedWithRegistrations(database.prisma);
+        const event = await list(database.prisma, 'MEMBER');
+        expect(event.registrations).toEqual([]);
+      })
+    );
+  });
+
   describe('POST /api/events', () => {
     it(
       'creates member and future member tickets and a venue with the event (#274)',

@@ -52,3 +52,21 @@ export function isDefaultView(
     !search?.trim() && !type && !category && !isFeatured
   )
 }
+
+/**
+ * Seat counts for an event card. Capacity is in tickets, so confirmed registrations
+ * are summed by ticketCount; pending, cancelled and refunded ones do not hold a seat.
+ */
+export function registrationSummary(
+  registrations: Array<{ status: string; ticketCount?: number }>,
+): { confirmedTickets: number; confirmed: number; total: number } {
+  let confirmedTickets = 0
+  let confirmed = 0
+  for (const r of registrations) {
+    if (r.status === "CONFIRMED") {
+      confirmed += 1
+      confirmedTickets += r.ticketCount ?? 1
+    }
+  }
+  return { confirmedTickets, confirmed, total: registrations.length }
+}

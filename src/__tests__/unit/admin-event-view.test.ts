@@ -1,5 +1,5 @@
 /** @jest-environment node */
-import { buildEventFilters, defaultSortOrder, isDefaultView } from "@/lib/admin-event-view"
+import { buildEventFilters, defaultSortOrder, isDefaultView, registrationSummary } from "@/lib/admin-event-view"
 
 const NOW = "2026-10-13T15:00:00.000Z"
 
@@ -46,5 +46,21 @@ describe("isDefaultView", () => {
     expect(isDefaultView({ type: "SUMMIT" }, "upcoming", "active")).toBe(false)
     expect(isDefaultView({ search: "x" }, "upcoming", "active")).toBe(false)
     expect(isDefaultView({ isFeatured: true }, "upcoming", "active")).toBe(false)
+  })
+})
+
+describe("registrationSummary", () => {
+  it("counts confirmed tickets only; pending, cancelled and refunded hold no seat", () => {
+    expect(registrationSummary([
+      { status: "CONFIRMED", ticketCount: 2 },
+      { status: "CONFIRMED", ticketCount: 1 },
+      { status: "PENDING", ticketCount: 4 },
+      { status: "CANCELLED", ticketCount: 3 },
+      { status: "REFUNDED", ticketCount: 1 },
+    ])).toEqual({ confirmedTickets: 3, confirmed: 2, total: 5 })
+  })
+  it("treats a missing ticketCount as one ticket and handles none", () => {
+    expect(registrationSummary([{ status: "CONFIRMED" }]).confirmedTickets).toBe(1)
+    expect(registrationSummary([])).toEqual({ confirmedTickets: 0, confirmed: 0, total: 0 })
   })
 })
