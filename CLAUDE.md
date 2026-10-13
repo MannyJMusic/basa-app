@@ -113,6 +113,10 @@ There is **no self-registration** (owner decision 2026-09-22, #166). Accounts ar
 
 `MEMBER_NOTICES_ENABLED` (off unless exactly `true`; owner rule 2026-10-02: no member emails until the owner says so) gates the renewal reminders and lapse notices the daily `/api/cron/membership-expiry` sweep sends. Expiry itself still runs; while off, nothing is claimed in `MembershipReminder`, so turning it on sends what is due then. Account invitations are separate: an admin sends them by hand from `/admin/members/invitations`.
 
+## Office daily digest
+
+`POST /api/cron/office-digest` (host cron, bearer `CRON_SECRET`, like the other `/api/cron/*` routes) emails the office one summary of the last 24 hours: new confirmed registrations by event, member-rate requests waiting, payments and declines, memberships that lapsed, and a two-week look at upcoming events and renewals. It exists so the office is not emailed per registration (owner decision 2026-10-13: conserve email clutter). A day with nothing new and nothing waiting sends nothing. Recipients come from `OFFICE_DIGEST_TO` (default `jen@businessassociationsa.com`). `?to=addr` previews to one address and `?force=1` sends on a quiet day; both still need the secret. Logic is `src/lib/office-digest.ts`, the template is in `basa-emails.ts`. The cron line lives in `/etc/cron.d/basa` on the host, not in this repo.
+
 ## Membership levels and billing (2026 relaunch)
 
 Levels are `src/lib/membership-tiers.ts`, the only place prices live: Meeting $350, Market $650, Action $950, Mixer $1,990, Sponsorship $3,900 a year (from "BASA Membership Levels - 10.01.2026"; the contract form's $995 for Sponsorship is out of date). There are no chapters; `Chapter` rows remain for history only.
