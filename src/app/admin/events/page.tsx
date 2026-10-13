@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,8 +23,8 @@ import {
   Users, 
   DollarSign,
   Star,
-  Edit,
-  Eye,
+  List,
+  LayoutGrid,
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
@@ -43,6 +43,22 @@ import { deriveTiers, type TierDraft } from '@/lib/flyer-draft'
 import { fieldsToUpdate } from '@/lib/flyer-batch'
 import type { DuplicateMatch } from '@/lib/event-duplicates'
 import { DashboardTableLoading } from '@/components/ui/dashboard-loading'
+import {
+  DEFAULT_SCOPE,
+  DEFAULT_STATUS_CHOICE,
+  buildEventFilters,
+  defaultSortOrder,
+  isDefaultView,
+  type EventScope,
+  type EventStatusChoice,
+} from '@/lib/admin-event-view'
+
+const EVENT_TZ = 'America/Chicago'
+const SCOPES: Array<{ value: EventScope; label: string }> = [
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'past', label: 'Past' },
+  { value: 'all', label: 'All' },
+]
 
 export default function AdminEventsPage() {
   const {
@@ -68,7 +84,19 @@ export default function AdminEventsPage() {
   const [showEventDialog, setShowEventDialog] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState('startDate')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  // The default view is upcoming events, soonest first, cancelled hidden. The
+  // scope and status choice are separate from `filters` so they can be widened
+  // without losing a search, and so the page opens on what staff need first.
+  const [scope, setScope] = useState<EventScope>(DEFAULT_SCOPE)
+  const [statusChoice, setStatusChoice] = useState<EventStatusChoice>(DEFAULT_STATUS_CHOICE)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(defaultSortOrder(DEFAULT_SCOPE))
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  // "Now" is fixed when the scope is chosen, not per render, so the query is stable.
+  const [nowIso, setNowIso] = useState(() => new Date().toISOString())
+  const apiFilters = useMemo(
+    () => buildEventFilters(filters, scope, statusChoice, nowIso),
+    [filters, scope, statusChoice, nowIso],
+  )
 
   // Form state for creating events
   const [createFormData, setCreateFormData] = useState<CreateEventData>({
@@ -120,8 +148,8 @@ export default function AdminEventsPage() {
   }
 
   useEffect(() => {
-    fetchEvents(filters, currentPage, 20, sortBy, sortOrder)
-  }, [fetchEvents, filters, currentPage, sortBy, sortOrder])
+    fetchEvents(apiFilters, currentPage, 20, sortBy, sortOrder)
+  }, [fetchEvents, apiFilters, currentPage, sortBy, sortOrder])
 
   // Organizers only populate the create form, so load them once rather than on
   // every filter, page, or sort change.
@@ -145,6 +173,47 @@ export default function AdminEventsPage() {
     setFilters(prev => ({ ...prev, [key]: value }))
     setCurrentPage(1)
   }
+
+  const chooseScope = (next: EventScope) => {
+    setScope(next)
+    setNowIso(new Date().toISOString())
+    setSortOrder(defaultSortOrder(next))
+    setCurrentPage(1)
+  }
+
+  const chooseStatus = (next: EventStatusChoice) => {
+    setStatusChoice(next)
+    setCurrentPage(1)
+  }
+
+  const resetToDefault = () => {
+    setFilters({})
+    setSearchTerm('')
+    setScope(DEFAULT_SCOPE)
+    setStatusChoice(DEFAULT_STATUS_CHOICE)
+    setNowIso(new Date().toISOString())
+    setSortOrder(defaultSortOrder(DEFAULT_SCOPE))
+    setCurrentPage(1)
+  }
+
+  const openEvent = (event: Event) => {
+    setSelectedEvent(event)
+    setShowEventDialog(true)
+  }
+  // Whole rows and cards open the event; Enter and Space do the same from the keyboard.
+  const activate = (event: Event) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    'aria-label': `Open ${event.title}`,
+    onClick: () => openEvent(event),
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.target !== e.currentTarget) return
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        openEvent(event)
+      }
+    },
+  })
 
   const handleCreateEvent = async (allowDuplicate = false) => {
     setCreateLoading(true)
@@ -221,7 +290,7 @@ export default function AdminEventsPage() {
         venueId: '',
         tags: [],
       })
-      fetchEvents(filters, currentPage, 20, sortBy, sortOrder)
+      fetchEvents(apiFilters, currentPage, 20, sortBy, sortOrder)
     } catch (error) {
       const found = error instanceof Error ? (error as Error & { duplicates?: DuplicateMatch[] }).duplicates : undefined
       if (found?.length) setDuplicates(found)
@@ -240,7 +309,7 @@ export default function AdminEventsPage() {
       setDuplicates(null)
       setShowCreateDialog(false)
       setTiers([])
-      fetchEvents(filters, currentPage, 20, sortBy, sortOrder)
+      fetchEvents(apiFilters, currentPage, 20, sortBy, sortOrder)
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : 'Failed to update event')
     } finally {
@@ -250,7 +319,7 @@ export default function AdminEventsPage() {
 
   const handleExport = async () => {
     try {
-      await exportEvents(filters)
+      await exportEvents(apiFilters)
     } catch (error) {
       console.error('Export failed:', error)
     }
@@ -261,6 +330,7 @@ export default function AdminEventsPage() {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
+      timeZone: EVENT_TZ,
     })
   }
 
@@ -268,6 +338,7 @@ export default function AdminEventsPage() {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
+      timeZone: EVENT_TZ,
     })
   }
 
@@ -709,19 +780,57 @@ export default function AdminEventsPage() {
             </div>
           </div>
 
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
+            <div className="inline-flex rounded-md border bg-white p-0.5" role="group" aria-label="Show events">
+              {SCOPES.map(({ value, label }) => (
+                <Button
+                  key={value}
+                  type="button"
+                  size="sm"
+                  variant={scope === value ? 'default' : 'ghost'}
+                  aria-pressed={scope === value}
+                  onClick={() => chooseScope(value)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+            <div className="inline-flex rounded-md border bg-white p-0.5" role="group" aria-label="View">
+              <Button
+                type="button"
+                size="sm"
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                aria-pressed={viewMode === 'list'}
+                onClick={() => setViewMode('list')}
+              >
+                <List className="w-4 h-4 mr-1" />List
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                aria-pressed={viewMode === 'grid'}
+                onClick={() => setViewMode('grid')}
+              >
+                <LayoutGrid className="w-4 h-4 mr-1" />Grid
+              </Button>
+            </div>
+          </div>
+
           {showFilters && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4">
               <div>
                 <Label>Status</Label>
                 <Select
-                  value={filters.status || ''}
-                  onValueChange={(value) => handleFilterChange('status', value || undefined)}
+                  value={statusChoice}
+                  onValueChange={(value) => chooseStatus(value as EventStatusChoice)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="All statuses" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All statuses</SelectItem>
+                    <SelectItem value="active">Hide cancelled</SelectItem>
+                    <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="DRAFT">Draft</SelectItem>
                     <SelectItem value="PUBLISHED">Published</SelectItem>
                     <SelectItem value="CANCELLED">Cancelled</SelectItem>
@@ -732,14 +841,14 @@ export default function AdminEventsPage() {
               <div>
                 <Label>Type</Label>
                 <Select
-                  value={filters.type || ''}
-                  onValueChange={(value) => handleFilterChange('type', value || undefined)}
+                  value={filters.type || 'all'}
+                  onValueChange={(value) => handleFilterChange('type', value === 'all' ? undefined : value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="All types" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All types</SelectItem>
+                    <SelectItem value="all">All types</SelectItem>
                     <SelectItem value="NETWORKING">Networking</SelectItem>
                     <SelectItem value="SUMMIT">Summit</SelectItem>
                     <SelectItem value="RIBBON_CUTTING">Ribbon Cutting</SelectItem>
@@ -776,32 +885,84 @@ export default function AdminEventsPage() {
           <Card>
             <CardContent className="text-center py-8">
               <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No events found</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {isDefaultView(filters, scope, statusChoice) ? 'No upcoming events' : 'No events found'}
+              </h3>
               <p className="text-gray-600 mb-4">
-                {Object.keys(filters).length > 0 
-                  ? 'Try adjusting your filters or search terms.'
-                  : 'Get started by creating your first event.'
-                }
+                {isDefaultView(filters, scope, statusChoice)
+                  ? 'Nothing is scheduled. Past and cancelled events are hidden by default.'
+                  : 'Try adjusting your filters or search terms.'}
               </p>
-              {Object.keys(filters).length > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setFilters({})
-                    setSearchTerm('')
-                    setCurrentPage(1)
-                  }}
-                >
-                  Clear filters
-                </Button>
-              )}
+              <div className="flex flex-wrap justify-center gap-2">
+                {scope !== 'all' && (
+                  <Button variant="outline" onClick={() => chooseScope('all')}>
+                    Show all events
+                  </Button>
+                )}
+                {!isDefaultView(filters, scope, statusChoice) && (
+                  <Button variant="outline" onClick={resetToDefault}>
+                    Back to upcoming
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         ) : (
           <>
+            {viewMode === 'list' ? (
+              <div className="space-y-3">
+                {events.map((event) => (
+                  <div
+                    key={event.id}
+                    {...activate(event)}
+                    className="flex flex-col sm:flex-row gap-4 rounded-lg border bg-white p-3 cursor-pointer transition-shadow hover:shadow-md hover:border-blue-300 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
+                  >
+                    <EventImage src={event.image ?? event.venue?.image} alt="" className="h-28 sm:h-20 w-full sm:w-32 shrink-0 rounded-md object-cover object-top bg-gray-100" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-semibold text-gray-900 line-clamp-1">{event.title}</h3>
+                        {event.isFeatured && <Star className="w-4 h-4 text-yellow-500" aria-label="Featured" />}
+                        <Badge className={getStatusColor(event.status)}>{event.status}</Badge>
+                        <Badge className={getTypeColor(event.type)}>{event.type}</Badge>
+                      </div>
+                      <p className="mt-1 text-sm text-gray-600 line-clamp-1">{event.shortDescription || event.description}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
+                        <span className="inline-flex items-center"><Calendar className="w-4 h-4 mr-1" />{formatDate(event.startDate)}</span>
+                        <span className="inline-flex items-center"><Clock className="w-4 h-4 mr-1" />{formatTime(event.startDate)}</span>
+                        <span className="inline-flex items-center min-w-0"><MapPin className="w-4 h-4 mr-1 shrink-0" /><span className="line-clamp-1">{event.location}</span></span>
+                      </div>
+                    </div>
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1 text-sm text-gray-600 sm:w-32 shrink-0">
+                      <span className="inline-flex items-center">
+                        <Users className="w-4 h-4 mr-1" />
+                        {event.registrations.length}
+                        {event.capacity && <span className="text-gray-400 ml-1">/ {event.capacity}</span>}
+                      </span>
+                      <span className="inline-flex items-center">
+                        <DollarSign className="w-4 h-4" />
+                        {event.price ? `$${event.price}` : 'Free'}
+                        {event.memberPrice && event.memberPrice !== event.price && (
+                          <span className="text-gray-400 ml-1">(${event.memberPrice})</span>
+                        )}
+                      </span>
+                      {/* BASA's own events have no organizer; show one only for outside organizers. */}
+                      {event.organizer && (
+                        <span className="inline-flex items-center max-w-full">
+                          <Building className="w-4 h-4 mr-1 shrink-0" /><span className="line-clamp-1">{event.organizer.name}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {events.map((event) => (
-                <Card key={event.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+                <Card
+                  key={event.id}
+                  {...activate(event)}
+                  className="cursor-pointer hover:shadow-lg hover:border-blue-300 transition-shadow overflow-hidden focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
                   <EventImage src={event.image ?? event.venue?.image} alt="" className="h-40 w-full object-cover object-top bg-gray-100" />
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -860,43 +1021,21 @@ export default function AdminEventsPage() {
                       </div>
                     </div>
 
-                    <Separator className="my-4" />
-
-                    <div className="flex items-center justify-between">
-                      {/* BASA's own events have no organizer; show one only for outside organizers. */}
-                      {event.organizer ? (
+                    {/* BASA's own events have no organizer; show one only for outside organizers. */}
+                    {event.organizer && (
+                      <>
+                        <Separator className="my-4" />
                         <div className="flex items-center text-sm text-gray-600">
                           <Building className="w-4 h-4 mr-2" />
                           <span className="line-clamp-1">{event.organizer.name}</span>
                         </div>
-                      ) : <span />}
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedEvent(event)
-                            setShowEventDialog(true)
-                          }}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedEvent(event)
-                            setShowEventDialog(true)
-                          }}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               ))}
             </div>
+            )}
 
             {/* Pagination */}
             {pagination && pagination.totalPages > 1 && (

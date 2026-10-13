@@ -169,6 +169,89 @@ describe('Events API Integration Tests', () => {
     );
   });
 
+  describe('GET /api/events: admin default view (upcoming, cancelled hidden)', () => {
+    const DAY = 24 * 60 * 60 * 1000;
+
+    async function seed(prisma: any) {
+      const user = await TestUtils.createTestUser(prisma, 'organizer@test.com', 'MEMBER');
+      const member = await TestUtils.createTestMember(prisma, user.id, 'Test Organizer');
+      const base = await TestUtils.createTestEventForMember(prisma, member.id, 'Seed Template');
+      const make = (title: string, status: string, startOffsetDays: number) =>
+        prisma.event.create({
+          data: {
+            ...base,
+            id: undefined,
+            title,
+            slug: `${title.toLowerCase().replace(/\s+/g, '-')}-view`,
+            status,
+            startDate: new Date(Date.now() + startOffsetDays * DAY),
+            endDate: new Date(Date.now() + startOffsetDays * DAY + 2 * 60 * 60 * 1000),
+          },
+        });
+      await make('View Upcoming Published', 'PUBLISHED', 5);
+      await make('View Upcoming Draft', 'DRAFT', 6);
+      await make('View Upcoming Cancelled', 'CANCELLED', 7);
+      await make('View Past Published', 'PUBLISHED', -5);
+      await make('View Past Cancelled', 'CANCELLED', -6);
+    }
+
+    async function titles(prisma: any, query: Record<string, string>, role: 'ADMIN' | 'MEMBER' = 'ADMIN') {
+      (auth as jest.Mock).mockResolvedValue({ user: { id: 'admin-id', role } });
+      const req = TestUtils.createMockRequest({ method: 'GET', url: 'http://localhost:3000/api/events', query });
+      const { GET } = createTestAPI(prisma);
+      const response = await GET(req as any);
+      const data = await response.json();
+      return data.events.map((e: any) => e.title).filter((t: string) => t.startsWith('View '));
+    }
+
+    it(
+      'upcoming with cancelled hidden returns only upcoming published and draft events',
+      withTestDatabase(async ({ database }) => {
+        await seed(database.prisma);
+        const result = await titles(database.prisma, { from: new Date().toISOString(), hideCancelled: 'true', limit: '100' });
+        expect(result.sort()).toEqual(['View Upcoming Draft', 'View Upcoming Published']);
+      })
+    );
+
+    it(
+      'an explicit status wins over hideCancelled, so cancelled events can still be listed',
+      withTestDatabase(async ({ database }) => {
+        await seed(database.prisma);
+        const result = await titles(database.prisma, { from: new Date().toISOString(), status: 'CANCELLED', hideCancelled: 'true', limit: '100' });
+        expect(result).toEqual(['View Upcoming Cancelled']);
+      })
+    );
+
+    it(
+      'before returns only events that have already ended',
+      withTestDatabase(async ({ database }) => {
+        await seed(database.prisma);
+        const past = await titles(database.prisma, { before: new Date().toISOString(), hideCancelled: 'true', limit: '100' });
+        expect(past).toEqual(['View Past Published']);
+        const pastAll = await titles(database.prisma, { before: new Date().toISOString(), limit: '100' });
+        expect(pastAll.sort()).toEqual(['View Past Cancelled', 'View Past Published']);
+      })
+    );
+
+    it(
+      'with no scope or status filter every event is listed',
+      withTestDatabase(async ({ database }) => {
+        await seed(database.prisma);
+        const result = await titles(database.prisma, { limit: '100' });
+        expect(result).toHaveLength(5);
+      })
+    );
+
+    it(
+      'hideCancelled does not widen what the public sees',
+      withTestDatabase(async ({ database }) => {
+        await seed(database.prisma);
+        const result = await titles(database.prisma, { hideCancelled: 'true', limit: '100' }, 'MEMBER');
+        expect(result.sort()).toEqual(['View Past Published', 'View Upcoming Published']);
+      })
+    );
+  });
+
   describe('POST /api/events', () => {
     it(
       'creates member and future member tickets and a venue with the event (#274)',

@@ -70,6 +70,10 @@ const searchParamsSchema = z.object({
   // that started this morning and runs until tonight is still upcoming at noon.
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
+  // Events that had already ended by this instant (the admin "Past" view).
+  before: z.string().datetime().optional(),
+  // Admin only: leave cancelled events out unless a status is asked for explicitly.
+  hideCancelled: z.string().transform(val => val === "true").optional(),
   page: z.string().transform(Number).pipe(z.number().min(1)).default("1"),
   limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).default("20"),
   sortBy: z.enum(["title", "startDate", "createdAt", "capacity"]).default("startDate"),
@@ -100,6 +104,7 @@ export async function GET(request: NextRequest) {
     const session = await auth()
     if (session?.user?.role === "ADMIN") {
       if (params.status) where.status = params.status
+      else if (params.hideCancelled) where.status = { not: "CANCELLED" }
     } else {
       const PUBLIC_STATUSES = ["PUBLISHED", "COMPLETED"]
       where.status = {
@@ -125,8 +130,11 @@ export async function GET(request: NextRequest) {
     // Time window. Without this the public "Upcoming Events" page asks for every
     // published event sorted ascending, which after the WordPress import (#57)
     // means it opens on 2020.
-    if (params.from) {
-      where.endDate = { gte: new Date(params.from) }
+    if (params.from || params.before) {
+      where.endDate = {
+        ...(params.from ? { gte: new Date(params.from) } : {}),
+        ...(params.before ? { lt: new Date(params.before) } : {}),
+      }
     }
     if (params.to) {
       where.startDate = { lte: new Date(params.to) }
