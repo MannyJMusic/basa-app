@@ -49,6 +49,7 @@ import {
   buildEventFilters,
   defaultSortOrder,
   isDefaultView,
+  registrationSummary,
   type EventScope,
   type EventStatusChoice,
 } from '@/lib/admin-event-view'
@@ -196,9 +197,22 @@ export default function AdminEventsPage() {
     setCurrentPage(1)
   }
 
+  // The list carries only registration counts. Open the dialog at once with that,
+  // then load the full event (registrants, speakers, sponsors) and merge those in.
   const openEvent = (event: Event) => {
     setSelectedEvent(event)
     setShowEventDialog(true)
+    fetch(`/api/events/${event.id}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then((full: Event | null) => {
+        if (!full) return
+        setSelectedEvent(prev =>
+          prev && prev.id === full.id
+            ? { ...prev, registrations: full.registrations ?? prev.registrations, speakers: full.speakers ?? prev.speakers, sponsors: full.sponsors ?? prev.sponsors }
+            : prev,
+        )
+      })
+      .catch(error => console.error('Failed to load event details:', error))
   }
   // Whole rows and cards open the event; Enter and Space do the same from the keyboard.
   const activate = (event: Event) => ({
@@ -935,7 +949,7 @@ export default function AdminEventsPage() {
                     <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1 text-sm text-gray-600 sm:w-32 shrink-0">
                       <span className="inline-flex items-center">
                         <Users className="w-4 h-4 mr-1" />
-                        {event.registrations.length}
+                        {registrationSummary(event.registrations).confirmedTickets}
                         {event.capacity && <span className="text-gray-400 ml-1">/ {event.capacity}</span>}
                       </span>
                       <span className="inline-flex items-center">
@@ -1004,7 +1018,7 @@ export default function AdminEventsPage() {
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center text-gray-600">
                           <Users className="w-4 h-4 mr-2" />
-                          <span>{event.registrations.length}</span>
+                          <span>{registrationSummary(event.registrations).confirmedTickets}</span>
                           {event.capacity && (
                             <span className="text-gray-400 ml-1">/ {event.capacity}</span>
                           )}
