@@ -16,6 +16,14 @@ import { MEMBERSHIP_TIERS } from "@/lib/membership-tiers"
 export type TransactionStatus = "COMPLETED" | "PENDING" | "FAILED" | "REFUNDED" | "CANCELLED"
 export type TransactionKind = "membership" | "renewal" | "recorded" | "tickets" | "failed"
 
+/** What a transaction was for, shown when a row is opened. */
+export interface TransactionBreakdown {
+  /** What was bought: one line per ticket tier, or the membership level. */
+  lines: Array<{ label: string; note: string | null; quantity: number | null; amountCents: number | null }>
+  facts: Array<{ label: string; value: string }>
+  links: Array<{ label: string; href: string }>
+}
+
 export interface Transaction {
   id: string
   kind: TransactionKind
@@ -29,6 +37,7 @@ export interface Transaction {
   /** Stripe id when there is one (payment intent), for matching against Stripe. */
   reference: string | null
   at: Date
+  breakdown: TransactionBreakdown
 }
 
 export const STATUS_LABEL: Record<TransactionStatus, string> = {
@@ -62,7 +71,12 @@ export interface PaymentRow {
     firstName: string | null
     lastName: string | null
     email: string | null
-    member: { businessName: string | null; membershipTier: keyof typeof MEMBERSHIP_TIERS | null } | null
+    member: {
+      businessName: string | null
+      membershipTier: keyof typeof MEMBERSHIP_TIERS | null
+      membershipStatus: string
+      renewalDate: Date | null
+    } | null
   }
 }
 
@@ -76,8 +90,16 @@ export interface RegistrationRow {
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "REFUNDED"
   paymentIntentId: string | null
   createdAt: Date
-  event: { title: string }
-  memberRateRequest: { chargedCents: number | null } | null
+  checkedInAt: Date | null
+  /** Per-ticket attendee details, [{ name, email? }]. */
+  attendees: Prisma.JsonValue
+  event: { title: string; slug: string; startDate: Date }
+  items: Array<{
+    quantity: number
+    unitPrice: { toString(): string } | number
+    ticketTier: { name: string }
+  }>
+  memberRateRequest: { status: string; heldCents: number; memberCents: number; chargedCents: number | null } | null
 }
 
 export interface FailureRow {
@@ -105,12 +127,53 @@ function tierLabel(value: unknown): string | null {
     : null
 }
 
+const num = (v: { toString(): string } | number) => Number(v.toString())
+const cents = (v: { toString(): string } | number) => Math.round(num(v) * 100)
+const dollars = (c: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(c / 100)
+const fmtDate = (d: Date) =>
+  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: EVENT_TIME_ZONE }).format(d)
+const fmtDateTime = (d: Date) =>
+  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: EVENT_TIME_ZONE }).format(d)
+const sentence = (v: string) => v.charAt(0) + v.slice(1).toLowerCase().replace(/_/g, " ")
+
+/** Stripe dashboard link for a payment intent id; anything else (a check number) has none. */
+const stripeLinks = (ref: string | null): TransactionBreakdown["links"] =>
+  ref && /^pi_[A-Za-z0-9]+$/.test(ref) ? [{ label: "View in Stripe", href: `https://dashboard.stripe.com/payments/${ref}` }] : []
+
+function attendeeNames(value: Prisma.JsonValue): string | null {
+  if (!Array.isArray(value)) return null
+  const names = value
+    .map(a => (a && typeof a === "object" && !Array.isArray(a) && typeof (a as Record<string, unknown>).name === "string" ? ((a as Record<string, unknown>).name as string).trim() : ""))
+    .filter(Boolean)
+  return names.length ? names.join(", ") : null
+}
+
 export function paymentToTransaction(p: PaymentRow): Transaction {
   const m = meta(p.metadata)
   const tier = tierLabel(m.tier) ?? tierLabel(m.membershipTier) ?? (p.user.member?.membershipTier ? tierLabel(p.user.member.membershipTier) : null)
   const kind: TransactionKind = m.kind === "membership_renewal" ? "renewal" : m.source === "admin_recorded" ? "recorded" : "membership"
   const title = kind === "renewal" ? "Membership renewal" : kind === "recorded" ? "Membership (recorded by staff)" : "Membership"
   const detail = [tier, p.user.member?.businessName].filter(Boolean).join(" · ") || null
+  const reference = p.stripePaymentIntentId ?? (typeof m.reference === "string" ? m.reference : null)
+  const online = typeof m.subscriptionId === "string" && m.subscriptionId !== ""
+  const member = p.user.member
+  const facts: TransactionBreakdown["facts"] = []
+  if (member?.businessName) facts.push({ label: "Business", value: member.businessName })
+  if (member) facts.push({ label: "Membership now", value: sentence(member.membershipStatus) })
+  if (member?.renewalDate) facts.push({ label: "Renews / expires", value: fmtDate(member.renewalDate) })
+  facts.push({ label: "Billing", value: online ? "Online subscription, renews automatically" : kind === "recorded" ? "Payment recorded by staff" : "Billed by the office" })
+  facts.push({ label: "Paid by", value: METHOD_LABEL[p.paymentMethod] })
+  if (typeof m.reference === "string" && !p.stripePaymentIntentId) facts.push({ label: "Reference", value: m.reference })
+  const breakdown: TransactionBreakdown = {
+    lines: [{
+      label: tier ?? "Membership",
+      note: kind === "renewal" ? "Yearly renewal" : "Yearly membership",
+      quantity: 1,
+      amountCents: p.amount,
+    }],
+    facts,
+    links: stripeLinks(reference),
+  }
   return {
     id: `pay_${p.id}`,
     kind,
@@ -121,8 +184,9 @@ export function paymentToTransaction(p: PaymentRow): Transaction {
     amountCents: p.amount,
     status: p.status,
     method: METHOD_LABEL[p.paymentMethod],
-    reference: p.stripePaymentIntentId ?? (typeof m.reference === "string" ? m.reference : null),
+    reference,
     at: p.createdAt,
+    breakdown,
   }
 }
 
@@ -137,7 +201,32 @@ export function registrationToTransaction(r: RegistrationRow): Transaction {
   // A member-rate hold is captured for less (or the same) once an admin decides;
   // chargedCents is what the card was actually charged.
   const charged = r.memberRateRequest?.chargedCents
-  const amountCents = charged != null ? charged : Math.round(Number(r.totalAmount.toString()) * 100)
+  const amountCents = charged != null ? charged : cents(r.totalAmount)
+  const lines: TransactionBreakdown["lines"] = r.items.length
+    ? r.items.map(i => ({
+        label: i.ticketTier.name,
+        note: `${dollars(cents(i.unitPrice))} each`,
+        quantity: i.quantity,
+        amountCents: cents(i.unitPrice) * i.quantity,
+      }))
+    : [{ label: "Tickets", note: null, quantity: r.ticketCount, amountCents: cents(r.totalAmount) }]
+  const facts: TransactionBreakdown["facts"] = [{ label: "Event date", value: fmtDateTime(r.event.startDate) }]
+  if (r.company) facts.push({ label: "Company", value: r.company })
+  const names = attendeeNames(r.attendees)
+  if (names) facts.push({ label: "Attendees", value: names })
+  const req = r.memberRateRequest
+  if (req) {
+    facts.push({
+      label: "Member rate",
+      value: `${sentence(req.status)}. Card held for ${dollars(req.heldCents)}; member total ${dollars(req.memberCents)}${req.chargedCents != null ? `; charged ${dollars(req.chargedCents)}` : ""}`,
+    })
+  }
+  if (r.checkedInAt) facts.push({ label: "Checked in", value: fmtDateTime(r.checkedInAt) })
+  const breakdown: TransactionBreakdown = {
+    lines,
+    facts,
+    links: [{ label: "View event page", href: `/events/${r.event.slug}` }, ...stripeLinks(r.paymentIntentId)],
+  }
   return {
     id: `reg_${r.id}`,
     kind: "tickets",
@@ -150,6 +239,7 @@ export function registrationToTransaction(r: RegistrationRow): Transaction {
     method: "Card",
     reference: r.paymentIntentId,
     at: r.createdAt,
+    breakdown,
   }
 }
 
@@ -168,6 +258,11 @@ export function failureToTransaction(f: FailureRow): Transaction {
     method: "Card",
     reference: f.entityId,
     at: f.timestamp,
+    breakdown: {
+      lines: [{ label: "Membership payment", note: reason, quantity: 1, amountCents: typeof v.amount === "number" ? v.amount : null }],
+      facts: reason ? [{ label: "Decline reason", value: reason }] : [],
+      links: stripeLinks(f.entityId),
+    },
   }
 }
 
@@ -249,7 +344,7 @@ export async function loadTransactions(): Promise<Transaction[]> {
         user: {
           select: {
             name: true, firstName: true, lastName: true, email: true,
-            member: { select: { businessName: true, membershipTier: true } },
+            member: { select: { businessName: true, membershipTier: true, membershipStatus: true, renewalDate: true } },
           },
         },
       },
@@ -260,9 +355,10 @@ export async function loadTransactions(): Promise<Transaction[]> {
       take: 1000,
       select: {
         id: true, name: true, email: true, company: true, ticketCount: true, totalAmount: true, status: true,
-        paymentIntentId: true, createdAt: true,
-        event: { select: { title: true } },
-        memberRateRequest: { select: { chargedCents: true } },
+        paymentIntentId: true, createdAt: true, checkedInAt: true, attendees: true,
+        event: { select: { title: true, slug: true, startDate: true } },
+        items: { select: { quantity: true, unitPrice: true, ticketTier: { select: { name: true } } } },
+        memberRateRequest: { select: { status: true, heldCents: true, memberCents: true, chargedCents: true } },
       },
     }),
     prisma.auditLog.findMany({
