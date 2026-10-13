@@ -106,6 +106,10 @@ export interface EventFilters {
   from?: string
   /** ISO instant: only events that had started by then */
   to?: string
+  /** ISO instant: only events that had already ended by then (past events) */
+  before?: string
+  /** Admin only: leave cancelled events out unless `status` asks for them */
+  hideCancelled?: boolean
 }
 
 export interface EventListResponse {
