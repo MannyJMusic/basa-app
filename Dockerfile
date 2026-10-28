@@ -3,7 +3,7 @@
 #
 # Base images are pinned by digest so a rebuild gets exactly the same base;
 # Dependabot (docker ecosystem) proposes digest bumps.
-FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS base
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS base
 
 # Install pnpm and OpenSSL dependencies for Prisma
 RUN apk add --no-cache openssl
@@ -72,7 +72,7 @@ RUN find node_modules -name ".prisma" -type d | head -1 | xargs -I {} cp -r {} /
      (echo "Prisma client still not found" && find node_modules -name "*prisma*" -type d && exit 1))
 
 # Production stage
-FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS production
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS production
 
 # Install pnpm and OpenSSL dependencies for Prisma
 RUN apk add --no-cache openssl
