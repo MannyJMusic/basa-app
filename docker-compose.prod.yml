@@ -143,7 +143,7 @@ services:
     #   docker compose --env-file .env.production -f docker-compose.prod.yml \
     #     --profile tools up -d prisma-studio
     profiles: ["tools"]
-    image: node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+    image: node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
     container_name: basa-prisma-studio-prod
     working_dir: /app
     command: ["sh", "-c", "npm install -g pnpm@9.12.2 && npm pkg delete scripts.postinstall && NODE_ENV=development pnpm install --frozen-lockfile && pnpm exec prisma generate && pnpm exec prisma studio --port 5555 --hostname 0.0.0.0"]
